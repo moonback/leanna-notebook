@@ -1,0 +1,30 @@
+appId: fr.moonback.leannanotebook
+productName: Leanna Notebook
+executableName: LeannaNotebook
+directories:
+  output: release
+files:
+  - dist/**/*
+  - package.json
+  - "!**/*.map"
+asar: true
+compression: maximum
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  artifactName: Leanna-Notebook-Setup-${version}-${arch}.${ext}
+  requestedExecutionLevel: asInvoker
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Leanna Notebook
+  uninstallDisplayName: Leanna Notebook
+  deleteAppDataOnUninstall: false
+  runAfterFinish: true
+  installerLanguages:
+    - fr_FR
