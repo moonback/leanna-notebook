@@ -152,7 +152,7 @@ export function Studio({ notebookId, canEdit, sourceIds, sourceTitle, onOpenCita
           ))}
         </ul>
       )}
-      <CreateDialog type={creating} sourceIds={sourceIds} onClose={() => setCreating(null)} onGenerate={generate} />
+      <CreateDialog type={creating} notebookId={notebookId} sourceIds={sourceIds} onClose={() => setCreating(null)} onGenerate={generate} />
       <ArtifactViewer id={open} canShare={canEdit} onClose={() => setOpen(null)} sourceTitle={sourceTitle} onOpenCitation={onOpenCitation} onAsk={(t) => { setOpen(null); onAsk(t); }} />
     </Panel>
   );
@@ -168,7 +168,7 @@ const REPORT_MODELS = [
 ] as const;
 type AiReportModel = { id: string; title: string; description: string; instruction: string };
 
-function CreateDialog({ type, sourceIds, onClose, onGenerate }: { type: ArtType | null; sourceIds: string[]; onClose: () => void; onGenerate: (t: ArtType, o: Record<string, string>, p?: string) => Promise<boolean> }) {
+function CreateDialog({ type, notebookId, sourceIds, onClose, onGenerate }: { type: ArtType | null; notebookId: string; sourceIds: string[]; onClose: () => void; onGenerate: (t: ArtType, o: Record<string, string>, p?: string) => Promise<boolean> }) {
   const [opts, setOpts] = React.useState<Record<string, string>>({});
   const [prompt, setPrompt] = React.useState("");
   const [sending, setSending] = React.useState(false);
@@ -177,6 +177,7 @@ function CreateDialog({ type, sourceIds, onClose, onGenerate }: { type: ArtType 
   const [aiModelsError, setAiModelsError] = React.useState(false);
   const [selectedAiModel, setSelectedAiModel] = React.useState<string | null>(null);
 
+  const sourceKey = sourceIds.join(",");
   React.useEffect(() => {
     setAiModels([]);
     setAiModelsError(false);
@@ -184,10 +185,10 @@ function CreateDialog({ type, sourceIds, onClose, onGenerate }: { type: ArtType 
     if (type !== "report" || sourceIds.length === 0) return;
     let active = true;
     setAiModelsLoading(true);
-    fetch(`/api/v1/notebooks/${encodeURIComponent(window.location.pathname.split("/")[2] ?? "")}/artifacts/suggestions`, {
+    fetch(`/api/v1/notebooks/${notebookId}/artifacts/suggestions`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ sourceIds }),
+      body: JSON.stringify({ sourceIds: sourceKey.split(",").filter(Boolean) }),
     }).then(async (response) => {
       if (!response.ok) throw new Error("suggestions_unavailable");
       const result = await response.json() as { suggestions?: AiReportModel[] };
@@ -199,7 +200,7 @@ function CreateDialog({ type, sourceIds, onClose, onGenerate }: { type: ArtType 
       if (active) setAiModelsLoading(false);
     });
     return () => { active = false; };
-  }, [type, sourceIds.join(",")]);
+  }, [type, notebookId, sourceKey]);
   React.useEffect(() => {
     setOpts(type === "report" ? { template: "briefing", reportFormat: "document" } : type === "flashcards" || type === "quiz" ? { difficulty: "medium", count: "standard" } : type === "audio" ? { format: "deep_dive", duration: "standard", style: "accessible" } : {});
     setPrompt("");
