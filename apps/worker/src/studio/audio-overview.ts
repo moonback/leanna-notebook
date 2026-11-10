@@ -7,7 +7,6 @@ import { z } from "zod";
 import type { Llm } from "../ai/llm.ts";
 import type { SpeechSynthesizer } from "../ai/speech.ts";
 import { PermanentError, type JobContext } from "../worker.ts";
-import type { Passage } from "@notebook/core/citations";
 
 export const AUDIO_OVERVIEW_MARKER = "[[NOTEBOOK_AUDIO_OVERVIEW_V1]]";
 
@@ -66,7 +65,7 @@ function runFfmpeg(binary: string, args: string[]): Promise<void> {
     let stderr = "";
     child.stderr.setEncoding("utf8");
     child.stderr.on("data", (chunk: string) => { stderr = (stderr + chunk).slice(-3000); });
-    child.once("error", reject);
+    child.once("error", (error: NodeJS.ErrnoException) => reject(error.code === "ENOENT" ? new PermanentError("audio_ffmpeg_not_installed", "ffmpeg est absent du PATH du worker.") : error));
     child.once("close", (code) => code === 0 ? resolve() : reject(new Error(`ffmpeg_exit_${code}: ${stderr}`)));
   });
 }
