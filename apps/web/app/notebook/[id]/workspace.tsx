@@ -42,7 +42,7 @@ const ERRORS: Record<string, string> = {
   lease_expired: "Le traitement a été interrompu. Supprimez puis réimportez la source.",
   archive_too_large: "Fichier compressé trop volumineux une fois décompressé.",
 };
-const KIND_ICON: Record<string, React.ReactNode> = { web: <Globe />, text: <Type />, note: <NotebookPen />, audio: <AudioLines /> };
+const KIND_ICON: Record<string, React.ReactNode> = { web: <Globe />, github: <Github />, text: <Type />, note: <NotebookPen />, audio: <AudioLines /> };
 const busyStatus = (s: string) => s === "pending" || s === "processing";
 
 /** Vrai si la requête média correspond (suit le redimensionnement). Rendu serveur : vue bureau. */
@@ -733,6 +733,9 @@ function AddSourcesDialog({ open, onOpenChange, notebookId, onAdded }: { open: b
         const urls = url.split(/\s+/).filter(Boolean);
         if (!urls.length) throw new Error("Collez au moins une adresse.");
         await post(urls.map((u) => ({ type: "url", url: u })));
+      } else if (tab === "github") {
+        if (!githubUrl.trim()) throw new Error("Indiquez l’URL du dépôt GitHub.");
+        await post([{ type: "github", url: githubUrl.trim(), branch: githubBranch.trim() || "main" }]);
       } else {
         if (!paste.title.trim() || !paste.text.trim()) throw new Error("Titre et texte sont requis.");
         await post([{ type: "text", title: paste.title, text: paste.text }]);
@@ -752,7 +755,8 @@ function AddSourcesDialog({ open, onOpenChange, notebookId, onAdded }: { open: b
             <TabsList aria-label="Type de source">
               <TabsTrigger value="file"><Upload className="mr-1.5 inline size-3.5" aria-hidden />Fichier</TabsTrigger>
               <TabsTrigger value="url"><Globe className="mr-1.5 inline size-3.5" aria-hidden />Page web</TabsTrigger>
-              <TabsTrigger value="text"><Type className="mr-1.5 inline size-3.5" aria-hidden />Texte</TabsTrigger>\n              <TabsTrigger value="github"><Github className="mr-1.5 inline size-3.5" aria-hidden />GitHub</TabsTrigger>
+              <TabsTrigger value="text"><Type className="mr-1.5 inline size-3.5" aria-hidden />Texte</TabsTrigger>
+              <TabsTrigger value="github"><Github className="mr-1.5 inline size-3.5" aria-hidden />GitHub</TabsTrigger>\n              <TabsTrigger value="github"><Github className="mr-1.5 inline size-3.5" aria-hidden />GitHub</TabsTrigger>
             </TabsList>
             <TabsContent value="file" className="pt-4">
               <Field id="files" label="Fichiers" hint="PDF, DOCX, PPTX, EPUB, TXT, MD, CSV, MP3, WAV, M4A, AAC, OGG, FLAC ou WEBM — 200 Mo maximum par fichier.">
@@ -764,7 +768,16 @@ function AddSourcesDialog({ open, onOpenChange, notebookId, onAdded }: { open: b
                 <Textarea value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://…" />
               </Field>
             </TabsContent>
-            <TabsContent value="github" className="grid gap-3 pt-4">\n              <Field id="github-url" label="Dépôt GitHub" hint="Dépôts publics uniquement pour cette première version. Les secrets et fichiers binaires sont ignorés.">\n                <Input value={githubUrl} onChange={(e) => setGithubUrl(e.target.value)} placeholder="https://github.com/organisation/projet" />\n              </Field>\n              <Field id="github-branch" label="Branche" hint="La branche à capturer (par défaut : main).">\n                <Input value={githubBranch} maxLength={200} onChange={(e) => setGithubBranch(e.target.value)} placeholder="main" />\n              </Field>\n              <p className="text-xs text-text-muted">Le code sera indexé comme une source unique. Les fichiers sont présentés avec leur chemin et leurs numéros de ligne pour faciliter les citations.</p>\n            </TabsContent>\n            <TabsContent value="text" className="grid gap-3 pt-4">
+            <TabsContent value="github" className="grid gap-3 pt-4">\n              <Field id="github-url" label="Dépôt GitHub" hint="Dépôts publics uniquement pour cette première version. Les secrets et fichiers binaires sont ignorés.">\n                <Input value={githubUrl} onChange={(e) => setGithubUrl(e.target.value)} placeholder="https://github.com/organisation/projet" />\n              </Field>\n              <Field id="github-branch" label="Branche" hint="La branche à capturer (par défaut : main).">\n                <Input value={githubBranch} maxLength={200} onChange={(e) => setGithubBranch(e.target.value)} placeholder="main" />\n              </Field>\n              <p className="text-xs text-text-muted">Le code sera indexé comme une source unique. Les fichiers sont présentés avec leur chemin et leurs numéros de ligne pour faciliter les citations.</p>\n            </TabsContent>\n            <TabsContent value="github" className="grid gap-3 pt-4">
+              <Field id="github-url" label="Dépôt GitHub" hint="Dépôts publics uniquement. Les fichiers secrets, binaires et dépendances sont ignorés.">
+                <Input value={githubUrl} onChange={(e) => setGithubUrl(e.target.value)} placeholder="https://github.com/organisation/projet" />
+              </Field>
+              <Field id="github-branch" label="Branche" hint="Branche à capturer (par défaut : main).">
+                <Input value={githubBranch} maxLength={200} onChange={(e) => setGithubBranch(e.target.value)} placeholder="main" />
+              </Field>
+              <p className="text-xs text-text-muted">Le code est indexé comme une source unique. Les chemins et numéros de ligne sont conservés dans le texte pour faciliter les citations.</p>
+            </TabsContent>
+            <TabsContent value="text" className="grid gap-3 pt-4">
               <Field id="paste-title" label="Titre"><Input value={paste.title} maxLength={300} onChange={(e) => setPaste({ ...paste, title: e.target.value })} /></Field>
               <Field id="paste-text" label="Texte"><Textarea value={paste.text} onChange={(e) => setPaste({ ...paste, text: e.target.value })} className="min-h-40" /></Field>
             </TabsContent>
