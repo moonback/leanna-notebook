@@ -36,7 +36,7 @@ export default async function SettingsPage() {
   return (
     <div className="min-h-dvh">
       <AppHeader><h1 className="truncate text-lg">Réglages</h1></AppHeader>
-      <main className="mx-auto grid max-w-3xl gap-6 px-4 py-8 sm:px-6">
+      <main className="mx-auto grid max-w-8xl grid-cols-1 gap-6 px-4 py-8 sm:px-6">
         <p className="text-sm text-text-muted">Connecté·e avec {user.email}</p>
         <SettingsTabs
           tabs={[
