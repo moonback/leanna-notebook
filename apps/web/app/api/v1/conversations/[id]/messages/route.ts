@@ -116,7 +116,7 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
     .map((h, i) => ({ n: i + 1, chunk_id: h.chunk_id, source_id: h.source_id, source_title: titles.get(h.source_id) ?? "source", content: h.content, char_start: h.char_start, char_end: h.char_end, page_start: h.page_start }));
 
   const messages: ChatMessage[] = [
-    { role: "system", content: [promptOverride?.content, systemPrompt(nb?.output_language ?? profile?.output_language ?? "fr", nb?.chat_style ?? "default", nb?.chat_custom_prompt ?? null, nb?.response_length ?? "default", passages.length > 0)].filter(Boolean).join("\\n\\n") },
+    { role: "system", content: [promptOverride?.content, systemPrompt(nb?.output_language ?? profile?.output_language ?? "fr", nb?.chat_style ?? "default", nb?.chat_custom_prompt ?? null, nb?.response_length ?? "default", passages.length > 0)].filter(Boolean).join("\n\n") },
     ...(history ?? []).reverse().map((m) => ({ role: m.role as "user" | "assistant", content: m.content })),
     { role: "user", content: `<passages>\n${formatPassages(passages)}\n</passages>\n\nQuestion : ${text}` },
   ];
