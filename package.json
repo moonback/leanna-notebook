@@ -3,6 +3,8 @@
   "private": true,
   "scripts": {
     "dev": "pnpm --dir apps/web dev",
+    "desktop:dev": "pnpm --dir apps/desktop dev",
+    "desktop:build": "pnpm --dir apps/desktop build",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
     "lint": "pnpm -r lint",
