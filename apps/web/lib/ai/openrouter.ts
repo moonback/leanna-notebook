@@ -32,37 +32,39 @@ export type ChatMessage = { role: "system" | "user" | "assistant"; content: stri
 export type ChatUsage = { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number; cost?: number };
 
 /** Vecteur de la question (null si aucun modèle d'embeddings configuré : recherche plein texte seule). */
-export async function embedQuery(text: string): Promise<{ vector: number[]; model: string } | null> {
+export async function embedQuery(text: string, opts: { model?: string } = {}): Promise<{ vector: number[]; model: string } | null> {
   const { key, embedModel } = config();
-  if (!embedModel) return null;
+  const selectedModel = opts.model ?? embedModel;
+  if (!selectedModel) return null;
   const res = await fetch(`${BASE}/embeddings`, {
     method: "POST", headers: headers(key),
-    body: JSON.stringify({ model: embedModel, input: [text], dimensions: EMBEDDING_DIM }),
+    body: JSON.stringify({ model: selectedModel, input: [text], dimensions: EMBEDDING_DIM }),
   });
   if (!res.ok) throw new AiUpstreamError(res.status);
   const json = (await res.json()) as { data: { embedding: number[] }[] };
   const vector = json.data[0]?.embedding;
   if (!vector || vector.length !== EMBEDDING_DIM) throw new Error(`dimension d'embedding inattendue (${vector?.length})`);
-  return { vector, model: `openrouter:${embedModel}` };
+  return { vector, model: `openrouter:${selectedModel}` };
 }
 
 /**
  * Chat en streaming : rend chaque fragment de texte, puis l'usage final.
  * `signal` permet d'interrompre la génération (bouton Stop / client déconnecté).
  */
-export async function* streamChat(messages: ChatMessage[], opts: { signal?: AbortSignal; maxTokens?: number } = {}):
+export async function* streamChat(messages: ChatMessage[], opts: { signal?: AbortSignal; maxTokens?: number; model?: string } = {}):
   AsyncGenerator<{ type: "delta"; text: string } | { type: "usage"; usage: ChatUsage; model: string }> {
   const { key, chatModel } = config();
+  const selectedModel = opts.model ?? chatModel;
   const res = await fetch(`${BASE}/chat/completions`, {
     method: "POST", headers: headers(key), signal: opts.signal,
-    body: JSON.stringify({ model: chatModel, messages, stream: true, max_tokens: opts.maxTokens ?? 2000, usage: { include: true } }),
+    body: JSON.stringify({ model: selectedModel, messages, stream: true, max_tokens: opts.maxTokens ?? 2000, usage: { include: true } }),
   });
   if (!res.ok || !res.body) throw new AiUpstreamError(res.status);
 
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
-  let model = chatModel;
+  let model = selectedModel;
   for (;;) {
     const { value, done } = await reader.read();
     if (done) break;
