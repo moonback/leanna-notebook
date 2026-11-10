@@ -84,7 +84,7 @@ export function Studio({ notebookId, canEdit, sourceIds, sourceTitle, onOpenCita
   async function generate(type: ArtType, options: Record<string, string>, customPrompt?: string) {
     const r = await fetch(`/api/v1/notebooks/${notebookId}/artifacts`, {
       method: "POST", headers: { "content-type": "application/json", "idempotency-key": crypto.randomUUID() },
-      body: JSON.stringify({ type, options, sourceIds, ...(customPrompt ? { customPrompt } : {}) }),
+      body: JSON.stringify({ type, options, sourceIds: type === "infographic" && options.sourceScope === "all" ? [] : sourceIds, ...(customPrompt ? { customPrompt } : {}) }),
     });
     const j = await r.json().catch(() => ({}));
     if (r.status === 429) { toast({ title: "Quota atteint", description: "Changez d’offre dans les réglages ou réessayez plus tard.", tone: "error" }); return false; }
@@ -187,6 +187,7 @@ function CreateDialog({ type, notebookId, sourceIds, onClose, onGenerate }: { ty
   const [aiModelsLoading, setAiModelsLoading] = React.useState(false);
   const [aiModelsError, setAiModelsError] = React.useState(false);
   const [selectedAiModel, setSelectedAiModel] = React.useState<string | null>(null);
+  const styleCarouselRef = React.useRef<HTMLDivElement | null>(null);
 
   const sourceKey = sourceIds.join(",");
   const aiModelsCache = React.useRef<{ notebookId: string; sourceIds: Set<string>; suggestions: AiReportModel[] } | null>(null);
@@ -225,7 +226,7 @@ function CreateDialog({ type, notebookId, sourceIds, onClose, onGenerate }: { ty
     return () => { active = false; };
   }, [type, notebookId, sourceKey]);
   React.useEffect(() => {
-    setOpts(type === "report" ? { template: "briefing", reportFormat: "document" } : type === "flashcards" || type === "quiz" ? { difficulty: "medium", count: "standard" } : type === "audio" ? { format: "deep_dive", duration: "standard", style: "accessible" } : {});
+    setOpts(type === "report" ? { template: "briefing", reportFormat: "document" } : type === "flashcards" || type === "quiz" ? { difficulty: "medium", count: "standard" } : type === "audio" ? { format: "deep_dive", duration: "standard", style: "accessible" } : type === "infographic" ? { language: "fr", orientation: "landscape", visualStyle: "auto", detailLevel: "standard", sourceScope: "selected" } : {});
     setPrompt("");
   }, [type]);
   if (!type) return null;
@@ -265,7 +266,7 @@ function CreateDialog({ type, notebookId, sourceIds, onClose, onGenerate }: { ty
   }
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent size="lg" title={type === "report" ? "Créer un rapport" : `Générer : ${TYPES[type].label}`} description={type === "report" ? "Choisissez un format et un modèle pour composer un rapport à partir de vos sources." : "À partir des sources sélectionnées. La génération continue en arrière-plan."}>
+      <DialogContent size="lg" title={type === "infographic" ? "Personnaliser l’infographie" : type === "report" ? "Créer un rapport" : `Générer : ${TYPES[type].label}`} description={type === "infographic" ? "Configurez la langue, le format, le style et les sources avant de lancer la création." : type === "report" ? "Choisissez un format et un modèle pour composer un rapport à partir de vos sources." : "À partir des sources sélectionnées. La génération continue en arrière-plan."}>
         <form onSubmit={submit} className="grid gap-5">
           {type === "report" && (
             <>
@@ -317,15 +318,84 @@ function CreateDialog({ type, notebookId, sourceIds, onClose, onGenerate }: { ty
               </section>
             </>
           )}
+          {type === "infographic" && (
+            <div className="grid gap-5">
+              <section className="grid gap-2">
+                <h3 className="text-sm font-semibold">Langue</h3>
+                {choice("language", "Langue", [["fr", "Français"], ["en", "Anglais"], ["es", "Espagnol"], ["de", "Allemand"], ["it", "Italien"], ["pt", "Portugais"], ["nl", "Néerlandais"]])}
+              </section>
+              <section className="grid gap-2">
+                <h3 className="text-sm font-semibold">Orientation</h3>
+                <div role="radiogroup" aria-label="Orientation de l’infographie" className="grid grid-cols-3 gap-2">
+                  {([["landscape", "Paysage"], ["portrait", "Portrait"], ["square", "Carré"]] as const).map(([value, title]) => (
+                    <button key={value} type="button" role="radio" aria-checked={(opts.orientation ?? "landscape") === value} onClick={() => setOpts((current) => ({ ...current, orientation: value }))} className={cn("grid min-h-16 place-items-center gap-2 rounded-xl border p-3 text-sm transition-colors", (opts.orientation ?? "landscape") === value ? "border-accent bg-accent-soft ring-1 ring-accent" : "border-border bg-surface hover:bg-surface-raised")}>
+                      <span aria-hidden className={cn("rounded border-2 border-current", value === "portrait" ? "h-8 w-5" : value === "landscape" ? "h-5 w-9" : "size-7")} />
+                      <span>{title}</span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+              <section className="grid gap-3">
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="text-sm font-semibold">Style visuel</h3>
+                  <Button type="button" size="icon-sm" variant="ghost" aria-label="Afficher les styles suivants" onClick={() => styleCarouselRef.current?.scrollBy({ left: 340, behavior: "smooth" })}><ChevronRight aria-hidden /></Button>
+                </div>
+                <div ref={styleCarouselRef} className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2">
+                  {([
+                    ["auto", "Sélection automatique", "autoselect.png"], ["kawaii", "Kawaii", "kawaii.jpeg"],
+                    ["claymation", "Pâte à modeler", "claymation.jpeg"], ["sketchnote", "Croquis", "sketchnote.jpeg"],
+                    ["anime", "Anime", "anime.jpeg"], ["editorial", "Éditorial", "editorial.jpeg"],
+                    ["storyboard", "Éducatif", "storyboard.jpeg"], ["bentogrid", "Grille Bento", "bentogrid.jpeg"],
+                    ["bricks", "Briques", "bricks.jpeg"], ["scientific", "Scientifique", "scientific.jpeg"],
+                    ["professional", "Professionnel", "professional.jpeg"],
+                  ] as const).map(([value, title, image]) => {
+                    const selected = (opts.visualStyle ?? "auto") === value;
+                    return <button key={value} type="button" aria-pressed={selected} onClick={() => setOpts((current) => ({ ...current, visualStyle: value }))} className={cn("w-36 shrink-0 snap-start overflow-hidden rounded-xl border text-left transition-colors", selected ? "border-accent bg-accent-soft ring-1 ring-accent" : "border-border bg-surface hover:border-accent")}>
+                      <span role="img" aria-label={title} className="block aspect-[5/3] bg-cover bg-center bg-muted" style={{ backgroundImage: "url(https://www.gstatic.com/tailwind/_/static/infographic/" + image + ")" }} />
+                      <span className="flex min-h-11 items-center justify-between gap-1 px-2 py-2 text-xs font-medium">{title}{selected && <Check className="size-4 shrink-0 text-accent" aria-label="Sélectionné" />}</span>
+                    </button>;
+                  })}
+                </div>
+              </section>
+              <section className="grid gap-2">
+                <h3 className="text-sm font-semibold">Niveau de détail</h3>
+                <div role="radiogroup" aria-label="Niveau de détail" className="flex flex-wrap gap-2">
+                  {([["concise", "Concis"], ["standard", "Standard"], ["detailed", "Détaillé"]] as const).map(([value, title]) => (
+                    <button key={value} type="button" role="radio" aria-checked={(opts.detailLevel ?? "standard") === value} onClick={() => setOpts((current) => ({ ...current, detailLevel: value }))} className={cn("inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm transition-colors", (opts.detailLevel ?? "standard") === value ? "border-accent bg-accent-soft font-medium" : "border-border bg-surface hover:bg-surface-raised")}>
+                      {title}{value === "detailed" && <Badge tone="warning">BÊTA</Badge>}
+                    </button>
+                  ))}
+                </div>
+              </section>
+              <section className="grid gap-2">
+                <h3 className="text-sm font-semibold">Sources</h3>
+                {choice("sourceScope", "Sources à utiliser", [["selected", sourceIds.length === 1 ? "1 source" : sourceIds.length + " sources"], ["all", "Toutes les sources prêtes du notebook"]])}
+                <p className="text-xs text-text-muted">Les citations seront vérifiées et reliées aux passages des sources utilisées.</p>
+              </section>
+            </div>
+          )}
           {type === "audio" && <div className="grid gap-4 sm:grid-cols-2">{choice("format", "Format du podcast", [["deep_dive", "Deep Dive · approfondi"], ["brief", "Brief · essentiel"], ["critique", "Critique · analyse"], ["debate", "Débat · points de vue"]])}{choice("duration", "Durée cible", [["short", "Court · 5 min"], ["standard", "Standard · 10 min"], ["long", "Long · 15 min"]])}{choice("style", "Ton", [["accessible", "Accessible et pédagogique"], ["professional", "Professionnel et précis"], ["dynamic", "Dynamique et vivant"]])}</div>}
           {(type === "flashcards" || type === "quiz") && <div className="grid gap-4 sm:grid-cols-2">{choice("difficulty", "Difficulté", [["easy", "Facile"], ["medium", "Moyenne"], ["hard", "Difficile"]])}{choice("count", "Quantité", [["fewer", "Moins"], ["standard", "Standard"], ["more", "Plus"]])}</div>}
-          <Field id="opt-prompt" label={type === "report" ? "Personnaliser le modèle (facultatif)" : "Consignes (facultatif)"} hint={type === "report" ? "Public visé, ton, plan souhaité, longueur ou éléments à mettre en avant…" : "Public visé, angle, thèmes à privilégier…"}>
-            <Textarea value={prompt} maxLength={4000} onChange={(e) => setPrompt(e.target.value)} placeholder={type === "report" ? "Ex. : rédiger pour une direction, avec une synthèse exécutive et des recommandations concrètes." : "Ex. : pour un public débutant, insister sur la sécurité."} />
+          <Field id="opt-prompt" label={type === "infographic" ? "Décrivez l’infographie que vous souhaitez créer" : type === "report" ? "Personnaliser le modèle (facultatif)" : "Consignes (facultatif)"} hint={type === "infographic" ? undefined : type === "report" ? "Public visé, ton, plan souhaité, longueur ou éléments à mettre en avant…" : "Public visé, angle, thèmes à privilégier…"}>
+            <Textarea value={prompt} maxLength={4000} onChange={(e) => setPrompt(e.target.value)} placeholder={type === "infographic" ? "Indiquez le style, la couleur ou le thème principal : « Utilise un thème de couleurs bleu et mets en avant les… »" : type === "report" ? "Ex. : rédiger pour une direction, avec une synthèse exécutive et des recommandations concrètes." : "Ex. : pour un public débutant, insister sur la sécurité."} />
           </Field>
-          <div className="flex justify-end gap-2 border-t pt-4">
-            <DialogClose asChild><Button type="button" variant="secondary">Annuler</Button></DialogClose>
-            <Button type="submit" loading={sending}><Sparkles aria-hidden /> {type === "report" ? "Générer le rapport" : "Générer"}</Button>
-          </div>
+          {type === "infographic" ? (
+            <div className="grid gap-4 border-t pt-4">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-text-muted" aria-label="Estimation de consommation IA">
+                <span className="inline-flex items-center gap-2"><span className="size-2 rounded-full bg-text-subtle" /> Déjà utilisé</span>
+                <span className="inline-flex items-center gap-2"><span className="size-2 rounded-full bg-accent" /> Utilisation estimée</span>
+              </div>
+              <div className="flex flex-wrap justify-end gap-2">
+                <Button type="button" variant="ghost" onClick={onClose}>Générer plus tard</Button>
+                <Button type="submit" loading={sending}><Sparkles aria-hidden /> Générer maintenant</Button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex justify-end gap-2 border-t pt-4">
+              <DialogClose asChild><Button type="button" variant="secondary">Annuler</Button></DialogClose>
+              <Button type="submit" loading={sending}><Sparkles aria-hidden /> {type === "report" ? "Générer le rapport" : "Générer"}</Button>
+            </div>
+          )}
         </form>
       </DialogContent>
     </Dialog>
@@ -349,7 +419,7 @@ async function resetProgress(id: string) {
 }
 
 function ArtifactViewer({ id, canShare, onClose, sourceTitle, onOpenCitation, onAsk }: { id: string | null; canShare: boolean; onClose: () => void; sourceTitle: (id: string) => string | undefined; onOpenCitation?: (c: Cite) => void; onAsk: (t: string) => void }) {
-  const [data, setData] = React.useState<{ artifact: { id: string; type: ArtType; title: string | null; content: Content; custom_prompt: string | null }; citations: Cite[]; progress: Progress[] } | null>(null);
+  const [data, setData] = React.useState<{ artifact: { id: string; type: ArtType; title: string | null; content: Content; options: Record<string, string> | null; custom_prompt: string | null }; citations: Cite[]; progress: Progress[] } | null>(null);
   const [failed, setFailed] = React.useState(false);
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
   const [playbackRate, setPlaybackRate] = React.useState("1");
@@ -368,7 +438,7 @@ function ArtifactViewer({ id, canShare, onClose, sourceTitle, onOpenCitation, on
           {art?.custom_prompt && !art.custom_prompt.startsWith(AUDIO_OVERVIEW_MARKER) && <p className="mb-4 rounded-md bg-surface px-3 py-2 text-xs text-text-muted"><span className="font-medium">Consignes de génération :</span> {art.custom_prompt}</p>}
           {failed ? <Alert tone="danger" title="Contenu indisponible" />
             : !art ? <div className="grid gap-2" aria-busy="true" aria-label="Chargement"><Skeleton className="h-5 w-2/3" /><Skeleton className="h-4" /><Skeleton className="h-4 w-5/6" /></div>
-             : art.type === "infographic" ? <InfographicView markdown={art.content.markdown ?? ""} citations={data!.citations} sourceTitle={sourceTitle} onOpen={onOpenCitation ? (c) => { onClose(); onOpenCitation(c); } : undefined} />
+             : art.type === "infographic" ? <InfographicView markdown={art.content.markdown ?? ""} options={art.options ?? {}} citations={data!.citations} sourceTitle={sourceTitle} onOpen={onOpenCitation ? (c) => { onClose(); onOpenCitation(c); } : undefined} />
              : art.type === "diagram" ? <DiagramEditor markdown={art.content.markdown ?? ""} />
              : art.type === "report" || art.type === "audio" || ["timeline", "comparison", "glossary", "faq", "editorial", "study_plan"].includes(art.type) ? <div className="grid gap-4">{art.content.audio_path && <div className="grid gap-2 rounded-lg border border-border p-3"><audio ref={audioRef} controls preload="metadata" className="w-full" src={`/api/v1/artifacts/${art.id}/audio`} /><div className="flex flex-wrap items-center justify-between gap-2"><div className="flex flex-wrap items-center gap-3 text-xs text-text-muted">{typeof art.content.estimated_duration_seconds === "number" && <span>Durée estimée : {Math.floor(art.content.estimated_duration_seconds / 60)} min</span>}{typeof art.content.tts_characters === "number" && <span>{art.content.tts_characters.toLocaleString("fr-FR")} caractères TTS</span>}{typeof art.content.segment_count === "number" && <span>{art.content.segment_count} répliques</span>}</div><label className="flex items-center gap-2 text-xs text-text-muted">Vitesse <select aria-label="Vitesse de lecture" className="h-8 rounded-md border border-border-input bg-surface-raised px-2 text-sm text-text" value={playbackRate} onChange={(e) => setPlaybackRate(e.target.value)}>{["0.75", "1", "1.25", "1.5", "1.75", "2"].map((v) => <option key={v} value={v}>{v}×</option>)}</select></label><a className="inline-flex items-center gap-2 text-sm font-medium text-accent hover:underline" href={`/api/v1/artifacts/${art.id}/audio?download=1`}><Download aria-hidden size={16} /> Télécharger le MP3</a></div></div>}<Markdown text={art.content.markdown ?? ""} citations={data!.citations} sourceTitle={sourceTitle} onOpen={onOpenCitation ? (c) => { onClose(); onOpenCitation(c); } : undefined} /></div>
             : art.type === "flashcards" ? <Flashcards id={art.id} title={art.title || "fiches"} cards={art.content.cards ?? []} progress={data!.progress} />
@@ -381,7 +451,7 @@ function ArtifactViewer({ id, canShare, onClose, sourceTitle, onOpenCitation, on
   );
 }
 
-function InfographicView({ markdown, citations, sourceTitle, onOpen }: { markdown: string; citations: Cite[]; sourceTitle: (id: string) => string | undefined; onOpen?: (c: Cite) => void }) {
+function InfographicView({ markdown, options, citations, sourceTitle, onOpen }: { markdown: string; options: Record<string, string>; citations: Cite[]; sourceTitle: (id: string) => string | undefined; onOpen?: (c: Cite) => void }) {
   const lines = markdown.split(/\r?\n/);
   const title = lines.find((line) => /^#\s+/.test(line))?.replace(/^#\s+/, "") ?? "Synthèse visuelle";
   const stats = [...markdown.matchAll(/(?:^|\n)[-*]\s+([^:\n]{2,60}):\s*([^\n]{1,70})/g)].slice(0, 4).map((m) => ({ label: m[1].replace(/\*\*/g, ""), value: m[2].replace(/\[(\d+)\]/g, "") }));
@@ -395,6 +465,19 @@ function InfographicView({ markdown, citations, sourceTitle, onOpen }: { markdow
   }
   const cards = sections.filter((x) => x.items.length).slice(0, 6);
   const cols = cards.length > 3 ? 3 : Math.max(1, cards.length);
+  const palettes: Record<string, { accent: string; soft: string }> = {
+    auto: { accent: "#2563eb", soft: "#dbeafe" }, kawaii: { accent: "#db6b9a", soft: "#fce7f3" },
+    claymation: { accent: "#b96b43", soft: "#f4dfd0" }, sketchnote: { accent: "#2563a6", soft: "#e0efff" },
+    anime: { accent: "#7c3aed", soft: "#ede9fe" }, editorial: { accent: "#1f2937", soft: "#e5e7eb" },
+    storyboard: { accent: "#0f766e", soft: "#ccfbf1" }, bentogrid: { accent: "#4f46e5", soft: "#e0e7ff" },
+    bricks: { accent: "#c2410c", soft: "#ffedd5" }, scientific: { accent: "#0e7490", soft: "#cffafe" },
+    professional: { accent: "#174b75", soft: "#dceaf4" },
+  };
+  const palette = palettes[options.visualStyle ?? "auto"] ?? palettes.auto;
+  const orientation = options.orientation ?? "landscape";
+  const canvasSize = orientation === "portrait" ? { width: 620, height: 960 } : orientation === "square" ? { width: 800, height: 800 } : { width: 960, height: 620 };
+  const detailLabels: Record<string, string> = { concise: "Concis", standard: "Standard", detailed: "Détaillé", very_detailed: "Très détaillé" };
+  const styleLabels: Record<string, string> = { auto: "Automatique", kawaii: "Kawaii", claymation: "Pâte à modeler", sketchnote: "Croquis", anime: "Anime", editorial: "Éditorial", storyboard: "Éducatif", bentogrid: "Grille Bento", bricks: "Briques", scientific: "Scientifique", professional: "Professionnel" };
   const downloadSvg = () => {
     const svg = document.getElementById("studio-infographic-preview");
     if (!svg) return;
@@ -402,15 +485,15 @@ function InfographicView({ markdown, citations, sourceTitle, onOpen }: { markdow
     const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = "infographie-studio.svg"; a.click(); URL.revokeObjectURL(url);
   };
   return <div className="grid gap-3">
-    <div className="flex justify-end"><Button size="sm" variant="secondary" onClick={downloadSvg}><Download aria-hidden size={15} /> Exporter en SVG</Button></div>
-    <div className="overflow-hidden rounded-xl border border-border bg-surface">
-      <svg id="studio-infographic-preview" viewBox="0 0 960 620" role="img" aria-label={title} className="h-auto w-full">
-        <defs><linearGradient id="studioInfographicBg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="var(--color-accent, #0f4c8a)" stopOpacity=".16" /><stop offset="100%" stopColor="var(--color-surface, #f3f1ec)" /></linearGradient></defs>
-        <rect width="960" height="620" rx="22" fill="url(#studioInfographicBg)" />
+    <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-xs text-text-muted">{orientation === "portrait" ? "Portrait" : orientation === "square" ? "Carré" : "Paysage"} · {styleLabels[options.visualStyle ?? "auto"] ?? "Automatique"} · {detailLabels[options.detailLevel ?? "standard"] ?? "Standard"}</p><Button size="sm" variant="secondary" onClick={downloadSvg}><Download aria-hidden size={15} /> Exporter en SVG</Button></div>
+    <div className="mx-auto overflow-hidden rounded-xl border border-border bg-surface" style={{ width: "100%", maxWidth: orientation === "portrait" ? "420px" : "100%", aspectRatio: canvasSize.width + " / " + canvasSize.height }}>
+      <svg id="studio-infographic-preview" width={canvasSize.width} height={canvasSize.height} viewBox="0 0 960 620" preserveAspectRatio="xMidYMid meet" role="img" aria-label={title} className="h-full w-full" style={{ "--infographic-accent": palette.accent, "--infographic-soft": palette.soft } as React.CSSProperties}>
+        <defs><linearGradient id="studioInfographicBg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="var(--infographic-accent)" stopOpacity=".16" /><stop offset="100%" stopColor="var(--color-surface, #f3f1ec)" /></linearGradient></defs>
+        <rect width="960" height="620" rx="22" fill="var(--infographic-soft)" />
         <text x="48" y="64" fontSize="29" fontWeight="700" fill="currentColor">{title.slice(0, 58)}</text>
         <text x="48" y="94" fontSize="13" fill="currentColor" opacity=".62">SYNTHÈSE EXTRAITE DES SOURCES DU NOTEBOOK</text>
-        {stats.map((stat, i) => { const w = 864 / stats.length - 14; return <g key={i} transform={"translate(" + (48 + i * (864 / stats.length)) + ",124)"}><rect width={w} height="94" rx="12" fill="var(--color-surface, #f3f1ec)" stroke="var(--color-border, #e2ded5)" /><text x="14" y="30" fontSize="12" fill="currentColor" opacity=".65">{stat.label.slice(0, 24)}</text><text x="14" y="65" fontSize="23" fontWeight="700" fill="var(--color-accent, #0f4c8a)">{stat.value.slice(0, 18)}</text></g>; })}
-        {cards.map((card, i) => { const w = 864 / cols - 14; const x = 48 + (i % cols) * (864 / cols); const y = 246 + Math.floor(i / cols) * 164; return <g key={i} transform={"translate(" + x + "," + y + ")"}><rect width={w} height="146" rx="12" fill="var(--color-surface, #f3f1ec)" stroke="var(--color-border, #e2ded5)" /><circle cx="22" cy="24" r="11" fill="var(--color-accent, #0f4c8a)" opacity=".18" /><text x="22" y="28" textAnchor="middle" fontSize="11" fontWeight="700" fill="var(--color-accent, #0f4c8a)">{i + 1}</text><text x="42" y="29" fontSize="15" fontWeight="700" fill="currentColor">{card.title.slice(0, 28)}</text>{card.items.map((item, j) => <g key={j}><circle cx="18" cy={58 + j * 20} r="3" fill="var(--color-accent, #0f4c8a)" /><text x="30" y={62 + j * 20} fontSize="11.5" fill="currentColor">{item.slice(0, Math.floor((w - 48) / 7))}</text></g>)}</g>; })}
+        {stats.map((stat, i) => { const w = 864 / stats.length - 14; return <g key={i} transform={"translate(" + (48 + i * (864 / stats.length)) + ",124)"}><rect width={w} height="94" rx="12" fill="var(--color-surface, #f3f1ec)" stroke="var(--color-border, #e2ded5)" /><text x="14" y="30" fontSize="12" fill="currentColor" opacity=".65">{stat.label.slice(0, 24)}</text><text x="14" y="65" fontSize="23" fontWeight="700" fill="var(--infographic-accent)">{stat.value.slice(0, 18)}</text></g>; })}
+        {cards.map((card, i) => { const w = 864 / cols - 14; const x = 48 + (i % cols) * (864 / cols); const y = 246 + Math.floor(i / cols) * 164; return <g key={i} transform={"translate(" + x + "," + y + ")"}><rect width={w} height="146" rx="12" fill="var(--color-surface, #f3f1ec)" stroke="var(--color-border, #e2ded5)" /><circle cx="22" cy="24" r="11" fill="var(--infographic-accent)" opacity=".18" /><text x="22" y="28" textAnchor="middle" fontSize="11" fontWeight="700" fill="var(--infographic-accent)">{i + 1}</text><text x="42" y="29" fontSize="15" fontWeight="700" fill="currentColor">{card.title.slice(0, 28)}</text>{card.items.map((item, j) => <g key={j}><circle cx="18" cy={58 + j * 20} r="3" fill="var(--infographic-accent)" /><text x="30" y={62 + j * 20} fontSize="11.5" fill="currentColor">{item.slice(0, Math.floor((w - 48) / 7))}</text></g>)}</g>; })}
         <text x="48" y="590" fontSize="11" fill="currentColor" opacity=".55">Détails et références vérifiées conservés sous le visuel.</text>
       </svg>
     </div>

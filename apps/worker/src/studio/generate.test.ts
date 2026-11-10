@@ -30,6 +30,13 @@ describe("toContent (validation des sorties du modèle)", () => {
     const r = toContent("mind_map", JSON.stringify(deep), P) as { content: { root: { children: { children: { children: { children: unknown[] }[] }[] }[] } } };
     expect(r.content.root.children[0].children[0].children[0].children).toEqual([]);
   });
+  it("infographie : applique langue, orientation, style et niveau de détail au prompt", () => {
+    const { messages, json } = buildPrompt("infographic", { orientation: "portrait", visualStyle: "scientific", detailLevel: "very_detailed" }, null, "<passage n=\"1\">x</passage>", "fr");
+    expect(json).toBe(false);
+    expect(messages[0].content).toContain("portrait vertical");
+    expect(messages[0].content).toContain("visualisation scientifique rigoureuse");
+    expect(messages[0].content).toContain("très détaillé");
+  });
   it("JSON absent : erreur réessayable (pas PermanentError)", () => {
     expect(() => parseJson("pas de json")).toThrow("json_absent");
   });

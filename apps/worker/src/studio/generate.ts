@@ -68,7 +68,17 @@ export function buildPrompt(type: string, options: Record<string, unknown>, cust
       const mode = type === "report" && options.reportFormat === "interactive"
         ? "Présente le résultat comme un rapport interactif à parcourir dans le Studio : sections courtes et autonomes, encadrés « À retenir », questions de réflexion et listes d’actions lorsque les sources le permettent. N’utilise pas de HTML ni de code."
         : "Respecte strictement le format demandé. Utilise uniquement du Markdown sûr, sans HTML ni JavaScript.";
-      const task = "TÂCHE : rédige le contenu en Markdown (titres ##, listes et tableaux si utiles). Format : " + t + "\n" + mode + "\nChaque affirmation tirée d’un passage doit se terminer par son numéro entre crochets, ex. [3] ou [1, 4]. N’invente jamais de numéro.";
+      const infographicOptions = type === "infographic" ? options as { orientation?: string; visualStyle?: string; detailLevel?: string } : null;
+      const orientationLabels: Record<string, string> = { portrait: "portrait vertical", landscape: "paysage horizontal", square: "carré" };
+      const styleLabels: Record<string, string> = { auto: "choisis le style le plus adapté au sujet", kawaii: "illustrations kawaii, douces et ludiques", claymation: "illustrations en pâte à modeler avec volumes et textures", sketchnote: "croquis dessinés à la main et annotations", anime: "illustration inspirée de l’animation japonaise", editorial: "mise en page éditoriale avec typographie forte", storyboard: "séquençage pédagogique en étapes", bentogrid: "grille Bento modulaire", bricks: "blocs modulaires imbriqués", scientific: "visualisation scientifique rigoureuse", professional: "design professionnel et corporate" };
+      const detailLabels: Record<string, string> = { concise: "concis, ne garder que l’essentiel", standard: "équilibré", detailed: "détaillé avec explications", very_detailed: "très détaillé, couvrir toutes les informations pertinentes sans surcharge" };
+      const infographicGuidance = infographicOptions ? [
+        "Orientation demandée : " + (orientationLabels[infographicOptions.orientation ?? "portrait"] ?? "portrait vertical") + ".",
+        "Style visuel : " + (styleLabels[infographicOptions.visualStyle ?? "auto"] ?? "style adapté") + ".",
+        "Niveau de détail : " + (detailLabels[infographicOptions.detailLevel ?? "standard"] ?? "équilibré") + ".",
+        "Structure le contenu pour qu’il puisse être converti en une infographie lisible, hiérarchisée et visuellement équilibrée. Privilégie les titres courts, les données vérifiables, les étapes numérotées et les comparaisons utiles."
+      ].join("\n") : "";
+      const task = "TÂCHE : rédige le contenu en Markdown (titres ##, listes et tableaux si utiles). Format : " + t + "\n" + infographicGuidance + "\n" + mode + "\nChaque affirmation tirée d’un passage doit se terminer par son numéro entre crochets, ex. [3] ou [1, 4]. N’invente jamais de numéro.";
       return { json: false, messages: [sys(task), user] };
     }
     case "flashcards": {
