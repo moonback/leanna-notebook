@@ -30,7 +30,7 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
     inputAudioTranscription: {},
     outputAudioTranscription: {},
     speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } },
-    systemInstruction: { parts: [{ text: [VOICE_SYSTEM_PROMPTS[persona], promptOverride?.content].filter(Boolean).join("\\n\\n") }] },
+    systemInstruction: { parts: [{ text: [VOICE_SYSTEM_PROMPTS[persona], promptOverride?.content].filter(Boolean).join("\n\n") }] },
     ...(persona === "leanna" ? { tools: [{ functionDeclarations: [{
       name: "search_notebook_sources",
       description: "Recherche des passages pertinents dans les sources prêtes et sélectionnées du notebook courant. À appeler avant toute réponse documentaire.",
