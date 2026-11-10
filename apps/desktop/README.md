@@ -19,6 +19,8 @@ pnpm install
 pnpm desktop:dev
 ```
 
+`pnpm desktop:test` compile le processus Electron puis exécute les tests Node.js des validations de sécurité (URL d'application, liens externes et filtres de fichiers).
+
 La commande compile le processus Electron, démarre Next.js sur `127.0.0.1:3000`, attend sa disponibilité puis ouvre la fenêtre desktop.
 
 Si le package npm Electron est présent mais que son binaire natif manque, relancer l'installation du workspace après récupération de la configuration :
@@ -43,6 +45,7 @@ pnpm --dir apps/desktop exec electron --version
 - Le preload expose une API étroite et typée via `contextBridge`.
 - Les dialogues IPC vérifient le processus émetteur.
 - Les téléchargements sont acceptés uniquement depuis la fenêtre principale et nécessitent une destination choisie par l'utilisateur.
+- L'URL configurée via `LEANNA_WEB_URL` doit utiliser HTTPS ; HTTP n'est accepté que pour `localhost`, `127.0.0.1` ou `::1` en développement.
 - La navigation interne reste limitée à l'origine Next configurée.
 - Les liens externes HTTPS sont ouverts dans le navigateur système.
 - Aucun secret Supabase, Gemini ou worker n'est embarqué dans Electron.
