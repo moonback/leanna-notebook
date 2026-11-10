@@ -160,12 +160,25 @@ export function Studio({ notebookId, canEdit, sourceIds, sourceTitle, onOpenCita
 
 /* ------------------------------------------------------------- Création ---- */
 
+const REPORT_MODELS = [
+  { id: "custom", title: "Créer le vôtre", description: "Définissez votre structure, votre ton et vos consignes." },
+  { id: "briefing", title: "Document de synthèse", description: "Les informations essentielles, les points clés et les citations des sources." },
+  { id: "study_guide", title: "Guide d'étude", description: "Notions clés, explications, questions de révision et glossaire." },
+  { id: "blog_post", title: "Article de blog", description: "Un article fluide, structuré et agréable à lire." },
+] as const;
+const AI_REPORT_MODELS = [
+  { id: "specification", title: "Spécification", description: "Exigences, fonctionnalités, contraintes et critères d'acceptation." },
+  { id: "action_plan", title: "Plan d'action", description: "Objectifs, étapes, priorités, responsables et échéances." },
+  { id: "practical_sheet", title: "Fiche pratique", description: "Une fiche opérationnelle avec méthodes et points de vigilance." },
+  { id: "detailed_guide", title: "Guide détaillé", description: "Un parcours progressif pour comprendre et appliquer le sujet." },
+] as const;
+
 function CreateDialog({ type, onClose, onGenerate }: { type: ArtType | null; onClose: () => void; onGenerate: (t: ArtType, o: Record<string, string>, p?: string) => Promise<boolean> }) {
   const [opts, setOpts] = React.useState<Record<string, string>>({});
   const [prompt, setPrompt] = React.useState("");
   const [sending, setSending] = React.useState(false);
   React.useEffect(() => {
-    setOpts(type === "report" ? { template: "briefing" } : type === "flashcards" || type === "quiz" ? { difficulty: "medium", count: "standard" } : type === "audio" ? { format: "deep_dive", duration: "standard", style: "accessible" } : {});
+    setOpts(type === "report" ? { template: "briefing", reportFormat: "document" } : type === "flashcards" || type === "quiz" ? { difficulty: "medium", count: "standard" } : type === "audio" ? { format: "deep_dive", duration: "standard", style: "accessible" } : {});
     setPrompt("");
   }, [type]);
   if (!type) return null;
@@ -176,32 +189,69 @@ function CreateDialog({ type, onClose, onGenerate }: { type: ArtType | null; onC
       </select>
     </Field>
   );
+  const selectTemplate = (id: string) => setOpts((current) => ({ ...current, template: id }));
+  const modelCard = (model: { id: string; title: string; description: string }) => {
+    const selected = opts.template === model.id;
+    return (
+      <button key={model.id} type="button" aria-pressed={selected} onClick={() => selectTemplate(model.id)}
+        className={cn("flex min-h-28 flex-col items-start gap-2 rounded-xl border p-4 text-left transition-colors hover:border-accent hover:bg-accent-soft/40", selected ? "border-accent bg-accent-soft/60 ring-1 ring-accent" : "border-border bg-surface")}>
+        <span className="flex w-full items-center justify-between gap-2 text-sm font-semibold">
+          {model.title}
+          {selected ? <Check className="size-4 shrink-0 text-accent" aria-label="Sélectionné" /> : <span className="size-4 shrink-0 rounded-full border border-border" />}
+        </span>
+        <span className="text-xs leading-5 text-text-muted">{model.description}</span>
+      </button>
+    );
+  };
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setSending(true);
-    const audioPrompt = type === "audio" ? `${AUDIO_OVERVIEW_MARKER}${prompt.trim() ? `\n${prompt.trim()}` : ""}` : undefined;
+    const audioPrompt = type === "audio" ? `${AUDIO_OVERVIEW_MARKER}${prompt.trim() ? `\\n${prompt.trim()}` : ""}` : undefined;
     const ok = await onGenerate(type!, opts, type === "audio" ? audioPrompt : prompt.trim() || undefined);
     setSending(false);
     if (ok) onClose();
   }
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent title={`Générer : ${TYPES[type].label}`} description="À partir des sources sélectionnées. La génération continue en arrière-plan.">
-        <form onSubmit={submit} className="grid gap-4">
-          {type === "report" && choice("template", "Format", [["briefing", "Note de synthèse"], ["study_guide", "Guide d’étude"], ["faq", "Questions fréquentes"]])}
-          {type === "audio" && <div className="grid gap-4 sm:grid-cols-2">{choice("format", "Format du podcast", [["deep_dive", "Deep Dive · approfondi"], ["brief", "Brief · essentiel"], ["critique", "Critique · analyse"], ["debate", "Débat · points de vue"]])}{choice("duration", "Durée cible", [["short", "Court · 5 min"], ["standard", "Standard · 10 min"], ["long", "Long · 15 min"]])}{choice("style", "Ton", [["accessible", "Accessible et pédagogique"], ["professional", "Professionnel et précis"], ["dynamic", "Dynamique et vivant"]])}</div>}
-          {(type === "flashcards" || type === "quiz") && (
-            <div className="grid gap-4 sm:grid-cols-2">
-              {choice("difficulty", "Difficulté", [["easy", "Facile"], ["medium", "Moyenne"], ["hard", "Difficile"]])}
-              {choice("count", "Quantité", [["fewer", "Moins"], ["standard", "Standard"], ["more", "Plus"]])}
-            </div>
+      <DialogContent size={type === "report" ? "xl" : "lg"} title={type === "report" ? "Créer un rapport" : `Générer : ${TYPES[type].label}`} description={type === "report" ? "Choisissez un format et un modèle pour composer un rapport à partir de vos sources." : "À partir des sources sélectionnées. La génération continue en arrière-plan."}>
+        <form onSubmit={submit} className="grid gap-5">
+          {type === "report" && (
+            <>
+              <section className="grid gap-3">
+                <h3 className="text-sm font-medium">Format</h3>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {([
+                    { id: "interactive", title: "Interactif", description: "Un rapport à explorer avec des contenus Studio intégrés." },
+                    { id: "document", title: "Document", description: "Un document structuré contenant uniquement du texte." },
+                  ]).map((format) => (
+                    <button key={format.id} type="button" aria-pressed={(opts.reportFormat ?? "document") === format.id}
+                      onClick={() => setOpts({ ...opts, reportFormat: format.id })}
+                      className={cn("flex min-h-20 items-start justify-between gap-3 rounded-2xl border p-4 text-left transition-colors", (opts.reportFormat ?? "document") === format.id ? "border-accent bg-accent-soft" : "border-border bg-surface hover:bg-surface-raised")}>
+                      <span className="grid gap-1"><span className="font-medium">{format.title}</span><span className="text-xs leading-5 text-text-muted">{format.description}</span></span>
+                      {(opts.reportFormat ?? "document") === format.id ? <Check className="mt-1 size-4 shrink-0" /> : <span className="mt-1 size-4 shrink-0 rounded-full border border-border" />}
+                    </button>
+                  ))}
+                </div>
+              </section>
+              <section className="grid gap-3">
+                <h3 className="text-sm font-medium">Modèle</h3>
+                <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">{REPORT_MODELS.map(modelCard)}</div>
+              </section>
+              <section className="grid gap-3">
+                <h3 className="flex items-center gap-2 text-sm font-medium"><Sparkles className="size-4" /> Modèles suggérés par l'IA</h3>
+                <p className="text-xs text-text-muted">Des formats complémentaires pour transformer vos sources en livrables concrets.</p>
+                <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">{AI_REPORT_MODELS.map(modelCard)}</div>
+              </section>
+            </>
           )}
-          <Field id="opt-prompt" label="Consignes (facultatif)" hint="Public visé, angle, thèmes à privilégier…">
-            <Textarea value={prompt} maxLength={4000} onChange={(e) => setPrompt(e.target.value)} placeholder="Ex. : pour un public débutant, insister sur la sécurité." />
+          {type === "audio" && <div className="grid gap-4 sm:grid-cols-2">{choice("format", "Format du podcast", [["deep_dive", "Deep Dive · approfondi"], ["brief", "Brief · essentiel"], ["critique", "Critique · analyse"], ["debate", "Débat · points de vue"]])}{choice("duration", "Durée cible", [["short", "Court · 5 min"], ["standard", "Standard · 10 min"], ["long", "Long · 15 min"]])}{choice("style", "Ton", [["accessible", "Accessible et pédagogique"], ["professional", "Professionnel et précis"], ["dynamic", "Dynamique et vivant"]])}</div>}
+          {(type === "flashcards" || type === "quiz") && <div className="grid gap-4 sm:grid-cols-2">{choice("difficulty", "Difficulté", [["easy", "Facile"], ["medium", "Moyenne"], ["hard", "Difficile"]])}{choice("count", "Quantité", [["fewer", "Moins"], ["standard", "Standard"], ["more", "Plus"]])}</div>}
+          <Field id="opt-prompt" label={type === "report" ? "Personnaliser le modèle (facultatif)" : "Consignes (facultatif)"} hint={type === "report" ? "Public visé, ton, plan souhaité, longueur ou éléments à mettre en avant…" : "Public visé, angle, thèmes à privilégier…"}>
+            <Textarea value={prompt} maxLength={4000} onChange={(e) => setPrompt(e.target.value)} placeholder={type === "report" ? "Ex. : rédiger pour une direction, avec une synthèse exécutive et des recommandations concrètes." : "Ex. : pour un public débutant, insister sur la sécurité."} />
           </Field>
-          <div className="flex justify-end gap-2">
+          <div className="flex justify-end gap-2 border-t pt-4">
             <DialogClose asChild><Button type="button" variant="secondary">Annuler</Button></DialogClose>
-            <Button type="submit" loading={sending}><Sparkles aria-hidden /> Générer</Button>
+            <Button type="submit" loading={sending}><Sparkles aria-hidden /> Générer le rapport</Button>
           </div>
         </form>
       </DialogContent>
