@@ -17,7 +17,8 @@ const scriptSchema = z.object({
     speaker: z.enum(["host", "guest"]),
     text: z.string().trim().min(20).max(900),
   })).min(8).max(24),
-}).refine((v) => v.segments[0]?.speaker === "host", "host_must_open");
+}).refine((v) => v.segments[0]?.speaker === "host", "host_must_open")
+  .refine((v) => v.segments.every((s, i) => s.speaker === (i % 2 === 0 ? "host" : "guest")), "speakers_must_alternate");
 
 export type AudioOverviewScript = z.infer<typeof scriptSchema>;
 
