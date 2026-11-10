@@ -53,6 +53,20 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
         properties: { query: { type: "STRING", description: "Question ou concepts à rechercher dans les documents." } },
         required: ["query"]
       }
+    }, {
+      name: "control_notebook",
+      description: "Commande de navigation et de contrôle non destructive du notebook. Utilise-la pour ouvrir une citation, naviguer entre les passages, sélectionner une source, aller au Studio, arrêter la lecture, répéter ou résumer. Ne supprime jamais et ne partage jamais de contenu par cette fonction : demande une confirmation explicite dans l'interface pour toute action sensible.",
+      parameters: {
+        type: "OBJECT",
+        properties: {
+          action: { type: "STRING", enum: ["open_current_citation", "show_passage", "repeat_current_citation", "next_citation", "previous_citation", "select_source", "deselect_source", "open_studio", "stop_speaking", "repeat", "summarize", "save_passage", "add_note"] },
+          sourceTitle: { type: "STRING", description: "Titre exact ou partie du titre de la source." },
+          passageNumber: { type: "INTEGER", description: "Numéro de citation si l'utilisateur le précise." },
+          noteTitle: { type: "STRING", description: "Titre court de la note." },
+          noteText: { type: "STRING", description: "Contenu dicté de la note." }
+        },
+        required: ["action"]
+      }
     }] }] } : {})
   };
 
