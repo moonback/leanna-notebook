@@ -7,7 +7,7 @@ import { createServiceClient, createUserClient } from "@/lib/supabase/server";
 type Params = { params: Promise<{ id: string }> };
 
 const createSchema = z.object({
-  type: z.enum(["report", "flashcards", "quiz", "mind_map"]),
+  type: z.enum(["report", "flashcards", "quiz", "mind_map", "audio"]),
   options: z.object({
     template: z.enum(["briefing", "study_guide", "faq"]).optional(),
     difficulty: z.enum(["easy", "medium", "hard"]).optional(),
