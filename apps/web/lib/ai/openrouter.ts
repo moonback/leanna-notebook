@@ -13,8 +13,8 @@ export class AiUpstreamError extends Error {
 
 function config() {
   const key = process.env.OPENROUTER_API_KEY;
-  const chatModel = process.env.OPENROUTER_CHAT_MODEL;
-  if (!key || !chatModel) throw new AiNotConfigured("OPENROUTER_API_KEY et OPENROUTER_CHAT_MODEL sont requis.");
+  const chatModel = process.env.OPENROUTER_CHAT_MODEL || null;
+  if (!key) throw new AiNotConfigured("OPENROUTER_API_KEY est requis.");
   return { key, chatModel, embedModel: process.env.OPENROUTER_EMBEDDINGS_MODEL || null };
 }
 
@@ -55,6 +55,7 @@ export async function* streamChat(messages: ChatMessage[], opts: { signal?: Abor
   AsyncGenerator<{ type: "delta"; text: string } | { type: "usage"; usage: ChatUsage; model: string }> {
   const { key, chatModel } = config();
   const selectedModel = opts.model ?? chatModel;
+  if (!selectedModel) throw new AiNotConfigured("Aucun modèle de conversation n’est configuré.");
   const res = await fetch(`${BASE}/chat/completions`, {
     method: "POST", headers: headers(key), signal: opts.signal,
     body: JSON.stringify({ model: selectedModel, messages, stream: true, max_tokens: opts.maxTokens ?? 2000, usage: { include: true } }),
