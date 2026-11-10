@@ -9,7 +9,7 @@ import { PendingVoiceSearches, VoiceTurnCitationStore, type NumberedVoicePassage
 
 type VoiceState = "idle" | "connecting" | "listening" | "speaking" | "error";
 type Passage = NumberedVoicePassage;
-type VoiceTurn = { user: string; assistant: string; sources: Passage[] };
+type VoiceTurn = { user: string; assistant: string; roxane?: string; sources: Passage[] };
 type LiveFunctionCall = { id: string; name: string; args?: Record<string, unknown> };
 type LiveMessage = {
   toolCall?: { functionCalls?: LiveFunctionCall[] };
@@ -76,6 +76,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
   const [status, setStatus] = React.useState("Prêt à discuter de vos sources.");
   const [transcript, setTranscript] = React.useState("");
   const [answer, setAnswer] = React.useState("");
+  const [roxaneAnswer, setRoxaneAnswer] = React.useState("");
   const [sources, setSources] = React.useState<Passage[]>([]);
   const [turnHistory, setTurnHistory] = React.useState<VoiceTurn[]>([]);
   const userTurn = React.useRef("");
@@ -87,6 +88,10 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
   const turnFinalizing = React.useRef(false);
   const [muted, setMuted] = React.useState(false);
   const socket = React.useRef<WebSocket | null>(null);
+  const roxaneSocket = React.useRef<WebSocket | null>(null);
+  const roxaneTurnText = React.useRef("");
+  const roxaneTurnResolver = React.useRef<(() => void) | null>(null);
+  const roxaneAskedForTurn = React.useRef(false);
   const audioContext = React.useRef<AudioContext | null>(null);
   const mediaStream = React.useRef<MediaStream | null>(null);
   const processor = React.useRef<AudioWorkletNode | null>(null);
@@ -101,6 +106,10 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
     intentionalClose.current = true;
     socket.current?.close();
     socket.current = null;
+    roxaneSocket.current?.close();
+    roxaneSocket.current = null;
+    roxaneTurnResolver.current?.();
+    roxaneTurnResolver.current = null;
     processor.current?.disconnect();
     processor.current = null;
     micSource.current?.disconnect();
@@ -187,6 +196,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
     setStatus("Connexion sécurisée à Gemini Live…");
     setTranscript("");
     setAnswer("");
+    setRoxaneAnswer("");
     setSources([]);
     setTurnHistory([]);
     try {
@@ -197,22 +207,32 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
       turnPassages.current.clear();
       turnCompletePending.current = false;
       turnFinalizing.current = false;
+      roxaneAskedForTurn.current = false;
+      roxaneTurnText.current = "";
       const ctx = new AudioContext();
       audioContext.current = ctx;
       await ctx.resume();
-      const tokenResponse = await fetch(`/api/v1/notebooks/${notebookId}/voice-token`, {
-        method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ voice: "Aoede" })
-      });
-      const tokenPayload = await tokenResponse.json();
-      if (!tokenResponse.ok) throw new Error(tokenPayload.error === "voice_not_configured" ? "Ajoutez GEMINI_API_KEY côté serveur." : "Impossible d'ouvrir une session vocale.");
+      const [tokenResponse, roxaneTokenResponse] = await Promise.all([
+        fetch(`/api/v1/notebooks/${notebookId}/voice-token`, {
+          method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ voice: "Aoede", persona: "leanna" })
+        }),
+        fetch(`/api/v1/notebooks/${notebookId}/voice-token`, {
+          method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ voice: "Kore", persona: "roxane" })
+        })
+      ]);
+      const [tokenPayload, roxaneTokenPayload] = await Promise.all([tokenResponse.json(), roxaneTokenResponse.json()]);
+      if (!tokenResponse.ok || !roxaneTokenResponse.ok) throw new Error(tokenPayload.error === "voice_not_configured" ? "Ajoutez GEMINI_API_KEY côté serveur." : "Impossible d'ouvrir les deux sessions vocales.");
 
       const ws = new WebSocket(`wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContentConstrained?access_token=${encodeURIComponent(tokenPayload.token)}`);
+      const roxaneWs = new WebSocket(`wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContentConstrained?access_token=${encodeURIComponent(roxaneTokenPayload.token)}`);
       ws.binaryType = "arraybuffer";
+      roxaneWs.binaryType = "arraybuffer";
       socket.current = ws;
-      await new Promise<void>((resolve, reject) => {
-        ws.onopen = () => resolve();
-        ws.onerror = () => reject(new Error("Connexion Gemini Live impossible."));
-      });
+      roxaneSocket.current = roxaneWs;
+      await Promise.all([ws, roxaneWs].map((connection) => new Promise<void>((resolve, reject) => {
+        connection.onopen = () => resolve();
+        connection.onerror = () => reject(new Error("Connexion à l'une des sessions Gemini Live impossible."));
+      })));
       ws.send(JSON.stringify({ setup: {
         model: `models/${tokenPayload.model}`,
         generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Aoede" } } } },
@@ -222,20 +242,28 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
         outputAudioTranscription: {}
       }}));
 
-      await new Promise<void>((resolve, reject) => {
-        const timeout = window.setTimeout(() => reject(new Error("Délai de configuration Gemini dépassé.")), 15000);
-        // Une config refusée se traduit par une fermeture avec motif : on le remonte au lieu d'attendre le délai.
-        ws.onclose = (event) => {
+      roxaneWs.send(JSON.stringify({ setup: {
+        model: `models/${roxaneTokenPayload.model}`,
+        generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } } } },
+        systemInstruction: roxaneTokenPayload.config.systemInstruction,
+        inputAudioTranscription: {},
+        outputAudioTranscription: {}
+      }}));
+
+      const waitForSetup = (connection: WebSocket, label: string) => new Promise<void>((resolve, reject) => {
+        const timeout = window.setTimeout(() => reject(new Error(`Délai de configuration dépassé pour ${label}.`)), 15000);
+        connection.onclose = (event) => {
           window.clearTimeout(timeout);
-          reject(new Error(event.reason ? `Gemini Live : ${event.reason}` : "La session Gemini Live a été fermée avant son initialisation."));
+          reject(new Error(event.reason ? `${label} : ${event.reason}` : `La session ${label} a été fermée avant son initialisation.`));
         };
-        ws.onmessage = (event) => {
+        connection.onmessage = (event) => {
           const data = parseFrame(event.data);
           if (!data) return;
           if (data.setupComplete) { window.clearTimeout(timeout); resolve(); }
-          if (data.error) { window.clearTimeout(timeout); reject(new Error(data.error.message ?? "Erreur Gemini Live.")); }
+          if (data.error) { window.clearTimeout(timeout); reject(new Error(data.error.message ?? `Erreur ${label}.`)); }
         };
       });
+      await Promise.all([waitForSetup(ws, "Leanna"), waitForSetup(roxaneWs, "Roxane")]);
 
       const stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
       mediaStream.current = stream;
@@ -255,15 +283,70 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
       setStatus("Je vous écoute. Parlez naturellement.");
       ws.onclose = () => { if (mounted.current && !intentionalClose.current) { stop(); setStatus("Session vocale terminée."); } };
       ws.onerror = () => { if (mounted.current) setStatus("Connexion vocale instable…"); };
+      const askRoxane = async () => {
+        if (roxaneAskedForTurn.current || !assistantTurn.current.trim()) return;
+        roxaneAskedForTurn.current = true;
+        const groundedSources = turnPassages.current.snapshot().map((passage) => `[Source ${passage.number}] ${passage.title}${passage.page ? `, page ${passage.page}` : ""}: ${passage.excerpt}`).join("\\n");
+        const prompt = [
+          "Voici le tour qui vient d'avoir lieu. Interviens maintenant comme Roxane, la co-animatrice critique.",
+          `Question de l'utilisateur : ${userTurn.current.trim()}`,
+          `Réponse de Leanna : ${assistantTurn.current.trim()}`,
+          `Extraits vérifiés consultés : ${groundedSources || "Aucun extrait transmis"}`,
+          "Fais une intervention courte et utile. Ne répète pas Leanna. Si la réponse est solide, apporte une nuance ou une question d'approfondissement. N'ajoute aucun fait absent des extraits."
+        ].join("\\n\\n");
+        const connection = roxaneSocket.current;
+        if (!connection || connection.readyState !== WebSocket.OPEN) {
+          setStatus("Roxane est indisponible ; la réponse de Leanna est conservée.");
+          return;
+        }
+        roxaneTurnText.current = "";
+        setRoxaneAnswer("");
+        setStatus("Roxane analyse la réponse de Leanna…");
+        await new Promise<void>((resolve) => {
+          const timeout = window.setTimeout(() => {
+            roxaneTurnResolver.current = null;
+            resolve();
+          }, 18000);
+          roxaneTurnResolver.current = () => { window.clearTimeout(timeout); resolve(); };
+          connection.send(JSON.stringify({ clientContent: { turns: [{ role: "user", parts: [{ text: prompt }] }], turnComplete: true } }));
+        });
+        if (roxaneTurnText.current.trim()) assistantTurn.current += `\\n\\nRoxane : ${roxaneTurnText.current.trim()}`;
+      };
+
+      roxaneWs.onmessage = async (event) => {
+        try {
+          const message = parseFrame(event.data);
+          if (!message?.serverContent) return;
+          const content = message.serverContent;
+          const spoken = content.outputTranscription?.text;
+          if (spoken) {
+            roxaneTurnText.current += spoken;
+            setRoxaneAnswer((current) => current + spoken);
+            setStatus("Roxane intervient…");
+          }
+          for (const part of content.modelTurn?.parts ?? []) {
+            if (part.inlineData?.data) await playPcm(part.inlineData.data, part.inlineData.mimeType ?? "audio/pcm;rate=24000");
+          }
+          if (content.turnComplete) {
+            roxaneTurnResolver.current?.();
+            roxaneTurnResolver.current = null;
+          }
+        } catch { /* ignore malformed Roxane frames */ }
+      };
+
       const finalizeVoiceTurn = async () => {
         if (turnFinalizing.current || pendingSearches.current.count > 0) return;
         turnFinalizing.current = true;
         try {
-          const completedTurn = { user: userTurn.current.trim(), assistant: assistantTurn.current.trim(), sources: turnPassages.current.snapshot() };
+          await askRoxane();
+          const completedTurn = { user: userTurn.current.trim(), assistant: answer.trim(), roxane: roxaneTurnText.current.trim(), sources: turnPassages.current.snapshot() };
           await persistVoiceTurn();
           if (completedTurn.user && completedTurn.assistant) setTurnHistory((history) => [...history, completedTurn]);
           setTranscript("");
           setAnswer("");
+          setRoxaneAnswer("");
+          roxaneAskedForTurn.current = false;
+          roxaneTurnText.current = "";
           setSources([]);
           turnPassages.current.clear();
           turnSourceIds.current.clear();
@@ -339,7 +422,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
         <AudioLines aria-hidden /> Mode Vocal
       </Button>
       <Dialog open={open} onOpenChange={(value) => { setOpen(value); if (!value) stop(); }}>
-        <DialogContent title="Conversation vocale" description="Discutez en direct avec Leanna à partir des sources sélectionnées." size="lg">
+        <DialogContent title="Conversation vocale" description="Leanna recherche dans vos sources ; Roxane intervient ensuite pour approfondir et challenger la réponse." size="lg">
           <div className="grid gap-5">
             <div className="flex flex-col items-center gap-3 rounded-xl border bg-surface-raised px-4 py-8 text-center">
               <div className={`grid size-20 place-items-center rounded-full ${state === "speaking" ? "bg-accent text-on-accent" : "bg-accent-soft text-on-accent-soft"}`}>
@@ -357,8 +440,8 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
                 )}
               </div>
             </div>
-            {(turnHistory.length > 0 || transcript || answer) && <div className="grid gap-4 text-sm"><p className="font-medium">Conversation</p>{turnHistory.map((turn, index) => <div key={index} className="grid gap-2"><p className="rounded-lg bg-surface-secondary p-3"><span className="text-xs text-text-muted">Vous</span><br />{turn.user}</p><p className="rounded-lg bg-surface-secondary p-3"><span className="text-xs text-text-muted">Leanna</span><br />{turn.assistant}</p>{turn.sources.length > 0 && <div className="grid gap-2 pl-1"><p className="text-xs font-medium text-text-muted">Sources consultées</p>{turn.sources.map((s) => <div key={`${s.sourceId}:${s.charStart}:${s.charEnd}`} className="flex items-start gap-3 rounded-lg border p-3"><Citation n={s.number} source={s.title} quote={s.excerpt} onOpen={() => onOpenCitation(s)} /><div className="min-w-0"><p className="font-medium">{s.title}{s.page ? ` · page ${s.page}` : ""}</p><p className="mt-1 line-clamp-3 text-text-muted">{s.excerpt}</p><button type="button" className="mt-2 text-xs font-medium text-accent underline-offset-4 hover:underline" onClick={() => onOpenCitation(s)}>Ouvrir le passage</button></div></div>)}</div>}</div>)}{(transcript || answer) && <div className="grid gap-2"><p className="rounded-lg bg-surface-secondary p-3"><span className="text-xs text-text-muted">Vous</span><br />{transcript}</p>{answer && <p className="rounded-lg bg-surface-secondary p-3"><span className="text-xs text-text-muted">Leanna</span><br />{answer}</p>}{sources.length > 0 && <div className="grid gap-2 pl-1"><p className="text-xs font-medium text-text-muted">Sources consultées</p>{sources.map((s) => <div key={`${s.sourceId}:${s.charStart}:${s.charEnd}`} className="flex items-start gap-3 rounded-lg border p-3"><Citation n={s.number} source={s.title} quote={s.excerpt} onOpen={() => onOpenCitation(s)} /><div className="min-w-0"><p className="font-medium">{s.title}{s.page ? ` · page ${s.page}` : ""}</p><p className="mt-1 line-clamp-3 text-text-muted">{s.excerpt}</p><button type="button" className="mt-2 text-xs font-medium text-accent underline-offset-4 hover:underline" onClick={() => onOpenCitation(s)}>Ouvrir le passage</button></div></div>)}</div>}</div>}</div>}
-            <p className="text-xs text-text-subtle">Les réponses vocales s&apos;appuient sur une recherche dans les sources sélectionnées. Une connexion Internet et l&apos;autorisation du microphone sont nécessaires.</p>
+            {(turnHistory.length > 0 || transcript || answer || roxaneAnswer) && <div className="grid gap-4 text-sm"><p className="font-medium">Conversation</p>{turnHistory.map((turn, index) => <div key={index} className="grid gap-2"><p className="rounded-lg bg-surface-secondary p-3"><span className="text-xs text-text-muted">Vous</span><br />{turn.user}</p><p className="rounded-lg bg-surface-secondary p-3"><span className="text-xs text-text-muted">Leanna</span><br />{turn.assistant}</p>{turn.roxane && <p className="rounded-lg border border-accent/30 bg-surface-raised p-3"><span className="text-xs font-medium text-accent">Roxane</span><br />{turn.roxane}</p>}{turn.sources.length > 0 && <div className="grid gap-2 pl-1"><p className="text-xs font-medium text-text-muted">Sources consultées</p>{turn.sources.map((s) => <div key={`${s.sourceId}:${s.charStart}:${s.charEnd}`} className="flex items-start gap-3 rounded-lg border p-3"><Citation n={s.number} source={s.title} quote={s.excerpt} onOpen={() => onOpenCitation(s)} /><div className="min-w-0"><p className="font-medium">{s.title}{s.page ? ` · page ${s.page}` : ""}</p><p className="mt-1 line-clamp-3 text-text-muted">{s.excerpt}</p><button type="button" className="mt-2 text-xs font-medium text-accent underline-offset-4 hover:underline" onClick={() => onOpenCitation(s)}>Ouvrir le passage</button></div></div>)}</div>}</div>)}{(transcript || answer) && <div className="grid gap-2"><p className="rounded-lg bg-surface-secondary p-3"><span className="text-xs text-text-muted">Vous</span><br />{transcript}</p>{answer && <p className="rounded-lg bg-surface-secondary p-3"><span className="text-xs text-text-muted">Leanna</span><br />{answer}</p>}{roxaneAnswer && <p className="rounded-lg border border-accent/30 bg-surface-raised p-3"><span className="text-xs font-medium text-accent">Roxane</span><br />{roxaneAnswer}</p>}{sources.length > 0 && <div className="grid gap-2 pl-1"><p className="text-xs font-medium text-text-muted">Sources consultées</p>{sources.map((s) => <div key={`${s.sourceId}:${s.charStart}:${s.charEnd}`} className="flex items-start gap-3 rounded-lg border p-3"><Citation n={s.number} source={s.title} quote={s.excerpt} onOpen={() => onOpenCitation(s)} /><div className="min-w-0"><p className="font-medium">{s.title}{s.page ? ` · page ${s.page}` : ""}</p><p className="mt-1 line-clamp-3 text-text-muted">{s.excerpt}</p><button type="button" className="mt-2 text-xs font-medium text-accent underline-offset-4 hover:underline" onClick={() => onOpenCitation(s)}>Ouvrir le passage</button></div></div>)}</div>}</div>}</div>}
+            <p className="text-xs text-text-subtle">Leanna s’appuie sur les sources sélectionnées. Roxane reçoit la synthèse et les extraits consultés pour apporter un regard critique. Deux sessions Gemini Live et l’autorisation du microphone sont nécessaires.</p>
           </div>
         </DialogContent>
       </Dialog>
