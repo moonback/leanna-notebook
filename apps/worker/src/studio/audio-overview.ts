@@ -15,8 +15,8 @@ const scriptSchema = z.object({
   title: z.string().trim().min(3).max(120),
   segments: z.array(z.object({
     speaker: z.enum(["host", "guest"]),
-    text: z.string().trim().min(20).max(900),
-  })).min(8).max(24),
+    text: z.string().trim().min(20).max(1200),
+  })).min(6).max(40),
 }).refine((v) => v.segments[0]?.speaker === "host", "host_must_open")
   .refine((v) => v.segments.every((s, i) => s.speaker === (i % 2 === 0 ? "host" : "guest")), "speakers_must_alternate");
 
@@ -32,8 +32,24 @@ export function audioOverviewInstructions(prompt: string | null | undefined): st
     : (prompt ?? "").slice(0, 3500);
 }
 
-export function buildAudioOverviewMessages(passages: string, language: string, custom: string) {
+export function buildAudioOverviewMessages(passages: string, language: string, custom: string, options: { format?: string; duration?: string; style?: string } = {}) {
   const lang = ({ fr: "français", en: "anglais", es: "espagnol", de: "allemand", it: "italien", pt: "portugais", nl: "néerlandais" } as Record<string, string>)[language] ?? "français";
+  const formats: Record<string, string> = {
+    deep_dive: "Deep Dive : exploration approfondie, progression pédagogique, contexte, exemples et liens entre les idées.",
+    brief: "Brief : aller directement aux 3 à 5 enseignements essentiels, sans digressions.",
+    critique: "Critique : examiner les arguments, les preuves, les limites, les biais possibles et les questions non résolues.",
+    debate: "Débat : faire confronter deux interprétations argumentées, sans inventer de désaccord artificiel.",
+  };
+  const durations: Record<string, string> = {
+    short: "Durée cible : environ 5 minutes, soit 550 à 750 mots prononcés au total.",
+    standard: "Durée cible : environ 10 minutes, soit 1 100 à 1 400 mots prononcés au total.",
+    long: "Durée cible : environ 15 minutes, soit 1 700 à 2 100 mots prononcés au total.",
+  };
+  const styles: Record<string, string> = {
+    accessible: "Ton accessible et pédagogique : expliquer les termes, rester chaleureux et concret.",
+    professional: "Ton professionnel et précis : vocabulaire rigoureux, nuances explicites, pas de familiarité.",
+    dynamic: "Ton dynamique et vivant : relances naturelles, rythme soutenu, exemples concrets, sans exagération.",
+  };
   return [
     {
       role: "system" as const,
@@ -43,12 +59,15 @@ export function buildAudioOverviewMessages(passages: string, language: string, c
         "Crée une conversation naturelle entre exactement deux intervenants : host (animatrice) et guest (co-animateur).",
         "Le host ouvre, le guest apporte des nuances, exemples et questions. Alterne les voix, sans répétitions mécaniques.",
         "Le dialogue doit expliquer les idées, relier les sources et signaler les incertitudes. Ne fabrique aucun fait.",
-        "Vise 8 à 14 répliques de 2 à 4 phrases, avec une introduction, 3 à 5 axes et une conclusion.",
+        formats[options.format ?? "deep_dive"] ?? formats.deep_dive,
+        durations[options.duration ?? "standard"] ?? durations.standard,
+        styles[options.style ?? "accessible"] ?? styles.accessible,
+        "Découpe le dialogue en répliques équilibrées de 2 à 5 phrases. Introduction claire, développement structuré et conclusion utile.",
         "Réponds uniquement en JSON : { title: string, segments: [{ speaker: 'host'|'guest', text: string }] }.",
         custom ? `Consigne éditoriale de l'utilisateur : ${custom}` : "",
-      ].filter(Boolean).join("\n"),
+      ].filter(Boolean).join("\\n"),
     },
-    { role: "user" as const, content: `<sources>\n${passages}\n</sources>` },
+    { role: "user" as const, content: `<sources>\\n${passages}\\n</sources>` },
   ];
 }
 
