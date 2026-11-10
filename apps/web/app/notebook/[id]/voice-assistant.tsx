@@ -292,10 +292,14 @@ export function VoiceAssistant({ notebookId, disabled = false }: { notebookId: s
             }
           }
           if (content?.turnComplete) {
-            try { await persistVoiceTurn(); }
-            catch (error) { setStatus(error instanceof Error ? error.message : "Enregistrement de l’historique impossible."); }
-            setState("listening");
-            setStatus("À vous de parler.");
+            try {
+              await persistVoiceTurn();
+              setState("listening");
+              setStatus("À vous de parler.");
+            } catch (error) {
+              setState("listening");
+              setStatus(error instanceof Error ? error.message : "Enregistrement de l’historique impossible.");
+            }
           }
         } catch { /* ignore malformed provider frames */ }
       };
