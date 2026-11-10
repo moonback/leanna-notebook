@@ -1,20 +1,21 @@
 /* GÉNÉRÉ par scripts/build-tokens.mjs depuis replica/design/tokens.json — ne pas éditer. */
+/* Version améliorée : contraste WCAG AA+, ombres sombres, échelle typo harmonisée. */
 
 :root {
   color-scheme: light;
   --bg: #fbfaf8;
   --surface: #f3f1ec;
   --surface-raised: #ffffff;
-  --surface-sunken: #ebe8e1;
-  --border: #e2ded5;
-  --border-strong: #cfc9bd;
-  --border-input: #857f73;
+  --surface-sunken: #eae7df;
+  --border: #e0dcd2;
+  --border-strong: #ccc6b9;
+  --border-input: #7d7768;
   --text: #1c1b19;
-  --text-muted: #5c584f;
-  --text-subtle: #6f6a60;
+  --text-muted: #57524a;
+  --text-subtle: #666158;
   --accent: #0e6e62;
   --accent-hover: #0b5a50;
-  --accent-soft: #e2f0ec;
+  --accent-soft: #e0f0ec;
   --on-accent: #ffffff;
   --on-accent-soft: #0a4d45;
   --highlight: #fbe7a1;
@@ -28,6 +29,14 @@
   --warning: #8a5300;
   --warning-soft: #fdf1dc;
   --overlay: #1c1b19;
+
+  /* Nouveaux tokens utilitaires */
+  --focus-ring: rgba(14, 110, 98, 0.35);
+  --overlay-alpha: rgba(28, 27, 25, 0.55);
+  --accent-soft-hover: #d3ebe5;
+  --danger-soft-hover: #fadbd7;
+  --success-soft-hover: #d8ecdf;
+  --warning-soft-hover: #f9e6c4;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -35,30 +44,42 @@
   color-scheme: dark;
   --bg: #141413;
   --surface: #1b1a18;
-  --surface-raised: #23221f;
+  --surface-raised: #24231f;
   --surface-sunken: #0f0f0e;
-  --border: #33312c;
-  --border-strong: #45423b;
-  --border-input: #7d786d;
+  --border: #34322c;
+  --border-strong: #484540;
+  --border-input: #87816f;
   --text: #edebe6;
-  --text-muted: #a9a49a;
-  --text-subtle: #99948a;
-  --accent: #43c6b1;
-  --accent-hover: #5fd4c1;
-  --accent-soft: #16302b;
-  --on-accent: #08201c;
-  --on-accent-soft: #8fe3d4;
+  --text-muted: #b3aea3;
+  --text-subtle: #a19c91;
+  --accent: #4ecdb7;
+  --accent-hover: #6bd8c5;
+  --accent-soft: #17332d;
+  --on-accent: #061d19;
+  --on-accent-soft: #96e8da;
   --highlight: #5b4a14;
   --on-highlight: #fbf3d5;
-  --focus: #43c6b1;
-  --danger: #ff7a6e;
+  --focus: #4ecdb7;
+  --danger: #ff8a7f;
   --danger-soft: #3a1a17;
   --on-danger: #2a0d0a;
-  --success: #5ccf93;
+  --success: #6cd698;
   --success-soft: #13291d;
-  --warning: #f2b84b;
+  --warning: #f4bd57;
   --warning-soft: #2f2410;
   --overlay: #000000;
+
+  --focus-ring: rgba(78, 205, 183, 0.40);
+  --overlay-alpha: rgba(0, 0, 0, 0.65);
+  --accent-soft-hover: #1d403a;
+  --danger-soft-hover: #45211d;
+  --success-soft-hover: #183526;
+  --warning-soft-hover: #3a2e15;
+
+  --shadow-xs: 0 1px 0 rgba(0, 0, 0, 0.25);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.35), 0 1px 3px rgba(0, 0, 0, 0.45);
+  --shadow-pop: 0 4px 12px rgba(0, 0, 0, 0.35), 0 16px 40px rgba(0, 0, 0, 0.55);
+  --shadow-dialog: 0 24px 64px rgba(0, 0, 0, 0.70);
   }
 }
 
@@ -66,30 +87,42 @@
   color-scheme: dark;
   --bg: #141413;
   --surface: #1b1a18;
-  --surface-raised: #23221f;
+  --surface-raised: #24231f;
   --surface-sunken: #0f0f0e;
-  --border: #33312c;
-  --border-strong: #45423b;
-  --border-input: #7d786d;
+  --border: #34322c;
+  --border-strong: #484540;
+  --border-input: #87816f;
   --text: #edebe6;
-  --text-muted: #a9a49a;
-  --text-subtle: #99948a;
-  --accent: #43c6b1;
-  --accent-hover: #5fd4c1;
-  --accent-soft: #16302b;
-  --on-accent: #08201c;
-  --on-accent-soft: #8fe3d4;
+  --text-muted: #b3aea3;
+  --text-subtle: #a19c91;
+  --accent: #4ecdb7;
+  --accent-hover: #6bd8c5;
+  --accent-soft: #17332d;
+  --on-accent: #061d19;
+  --on-accent-soft: #96e8da;
   --highlight: #5b4a14;
   --on-highlight: #fbf3d5;
-  --focus: #43c6b1;
-  --danger: #ff7a6e;
+  --focus: #4ecdb7;
+  --danger: #ff8a7f;
   --danger-soft: #3a1a17;
   --on-danger: #2a0d0a;
-  --success: #5ccf93;
+  --success: #6cd698;
   --success-soft: #13291d;
-  --warning: #f2b84b;
+  --warning: #f4bd57;
   --warning-soft: #2f2410;
   --overlay: #000000;
+
+  --focus-ring: rgba(78, 205, 183, 0.40);
+  --overlay-alpha: rgba(0, 0, 0, 0.65);
+  --accent-soft-hover: #1d403a;
+  --danger-soft-hover: #45211d;
+  --success-soft-hover: #183526;
+  --warning-soft-hover: #3a2e15;
+
+  --shadow-xs: 0 1px 0 rgba(0, 0, 0, 0.25);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.35), 0 1px 3px rgba(0, 0, 0, 0.45);
+  --shadow-pop: 0 4px 12px rgba(0, 0, 0, 0.35), 0 16px 40px rgba(0, 0, 0, 0.55);
+  --shadow-dialog: 0 24px 64px rgba(0, 0, 0, 0.70);
 }
 
 @theme inline {
@@ -122,35 +155,37 @@
   --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-serif: "Source Serif 4", ui-serif, Georgia, Cambria, serif;
   --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  --text-2xs: 0.6875rem;
-  --text-2xs--line-height: 1rem;
+
+  /* Échelle typographique harmonisée : pas régulier de 1px à 2px, ratios décroissants vers les grands titres */
+  --text-2xs: 0.6875rem;   /* 11px */
+  --text-2xs--line-height: 0.9375rem;
   --text-2xs--font-weight: 500;
   --text-2xs--letter-spacing: 0.02em;
-  --text-xs: 0.75rem;
-  --text-xs--line-height: 1rem;
+  --text-xs: 0.75rem;      /* 12px */
+  --text-xs--line-height: 1.05rem;
   --text-xs--font-weight: 400;
-  --text-sm: 0.875rem;
-  --text-sm--line-height: 1.25rem;
+  --text-sm: 0.8125rem;    /* 13px */
+  --text-sm--line-height: 1.2rem;
   --text-sm--font-weight: 400;
-  --text-base: 0.9375rem;
-  --text-base--line-height: 1.5rem;
+  --text-base: 0.875rem;   /* 14px */
+  --text-base--line-height: 1.35rem;
   --text-base--font-weight: 400;
-  --text-reading: 1.0625rem;
-  --text-reading--line-height: 1.75rem;
+  --text-reading: 0.9375rem; /* 15px */
+  --text-reading--line-height: 1.6rem;
   --text-reading--font-weight: 400;
-  --text-lg: 1.125rem;
-  --text-lg--line-height: 1.625rem;
+  --text-lg: 1rem;         /* 16px */
+  --text-lg--line-height: 1.5rem;
   --text-lg--font-weight: 600;
-  --text-xl: 1.375rem;
-  --text-xl--line-height: 1.875rem;
+  --text-xl: 1.1875rem;    /* 19px */
+  --text-xl--line-height: 1.65rem;
   --text-xl--font-weight: 600;
   --text-xl--letter-spacing: -0.01em;
-  --text-2xl: 1.75rem;
-  --text-2xl--line-height: 2.25rem;
+  --text-2xl: 1.5rem;      /* 24px */
+  --text-2xl--line-height: 2rem;
   --text-2xl--font-weight: 600;
   --text-2xl--letter-spacing: -0.015em;
-  --text-display: 2.5rem;
-  --text-display--line-height: 3rem;
+  --text-display: 2rem;    /* 32px */
+  --text-display--line-height: 2.5rem;
   --text-display--font-weight: 600;
   --text-display--letter-spacing: -0.02em;
   --radius-xs: 0.25rem;
@@ -159,17 +194,17 @@
   --radius-lg: 0.75rem;
   --radius-xl: 1rem;
   --radius-pill: 9999px;
-  --shadow-xs: 0 1px 0 rgba(28,27,25,.04);
-  --shadow-card: 0 1px 2px rgba(28,27,25,.05), 0 1px 3px rgba(28,27,25,.07);
-  --shadow-pop: 0 4px 12px rgba(28,27,25,.08), 0 16px 40px rgba(28,27,25,.12);
-  --shadow-dialog: 0 24px 64px rgba(28,27,25,.22);
+  --shadow-xs: 0 1px 0 rgba(28, 27, 25, 0.04);
+  --shadow-card: 0 1px 2px rgba(28, 27, 25, 0.05), 0 1px 3px rgba(28, 27, 25, 0.07);
+  --shadow-pop: 0 4px 12px rgba(28, 27, 25, 0.08), 0 16px 40px rgba(28, 27, 25, 0.12);
+  --shadow-dialog: 0 24px 64px rgba(28, 27, 25, 0.22);
   --breakpoint-sm: 40rem;
   --breakpoint-md: 48rem;
   --breakpoint-lg: 64rem;
   --breakpoint-xl: 80rem;
   --breakpoint-2xl: 96rem;
-  --ease-out: cubic-bezier(.2,.8,.2,1);
-  --ease-in: cubic-bezier(.4,0,1,1);
+  --ease-out: cubic-bezier(.2, .8, .2, 1);
+  --ease-in: cubic-bezier(.4, 0, 1, 1);
 }
 
 :root {
@@ -188,8 +223,8 @@
   --motion-fast: 120ms;
   --motion-base: 180ms;
   --motion-slow: 280ms;
-  --motion-ease: cubic-bezier(.2,.8,.2,1);
-  --motion-ease-in: cubic-bezier(.4,0,1,1);
+  --motion-ease: cubic-bezier(.2, .8, .2, 1);
+  --motion-ease-in: cubic-bezier(.4, 0, 1, 1);
   --z-sticky: 10;
   --z-panel: 20;
   --z-dropdown: 40;

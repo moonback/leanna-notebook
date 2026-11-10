@@ -134,10 +134,10 @@ export function studioHandler(db: SupabaseClient, llm: Llm | null, speech: Speec
       if (audioOverview && !speech) throw new PermanentError("audio_tts_not_configured", "Configurez ELEVENLABS_API_KEY et les deux identifiants de voix.");
       if (audioOverview && (!audioEnv.AUDIO_OVERVIEW_HOST_VOICE_ID || !audioEnv.AUDIO_OVERVIEW_GUEST_VOICE_ID || audioEnv.AUDIO_OVERVIEW_HOST_VOICE_ID === audioEnv.AUDIO_OVERVIEW_GUEST_VOICE_ID)) throw new PermanentError("audio_voices_invalid");
       const prompt = audioOverview
-        ? { messages: buildAudioOverviewMessages(formatPassages(passages), language, customPrompt), json: true }
+        ? { messages: buildAudioOverviewMessages(formatPassages(passages), language, customPrompt, (art.options ?? {}) as { format?: string; duration?: string; style?: string }), json: true }
         : buildPrompt(art.type, art.options ?? {}, customPrompt, formatPassages(passages), language);
       await ctx.progress(30, audioOverview ? "écriture du dialogue" : "rédaction");
-      const out = await llm(prompt.messages, { json: prompt.json, maxTokens: audioOverview ? 5000 : art.type === "report" ? 6000 : 4000 });
+      const out = await llm(prompt.messages, { json: prompt.json, maxTokens: audioOverview ? ((art.options as { duration?: string } | null)?.duration === "long" ? 7000 : (art.options as { duration?: string } | null)?.duration === "short" ? 3000 : 5000) : art.type === "report" ? 6000 : 4000 });
       let content: Record<string, unknown>;
       let citations: ReturnType<typeof toContent>["citations"];
       let title: string | null;
