@@ -19,6 +19,24 @@ export function isSafeExternalUrl(value: unknown): value is string {
   }
 }
 
+/**
+ * Permit HTTPS application origins. Plain HTTP is allowed only for loopback
+ * development servers, never for a remote host.
+ */
+export function isAllowedWebUrl(value: unknown, allowLocalHttp = true): value is string {
+  if (typeof value !== "string" || value.length > 2048) return false;
+  try {
+    const url = new URL(value);
+    if (!url.hostname || url.username || url.password) return false;
+    if (url.protocol === "https:") return true;
+    return allowLocalHttp &&
+      url.protocol === "http:" &&
+      ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
+  } catch {
+    return false;
+  }
+}
+
 /** Sanitize renderer-provided file filters before passing them to Electron. */
 export function normalizeFilters(value: unknown): NormalizedFileFilter[] {
   if (!Array.isArray(value)) return [];
