@@ -25,15 +25,17 @@ export function OpenRouterSettings() {
       setModels(data.models);
       const next: Record<string, string> = {};
       for (const p of data.preferences as Preference[]) next[p.feature] = p.modelId;
-      const defaultModel = data.models[0]?.id ?? "";
-      for (const f of AI_FEATURES) next[f.id] ??= defaultModel;
+      const defaultModel = data.defaultModelId && data.models.some((m: Model) => m.id === data.defaultModelId) ? data.defaultModelId : data.models[0]?.id ?? "";
+      const embeddingModel = data.defaultEmbeddingModelId && data.models.some((m: Model) => m.id === data.defaultEmbeddingModelId) ? data.defaultEmbeddingModelId : defaultModel;
+      for (const f of AI_FEATURES) next[f.id] ??= f.id === "embeddings" ? embeddingModel : defaultModel;
       setPreferences(next);
     }).catch((e) => alive && setError(e.message)).finally(() => alive && setLoading(false));
     return () => { alive = false; };
   }, []);
   const filtered = React.useMemo(() => {
     const q = query.trim().toLowerCase();
-    return q ? models.filter((m) => m.name.toLowerCase().includes(q) || m.id.toLowerCase().includes(q)) : models;
+    const matches = q ? models.filter((m) => m.name.toLowerCase().includes(q) || m.id.toLowerCase().includes(q)) : models;
+    return matches.slice(0, 200);
   }, [models, query]);
   async function save() {
     setSaving(true); setError(""); setNotice("");
@@ -52,7 +54,7 @@ export function OpenRouterSettings() {
       <div className="grid gap-4">{AI_FEATURES.map((feature) => <div key={feature.id} className="grid gap-2 border-b pb-4 last:border-0">
         <div><h3 className="text-sm font-medium">{feature.label}</h3><p className="text-xs text-text-muted">{feature.description}</p></div>
         <select aria-label={`Modèle pour ${feature.label}`} value={preferences[feature.id] ?? ""} onChange={(e) => setPreferences((p) => ({ ...p, [feature.id]: e.target.value }))} className="h-10 w-full rounded-md border bg-surface px-3 text-sm">
-          {filtered.map((m) => <option key={m.id} value={m.id}>{m.name} — {m.id}</option>)}
+          {[...new Map([...filtered, ...models.filter((m) => m.id === preferences[feature.id])].map((m) => [m.id, m])).values()].map((m) => <option key={m.id} value={m.id}>{m.name} — {m.id}</option>)}
         </select>
         {preferences[feature.id] && (() => { const m = models.find((x) => x.id === preferences[feature.id]); return m ? <p className="text-xs text-text-subtle">Contexte : {m.contextLength?.toLocaleString("fr-FR") ?? "inconnu"} tokens · Entrée : {money(m.promptPrice)} · Sortie : {money(m.completionPrice)} · {m.modality ?? "modalité inconnue"}</p> : null; })()}
       </div>)}</div>
