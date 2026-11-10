@@ -1,8 +1,13 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from "electron";
 import { join } from "node:path";
-import { isSafeExternalUrl, normalizeFilters } from "./shared/validation";
+import { isAllowedWebUrl, isSafeExternalUrl, normalizeFilters } from "./shared/validation";
 
 const WEB_URL = process.env.LEANNA_WEB_URL ?? "http://127.0.0.1:3000";
+if (!isAllowedWebUrl(WEB_URL, !app.isPackaged)) {
+  throw new Error(
+    "LEANNA_WEB_URL must use HTTPS (or localhost HTTP in development).",
+  );
+}
 const allowedOrigin = new URL(WEB_URL).origin;
 let mainWindow: BrowserWindow | null = null;
 
