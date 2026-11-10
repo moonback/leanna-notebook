@@ -24,7 +24,7 @@ language sql stable security definer set search_path = '' as $$
       from public.notebook_visits v
       join public.notebooks n on n.id = v.notebook_id
      where v.notebook_id = p_nb and v.user_id = auth.uid()
-       and v.via_link_id is null and n.is_featured
+       and n.is_featured
   ) s(r)
 $$;
 
