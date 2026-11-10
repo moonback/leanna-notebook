@@ -30,6 +30,81 @@ function normalizeFilters(value) {
         return [{ name: filter.name.slice(0, 80), extensions: filter.extensions }];
     });
 }
+function registerApplicationMenu() {
+    const viewItems = [
+        { role: "reload", label: "Recharger" },
+        ...(!electron_1.app.isPackaged ? [{ role: "toggleDevTools", label: "Outils de développement" }] : []),
+        { type: "separator" },
+        { role: "resetZoom", label: "Taille réelle" },
+        { role: "zoomIn", label: "Agrandir" },
+        { role: "zoomOut", label: "Réduire" },
+        { type: "separator" },
+        { role: "togglefullscreen", label: "Plein écran" },
+    ];
+    electron_1.Menu.setApplicationMenu(electron_1.Menu.buildFromTemplate([
+        {
+            label: "Leanna Notebook",
+            submenu: [
+                { role: "about", label: "À propos de Leanna Notebook" },
+                { type: "separator" },
+                { role: "quit", label: "Quitter" },
+            ],
+        },
+        {
+            label: "Édition",
+            submenu: [
+                { role: "undo", label: "Annuler" },
+                { role: "redo", label: "Rétablir" },
+                { type: "separator" },
+                { role: "cut", label: "Couper" },
+                { role: "copy", label: "Copier" },
+                { role: "paste", label: "Coller" },
+                { role: "selectAll", label: "Tout sélectionner" },
+            ],
+        },
+        { label: "Affichage", submenu: viewItems },
+        {
+            label: "Fenêtre",
+            submenu: [
+                { role: "minimize", label: "Réduire" },
+                { role: "close", label: "Fermer" },
+            ],
+        },
+    ]));
+}
+/**
+ * Les exports déclenchés par le renderer passent par la boîte de dialogue
+ * native « Enregistrer sous ». Aucun chemin local n'est choisi silencieusement.
+ */
+function registerNativeDownloadHandler() {
+    const downloadSession = mainWindow?.webContents.session;
+    if (!downloadSession)
+        return;
+    downloadSession.on("will-download", (event, item, contents) => {
+        const parent = electron_1.BrowserWindow.fromWebContents(contents);
+        if (!parent || contents !== mainWindow?.webContents) {
+            item.cancel();
+            return;
+        }
+        void electron_1.dialog.showSaveDialog(parent, {
+            title: "Enregistrer le fichier",
+            defaultPath: item.getFilename(),
+        }).then((result) => {
+            if (result.canceled || !result.filePath) {
+                item.cancel();
+                return;
+            }
+            item.setSavePath(result.filePath);
+        }).catch(() => {
+            item.cancel();
+            void electron_1.dialog.showMessageBox(parent, {
+                type: "error",
+                title: "Téléchargement impossible",
+                message: "Le fichier n'a pas pu être enregistré.",
+            });
+        });
+    });
+}
 function registerIpcHandlers() {
     electron_1.ipcMain.handle("desktop:app-version", () => electron_1.app.getVersion());
     electron_1.ipcMain.handle("desktop:open-files", async (event, filters) => {
@@ -110,8 +185,10 @@ function createMainWindow() {
     void mainWindow.loadURL(WEB_URL);
 }
 electron_1.app.whenReady().then(() => {
+    registerApplicationMenu();
     registerIpcHandlers();
     createMainWindow();
+    registerNativeDownloadHandler();
     electron_1.app.on("activate", () => {
         if (electron_1.BrowserWindow.getAllWindows().length === 0)
             createMainWindow();
