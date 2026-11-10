@@ -238,7 +238,7 @@ function CreateDialog({ type, onClose, onGenerate }: { type: ArtType | null; onC
                 <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">{REPORT_MODELS.map(modelCard)}</div>
               </section>
               <section className="grid gap-3">
-                <h3 className="flex items-center gap-2 text-sm font-medium"><Sparkles className="size-4" /> Modèles suggérés par l'IA</h3>
+                <h3 className="flex items-center gap-2 text-sm font-medium"><Sparkles className="size-4" /> Modèles suggérés par l&apos;IA</h3>
                 <p className="text-xs text-text-muted">Des formats complémentaires pour transformer vos sources en livrables concrets.</p>
                 <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">{AI_REPORT_MODELS.map(modelCard)}</div>
               </section>
