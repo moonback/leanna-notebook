@@ -29,7 +29,7 @@ export function isAudioOverviewPrompt(prompt: string | null | undefined): boolea
 export function audioOverviewInstructions(prompt: string | null | undefined): string {
   return prompt?.startsWith(AUDIO_OVERVIEW_MARKER)
     ? prompt.slice(AUDIO_OVERVIEW_MARKER.length).trim().slice(0, 3500)
-    : "";
+    : (prompt ?? "").slice(0, 3500);
 }
 
 export function buildAudioOverviewMessages(passages: string, language: string, custom: string) {
@@ -107,7 +107,7 @@ export async function renderAudioOverview(args: {
       files.push(file);
     }
     const list = join(dir, "concat.txt");
-    await writeFile(list, files.map((file) => `file '${file.replace(/'/g, "'\\''")}'`).join("\n"));
+    await writeFile(list, files.map((file) => "file '" + file.replace(/\\/g, "/") + "'").join("\n"));
     const output = join(dir, "overview.mp3");
     await runFfmpeg(args.ffmpegPath || "ffmpeg", ["-y", "-f", "concat", "-safe", "0", "-i", list, "-vn", "-c:a", "libmp3lame", "-b:a", "128k", output]);
     const bytes = await readFile(output);
