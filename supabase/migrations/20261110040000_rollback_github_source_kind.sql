@@ -30,9 +30,32 @@ create type public.source_kind_without_github as enum (
   'text', 'gdrive', 'note'
 );
 
+-- La contrainte inline (kind = 'note') conserve une constante typée avec
+-- l'ancien enum. On la retire avant ALTER TYPE puis on la recrée après conversion.
+do $$
+declare
+  v_constraint record;
+begin
+  for v_constraint in
+    select c.conname
+      from pg_constraint c
+     where c.conrelid = 'public.sources'::regclass
+       and c.contype = 'c'
+       and pg_get_constraintdef(c.oid) ilike '%kind%'
+       and pg_get_constraintdef(c.oid) ilike '%note_body%'
+  loop
+    execute format('alter table public.sources drop constraint %I', v_constraint.conname);
+  end loop;
+end
+$$;
+
 alter table public.sources
   alter column kind type public.source_kind_without_github
   using kind::text::public.source_kind_without_github;
+
+alter table public.sources
+  add constraint sources_kind_note_body_check
+  check ((kind = 'note') = (note_body is not null));
 
 drop type public.source_kind;
 alter type public.source_kind_without_github rename to source_kind;
