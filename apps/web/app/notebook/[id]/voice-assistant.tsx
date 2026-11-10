@@ -70,7 +70,7 @@ function floatToPcm16(input: Float32Array) {
   return new Uint8Array(buffer);
 }
 
-export function VoiceAssistant({ notebookId, conversationId, disabled = false, onOpenCitation }: { notebookId: string; conversationId: string; disabled?: boolean; onOpenCitation: (passage: Passage) => void }) {
+export function VoiceAssistant({ notebookId, conversationId, disabled = false, onOpenCitation, onNavigateStudio }: { notebookId: string; conversationId: string; disabled?: boolean; onOpenCitation: (passage: Passage) => void; onNavigateStudio?: () => void }) {
   const [open, setOpen] = React.useState(false);
   const [expanded, setExpanded] = React.useState(false);
   const [state, setState] = React.useState<VoiceState>("idle");
@@ -79,6 +79,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
   const [answer, setAnswer] = React.useState("");
   const [roxaneAnswer, setRoxaneAnswer] = React.useState("");
   const [sources, setSources] = React.useState<Passage[]>([]);
+  const [activePassageIndex, setActivePassageIndex] = React.useState(0);
   const [turnHistory, setTurnHistory] = React.useState<VoiceTurn[]>([]);
   const userTurn = React.useRef("");
   const assistantTurn = React.useRef("");
@@ -156,23 +157,101 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
   async function handleToolCall(message: LiveMessage) {
     const calls = message?.toolCall?.functionCalls ?? [];
     for (const call of calls) {
-      if (call.name !== "search_notebook_sources") continue;
       try {
-        const response = await fetch(`/api/v1/notebooks/${notebookId}/voice-search`, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ query: String(call.args?.query ?? "") })
-        });
-        const payload = await response.json();
-        if (!response.ok) throw new Error(payload.error ?? "Recherche documentaire impossible");
-        const retrieved = (payload.passages ?? []) as Array<Omit<Passage, "number">>;
-        const passages = turnPassages.current.add(retrieved);
-        for (const sourceId of turnPassages.current.sourceIds()) turnSourceIds.current.add(sourceId);
-        setSources(turnPassages.current.snapshot());
-        const result = passages.length ? passages.map((p) => `[Source ${p.number}] ${p.title}${p.page ? `, page ${p.page}` : ""}\n${p.excerpt}`).join("\n\n") : "Aucun passage pertinent trouvé dans les sources sélectionnées.";
+        if (call.name === "search_notebook_sources") {
+          const response = await fetch(`/api/v1/notebooks/${notebookId}/voice-search`, {
+            method: "POST", headers: { "content-type": "application/json" },
+            body: JSON.stringify({ query: String(call.args?.query ?? "") })
+          });
+          const payload = await response.json();
+          if (!response.ok) throw new Error(payload.error ?? "Recherche documentaire impossible");
+          const retrieved = (payload.passages ?? []) as Array<Omit<Passage, "number">>;
+          const passages = turnPassages.current.add(retrieved);
+          for (const sourceId of turnPassages.current.sourceIds()) turnSourceIds.current.add(sourceId);
+          setSources(turnPassages.current.snapshot());
+          if (passages.length) setActivePassageIndex(0);
+          const result = passages.length ? passages.map((p) => `[Source ${p.number}] ${p.title}${p.page ? `, page ${p.page}` : p.timeStartMs != null ? `, ${Math.floor(p.timeStartMs / 60000)} min ${Math.floor((p.timeStartMs % 60000) / 1000)} s` : ""}\n${p.excerpt}`).join("\n\n") : "Aucun passage pertinent trouvé dans les sources sélectionnées.";
+          socket.current?.send(JSON.stringify({ toolResponse: { functionResponses: [{ id: call.id, name: call.name, response: { result } }] } }));
+          continue;
+        }
+        if (call.name !== "control_notebook") continue;
+        const action = String(call.args?.action ?? "");
+        const passages = turnPassages.current.snapshot();
+        const requestedNumber = Number(call.args?.passageNumber);
+        const sourceTitle = String(call.args?.sourceTitle ?? "").trim();
+        let result = "Commande non exécutée.";
+        const openPassage = (index: number) => {
+          if (!passages.length) return false;
+          const safeIndex = Math.max(0, Math.min(passages.length - 1, index));
+          setActivePassageIndex(safeIndex);
+          onOpenCitation(passages[safeIndex]);
+          return true;
+        };
+        if (["open_current_citation", "show_passage", "repeat_current_citation"].includes(action)) {
+          const index = Number.isInteger(requestedNumber) && requestedNumber > 0 ? passages.findIndex((p) => p.number === requestedNumber) : activePassageIndex;
+          if (index >= 0 && openPassage(index)) {
+            const p = passages[index];
+            result = `Passage ouvert : ${p.title}${p.page ? `, page ${p.page}` : p.timeStartMs != null ? `, horodatage ${Math.floor(p.timeStartMs / 1000)} secondes` : ""}. Extrait : ${p.excerpt}`;
+            if (action === "repeat_current_citation") result = `Relis cette citation et annonce sa source. ${result}`;
+          } else result = "Aucune citation disponible dans ce tour.";
+        } else if (action === "next_citation" || action === "previous_citation") {
+          const next = activePassageIndex + (action === "next_citation" ? 1 : -1);
+          if (next >= 0 && next < passages.length && openPassage(next)) {
+            const p = passages[next];
+            result = `Citation ${p.number} sur ${passages.length} : ${p.title}${p.page ? `, page ${p.page}` : p.timeStartMs != null ? `, horodatage ${Math.floor(p.timeStartMs / 1000)} secondes` : ""}. ${p.excerpt}`;
+          } else result = action === "next_citation" ? "Il n'y a pas de citation suivante." : "Il n'y a pas de citation précédente.";
+        } else if (action === "select_source" || action === "deselect_source") {
+          if (!sourceTitle) result = "Précise le titre de la source à sélectionner.";
+          else {
+            const listResponse = await fetch(`/api/v1/notebooks/${notebookId}/sources`);
+            const listPayload = await listResponse.json();
+            if (!listResponse.ok) throw new Error("Impossible de lire la sélection des sources.");
+            const matches = (listPayload.sources ?? []).filter((s: { title: string }) => s.title.toLocaleLowerCase().includes(sourceTitle.toLocaleLowerCase()));
+            if (matches.length !== 1) result = matches.length ? "Plusieurs sources correspondent. Demande à l'utilisateur de préciser le titre." : "Aucune source ne correspond à ce titre.";
+            else {
+              const deselected = new Set<string>((listPayload.deselected ?? []) as string[]);
+              if (action === "select_source") deselected.delete(matches[0].id); else deselected.add(matches[0].id);
+              const saveResponse = await fetch(`/api/v1/notebooks/${notebookId}/selection`, { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ deselectedSourceIds: [...deselected] }) });
+              if (!saveResponse.ok) throw new Error("La sélection des sources n'a pas pu être enregistrée.");
+              result = `Source ${action === "select_source" ? "sélectionnée" : "retirée de la sélection"} : ${matches[0].title}.`;
+            }
+          }
+        } else if (action === "open_studio") {
+          onNavigateStudio?.();
+          result = "Le Studio est maintenant affiché.";
+        } else if (action === "stop_speaking") {
+          playbackNodes.current.forEach((node) => { try { node.stop(); } catch {} });
+          playbackNodes.current.clear();
+          nextPlaybackTime.current = audioContext.current?.currentTime ?? 0;
+          setState("listening");
+          result = "Lecture vocale arrêtée. Je reste à l'écoute.";
+        } else if (action === "repeat" || action === "summarize") {
+          const instruction = action === "repeat" ? "Répète ta dernière réponse à l'identique, sans ajouter de nouvelle information." : "Résume ta dernière réponse en une seule phrase, sans ajouter de nouvelle information.";
+          socket.current?.send(JSON.stringify({ clientContent: { turns: [{ role: "user", parts: [{ text: instruction }] }], turnComplete: true } }));
+          result = action === "repeat" ? "Je répète la dernière réponse." : "Je résume la dernière réponse en une phrase.";
+        } else if (action === "save_passage") {
+          const index = Number.isInteger(requestedNumber) && requestedNumber > 0 ? passages.findIndex((p) => p.number === requestedNumber) : activePassageIndex;
+          if (index < 0 || !passages[index]) result = "Aucun passage à conserver. Ouvre d'abord une citation.";
+          else {
+            const p = passages[index];
+            const body = [`Source : ${p.title}`, p.page ? `Page : ${p.page}` : p.timeStartMs != null ? `Horodatage : ${Math.floor(p.timeStartMs / 1000)} s` : "", "", p.excerpt].filter(Boolean).join("\n");
+            const saved = await fetch(`/api/v1/notebooks/${notebookId}/notes`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ title: String(call.args?.noteTitle ?? `Passage conservé — ${p.title}`).slice(0, 300), text: body }) });
+            if (!saved.ok) throw new Error(saved.status === 403 ? "Le rôle éditeur est requis pour créer une note." : "La note n'a pas pu être créée.");
+            result = `Passage enregistré dans une nouvelle note : ${p.title}.`;
+          }
+        } else if (action === "add_note") {
+          const noteText = String(call.args?.noteText ?? "").trim();
+          if (!noteText) result = "Demande à l'utilisateur de dicter le contenu de sa note.";
+          else {
+            const saved = await fetch(`/api/v1/notebooks/${notebookId}/notes`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ title: String(call.args?.noteTitle ?? "Note vocale").slice(0, 300), text: noteText }) });
+            if (!saved.ok) throw new Error(saved.status === 403 ? "Le rôle éditeur est requis pour créer une note." : "La note n'a pas pu être créée.");
+            result = "Note vocale créée dans les sources du notebook.";
+          }
+        }
         socket.current?.send(JSON.stringify({ toolResponse: { functionResponses: [{ id: call.id, name: call.name, response: { result } }] } }));
-      } catch {
-        socket.current?.send(JSON.stringify({ toolResponse: { functionResponses: [{ id: call.id, name: call.name, response: { error: "La recherche dans les sources a échoué. Indique à l'utilisateur que tu ne peux pas vérifier cette information." } }] } }));
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "La commande vocale a échoué.";
+        socket.current?.send(JSON.stringify({ toolResponse: { functionResponses: [{ id: call.id, name: call.name, response: { error: message } }] } }));
       }
     }
   }
@@ -201,6 +280,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
     setAnswer("");
     setRoxaneAnswer("");
     setSources([]);
+    setActivePassageIndex(0);
     setTurnHistory([]);
     try {
       if (!conversationId) throw new Error("Conversation du notebook en cours de chargement.");
