@@ -13,6 +13,7 @@ export function AppHeader({ children, notebookId }: { children?: React.ReactNode
         <span className="hidden font-serif text-lg sm:inline">Leanna</span>
       </Link>
       <div className="flex min-w-0 flex-1 items-center gap-2">{children}</div>
+      <div id="app-header-actions" className="flex shrink-0 items-center gap-1 empty:hidden" />
       <nav aria-label="Compte" className="flex shrink-0 items-center gap-1">
         <Button asChild variant="ghost" size="sm" className="gap-1.5">
           <Link href="/discover" aria-label="Découvrir des notebooks"><Compass aria-hidden /><span className="hidden md:inline">Découvrir</span></Link>

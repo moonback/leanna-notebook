@@ -1,5 +1,6 @@
 "use client";
 import * as React from "react";
+import { createPortal } from "react-dom";
 import { AlertTriangle, ArrowUp, AudioLines, BookmarkPlus, Eraser, Settings2, ThumbsDown, ThumbsUp, FileText, Globe, Inbox, Lock, NotebookPen, Pencil, Plus, Square, Sparkles, Trash2, Type, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Textarea } from "@/components/ui/field";
@@ -330,10 +331,16 @@ function Chat({ notebookId, readyCount, onOpenCitation, onOpenPassage, canViewSo
     } finally { setStreaming(false); abort.current = null; }
   }
 
+  const [headerSlot, setHeaderSlot] = React.useState<HTMLElement | null>(null);
+  React.useEffect(() => { setHeaderSlot(document.getElementById("app-header-actions")); }, []);
+
   return (
     <section aria-label="Conversation" className="flex h-full min-h-0 flex-col rounded-xl border bg-surface-raised">
+      {headerSlot && createPortal(
+        <VoiceAssistant notebookId={notebookId} conversationId={conversationId ?? ""} disabled={!canViewSources || readyCount === 0 || !conversationId} onOpenCitation={onOpenPassage} />,
+        headerSlot,
+      )}
       <div className="flex h-11 shrink-0 items-center justify-end gap-1 border-b px-2">
-        <VoiceAssistant notebookId={notebookId} conversationId={conversationId ?? ""} disabled={!canViewSources || readyCount === 0 || !conversationId} onOpenCitation={onOpenPassage} />
         {canConfigure && <Button size="sm" variant="ghost" onClick={() => setConfiguring(true)}><Settings2 aria-hidden /> Configurer</Button>}
         <Button size="sm" variant="ghost" disabled={!messages?.length || streaming} onClick={() => void clearHistory()}><Eraser aria-hidden /> Effacer l’historique</Button>
       </div>

@@ -20,7 +20,7 @@ const fold = (s: string) => s.normalize("NFD").replace(/\p{Diacritic}/gu, "").to
 const titleOf = (n: NotebookRow) => n.title || "Notebook sans titre";
 const sources = (n: number) => `${n} source${n > 1 ? "s" : ""}`;
 
-export function Dashboard({ initial, loadError, initialView, name }: { initial: NotebookRow[]; loadError: boolean; initialView: "grid" | "list"; name: string | null }) {
+export function Dashboard({ initial, loadError, initialView }: { initial: NotebookRow[]; loadError: boolean; initialView: "grid" | "list"; name: string | null }) {
   const router = useRouter();
   const [items, setItems] = React.useState(initial);
   const [tab, setTab] = React.useState<Tab>("all");
@@ -71,16 +71,9 @@ export function Dashboard({ initial, loadError, initialView, name }: { initial: 
     <>
     <AppHeader>
       <SearchInput aria-label="Rechercher un notebook" placeholder="Rechercher" value={query} onChange={(e) => setQuery(e.target.value)} className="mx-auto w-full max-w-md" />
+      <Button size="sm" className="shrink-0" onClick={create} loading={creating}><Plus aria-hidden /> <span className="hidden sm:inline">Nouveau notebook</span><span className="sr-only sm:hidden">Nouveau notebook</span></Button>
     </AppHeader>
     <main className="mx-auto grid max-w-[var(--page-max-w)] gap-6 px-4 py-8 sm:px-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl">{name ? `Bonjour, ${name}` : "Vos notebooks"}</h1>
-          <p className="text-sm text-text-muted">Rassemblez vos documents, posez vos questions, vérifiez chaque réponse.</p>
-        </div>
-        <Button onClick={create} loading={creating}><Plus aria-hidden /> Nouveau notebook</Button>
-      </div>
-
       {loadError && <Alert tone="danger" title="Impossible de charger vos notebooks" action={<Button size="sm" variant="secondary" onClick={() => router.refresh()}>Réessayer</Button>} />}
 
       <div className="flex flex-wrap items-center justify-between gap-3">

@@ -336,7 +336,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
   return (
     <>
       <Button size="sm" variant="soft" disabled={disabled} onClick={() => setOpen(true)}>
-        <AudioLines aria-hidden /> Parler à mes sources
+        <AudioLines aria-hidden /> Mode Vocal
       </Button>
       <Dialog open={open} onOpenChange={(value) => { setOpen(value); if (!value) stop(); }}>
         <DialogContent title="Conversation vocale" description="Discutez en direct avec Leanna à partir des sources sélectionnées." size="lg">
