@@ -36,7 +36,7 @@ export function languageForGitHubPath(path: string): string {
   if (name === "Dockerfile") return "dockerfile";
   if (name === "Makefile") return "makefile";
   if (name === "Gemfile") return "ruby";
-  if (name === " justfile") return "makefile";
+  if (name === "justfile") return "makefile";
   const extension = name.includes(".") ? name.split(".").pop()!.toLowerCase() : "";
   return LANGUAGE_BY_EXTENSION[extension] ?? "text";
 }
@@ -68,7 +68,7 @@ export function renderGitHubMarkdown(input: {
 }): string {
   const { owner, repo, ref, commitSha, files } = input;
   const tree = files.map(({ path }) => `- \`${markdownPath(path)}\``).join("\n");
-  const toc = files.map(({ path }) => `- [${path.replace(/\\/g, "/")}](#file-${path.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")})`).join("\n");
+  const toc = files.map(({ path }) => `- \`${markdownPath(path)}\``).join("\n");
   const sections = files.map(({ path, content }) => {
     const fence = markdownFence(content);
     const language = languageForGitHubPath(path);
@@ -77,7 +77,7 @@ export function renderGitHubMarkdown(input: {
       "",
       `- **Chemin :** \`${markdownPath(path)}\``,
       `- **Langage :** ${language}`,
-      `- **Lignes :** ${content.replace(/\\r\\n?/g, "\\n").split("\\n").length}`,
+      `- **Lignes :** ${content.replace(/\r\n?/g, "\n").split("\n").length}`,
       "",
       `${fence}${language}`,
       numberedContent(content),
