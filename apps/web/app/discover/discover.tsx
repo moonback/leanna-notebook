@@ -1,5 +1,6 @@
 "use client";
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BookOpen, Copy, Search, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -54,6 +55,7 @@ export function Discover({ initial, loadError }: { initial: FeaturedNotebook[]; 
   return (
     <main className="mx-auto grid max-w-[var(--page-max-w)] gap-6 px-4 py-8 sm:px-6">
       <header className="grid gap-2">
+        <Link href="/" className="w-fit text-sm text-text-muted underline underline-offset-4">← Retour à mes notebooks</Link>
         <div className="flex items-center gap-2 text-sm text-accent"><Sparkles aria-hidden className="size-4" /> Sélections éditoriales</div>
         <h1 className="text-2xl font-semibold">Découvrir des notebooks</h1>
         <p className="max-w-2xl text-sm text-text-muted">Explorez des notebooks sélectionnés par l’équipe. Ouvrez-les en lecture ou copiez-les dans votre bibliothèque lorsque cette option est proposée.</p>
