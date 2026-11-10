@@ -11,7 +11,7 @@ import { toast } from "@/components/ui/toast";
 import { ArtifactShareButton } from "./artifact-share-button";
 import { cn } from "@/lib/utils";
 
-type ArtType = "report" | "flashcards" | "quiz" | "mind_map";
+type ArtType = "report" | "flashcards" | "quiz" | "mind_map" | "audio";
 type Art = { id: string; type: ArtType; title: string | null; status: string; error_code: string | null; options: Record<string, string> | null; custom_prompt?: string | null; created_at: string; progress?: number; stage?: string; unread?: boolean };
 type Cite = { marker: number; source_id: string; quote_text: string; char_start: number; char_end: number; verified: boolean };
 
@@ -20,6 +20,7 @@ const TYPES: Record<ArtType, { label: string; icon: React.ReactNode; hint: strin
   flashcards: { label: "Fiches", icon: <Layers />, hint: "Recto / verso pour réviser" },
   quiz: { label: "Quiz", icon: <ListChecks />, hint: "QCM corrigé avec explications" },
   mind_map: { label: "Carte mentale", icon: <Network />, hint: "Les thèmes et leurs liens" },
+  audio: { label: "Audio Overview", icon: <AudioLines />, hint: "Podcast dialogué à deux voix à partir des sources" },
 };
 const ERRORS: Record<string, string> = {
   ai_not_configured: "L’assistant n’est pas configuré côté serveur.",
@@ -107,7 +108,7 @@ export function Studio({ notebookId, canEdit, sourceIds, sourceTitle, onOpenCita
             className="col-span-2 justify-start"
             disabled={!readyCount}
             title={readyCount ? "Créer un podcast dialogué à deux voix à partir des sources sélectionnées" : "Ajoutez d’abord une source"}
-            onClick={() => void generate("report", { template: "briefing" }, AUDIO_OVERVIEW_MARKER)}
+            onClick={() => void generate("audio", {}, AUDIO_OVERVIEW_MARKER)}
           >
             <AudioLines aria-hidden /> Audio Overview · Podcast à deux voix
           </Button>
