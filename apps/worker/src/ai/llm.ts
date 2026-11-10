@@ -1,7 +1,7 @@
 import { PermanentError } from "../worker.ts";
 
 export type LlmMessage = { role: "system" | "user" | "assistant"; content: string };
-export type Llm = (messages: LlmMessage[], opts?: { json?: boolean; maxTokens?: number }) => Promise<{ text: string; model: string; usage: unknown }>;
+export type Llm = (messages: LlmMessage[], opts?: { json?: boolean; maxTokens?: number; model?: string }) => Promise<{ text: string; model: string; usage: unknown }>;
 
 /** Client OpenRouter (non streamé) pour les générations du Studio. Modèle et clé viennent de la configuration. */
 export function llmFromEnv(env = process.env): Llm | null {
@@ -17,7 +17,7 @@ export function llmFromEnv(env = process.env): Llm | null {
         method: "POST",
         headers: { authorization: `Bearer ${key}`, "content-type": "application/json", "X-Title": "Notebook" },
         body: JSON.stringify({
-          model, messages, max_tokens: opts.maxTokens ?? 4000, usage: { include: true },
+          model: opts.model ?? model, messages, max_tokens: opts.maxTokens ?? 4000, usage: { include: true },
           ...(opts.json ? { response_format: { type: "json_object" } } : {}),
         }),
       });
