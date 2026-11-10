@@ -33,12 +33,27 @@ export const notebookCreateSchema = z.object({ title: z.string().trim().max(200,
 
 /** Types acceptés à l'upload : extension → MIME attendu → kind de source. */
 export const UPLOAD_TYPES = {
-  pdf: ["application/pdf", "pdf"], txt: ["text/plain", "txt"], md: ["text/markdown", "md"], csv: ["text/csv", "csv"],
+  pdf: ["application/pdf", "pdf"],
+  txt: ["text/plain", "txt"], md: ["text/markdown", "md"], csv: ["text/csv", "csv"],
   docx: ["application/vnd.openxmlformats-officedocument.wordprocessingml.document", "docx"],
   pptx: ["application/vnd.openxmlformats-officedocument.presentationml.presentation", "pptx"],
   epub: ["application/epub+zip", "epub"],
-  mp3: ["audio/mpeg", "audio"], wav: ["audio/wav", "audio"], m4a: ["audio/mp4", "audio"],
-  aac: ["audio/aac", "audio"], ogg: ["audio/ogg", "audio"], flac: ["audio/flac", "audio"], webm: ["audio/webm", "audio"],
+  odt: ["application/vnd.oasis.opendocument.text", "docx"],
+  rtf: ["application/rtf", "docx"],
+  hwp: ["application/x-hwp", "docx"], hwpx: ["application/vnd.hancom.hwpx", "docx"],
+  mp3: ["audio/mpeg", "audio"], mpeg: ["video/mpeg", "video"],
+  wav: ["audio/wav", "audio"], m4a: ["audio/mp4", "audio"],
+  aac: ["audio/aac", "audio"], aif: ["audio/aiff", "audio"], aifc: ["audio/aiff", "audio"],
+  aiff: ["audio/aiff", "audio"], amr: ["audio/amr", "audio"], au: ["audio/basic", "audio"],
+  ra: ["audio/vnd.rn-realaudio", "audio"], snd: ["audio/basic", "audio"],
+  ogg: ["audio/ogg", "audio"], opus: ["audio/ogg", "audio"], wma: ["audio/x-ms-wma", "audio"],
+  "3g2": ["video/3gpp2", "video"], "3gp": ["video/3gpp", "video"],
+  avi: ["video/x-msvideo", "video"], mp4: ["video/mp4", "video"],
+  avif: ["image/avif", "image"], bmp: ["image/bmp", "image"], gif: ["image/gif", "image"],
+  ico: ["image/x-icon", "image"], jp2: ["image/jp2", "image"], png: ["image/png", "image"],
+  webp: ["image/webp", "image"], tif: ["image/tiff", "image"], tiff: ["image/tiff", "image"],
+  heic: ["image/heic", "image"], heif: ["image/heif", "image"],
+  jpeg: ["image/jpeg", "image"], jpg: ["image/jpeg", "image"], jpe: ["image/jpeg", "image"],
 } as const;
 export const MAX_UPLOAD_BYTES = 200 * 1024 * 1024;
 
@@ -69,7 +84,7 @@ export const notePatchSchema = z.object({
 /** Extension d'un nom de fichier → type d'upload accepté, ou null. */
 export function uploadTypeOf(filename: string) {
   const ext = filename.toLowerCase().split(".").pop() ?? "";
-  return ext in UPLOAD_TYPES ? (ext as keyof typeof UPLOAD_TYPES) : null;
+  return Object.prototype.hasOwnProperty.call(UPLOAD_TYPES, ext) ? (ext as keyof typeof UPLOAD_TYPES) : null;
 }
 
 /** Première erreur par champ, pour l'affichage sous chaque input. */
