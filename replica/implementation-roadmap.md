@@ -166,3 +166,20 @@ Date : 2026-11-09.
 3. La RLS est couverte pour lecteur, éditeur, rôle chat et étranger.
 4. Le coût IA (si la fonctionnalité en consomme) est enregistré dans `usage_ledger`.
 5. La ligne `clone` de `features.csv` passe à `yes` et `/replica-diff` est relancé.
+
+---
+
+## Electron : mises à jour automatiques
+
+> **Implémentation ajoutée sur `feat/electron-auto-updates` — validation de build et publication encore requises.**
+
+- Détection automatique au démarrage d'une version packagée, avec délai initial de 12 secondes.
+- Vérification manuelle depuis le menu natif **Leanna Notebook → Rechercher les mises à jour…**.
+- Distribution des versions Windows via les GitHub Releases du dépôt `moonback/leanna-notebook`, avec `electron-updater`.
+- Consentement explicite avant téléchargement ; progression exposée au renderer via l'API preload sécurisée ; aucune installation forcée pendant une session.
+- Une fois le téléchargement terminé, l'utilisateur choisit de redémarrer immédiatement ou de reporter l'installation.
+- Publication automatisée par le workflow `.github/workflows/desktop-release.yml` à chaque tag `v*`.
+
+**Mise en service :** configurer le secret GitHub Actions `LEANNA_WEB_URL` avec l'origine HTTPS de l'application web ; créer une release en poussant un tag correspondant à la version de `apps/desktop/package.json` (par exemple `v1.0.1`). Le workflow doit publier l'installateur NSIS, `latest.yml` et les artefacts de mise à jour. La version installée doit provenir d'une release GitHub publique.
+
+**À valider avant diffusion :** installation propre, détection d'une version supérieure, téléchargement interrompu/repris, report du redémarrage, installation après fermeture, signature de code Windows (non configurée) et fonctionnement sur une installation existante.
