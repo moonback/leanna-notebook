@@ -1,36 +1,10 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from "electron";
 import { join } from "node:path";
-import type { DesktopFileFilter } from "./shared/desktop-api";
+import { isSafeExternalUrl, normalizeFilters } from "./shared/validation";
 
 const WEB_URL = process.env.LEANNA_WEB_URL ?? "http://127.0.0.1:3000";
 const allowedOrigin = new URL(WEB_URL).origin;
 let mainWindow: BrowserWindow | null = null;
-
-function isSafeExternalUrl(value: unknown): value is string {
-  if (typeof value !== "string" || value.length > 2048) return false;
-  try {
-    return new URL(value).protocol === "https:";
-  } catch {
-    return false;
-  }
-}
-
-function normalizeFilters(value: unknown): Electron.FileFilter[] {
-  if (!Array.isArray(value)) return [];
-  return value.slice(0, 12).flatMap((entry) => {
-    if (!entry || typeof entry !== "object") return [];
-    const filter = entry as Partial<DesktopFileFilter>;
-    if (
-      typeof filter.name !== "string" ||
-      !Array.isArray(filter.extensions) ||
-      filter.extensions.length > 30 ||
-      !filter.extensions.every(
-        (extension) => typeof extension === "string" && /^[a-z0-9]{1,10}$/i.test(extension),
-      )
-    ) return [];
-    return [{ name: filter.name.slice(0, 80), extensions: filter.extensions }];
-  });
-}
 
 function registerApplicationMenu(): void {
   const viewItems: Electron.MenuItemConstructorOptions[] = [
