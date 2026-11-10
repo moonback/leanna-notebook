@@ -13,9 +13,9 @@ export function Contact() {
 
 export function Doc({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <article className="grid gap-6 text-[15px] leading-relaxed">
+    <article className="grid gap-6 text-[12px] leading-relaxed">
       <header className="grid gap-1">
-        <h1 className="text-3xl">{title}</h1>
+        <h1 className="text-[1.5rem] leading-[1.8rem]">{title}</h1>
         <p className="text-sm text-text-muted">Dernière mise à jour : {UPDATED}</p>
       </header>
       {children}

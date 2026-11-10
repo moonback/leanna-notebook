@@ -21,7 +21,7 @@ export function Citation({
             onClick={onOpen}
             aria-label={`Citation ${n}, ${source}${verified ? "" : ", non vérifiée"}`}
             className={cn(
-              "mx-0.5 inline-grid h-[1.15rem] min-w-[1.15rem] place-items-center rounded-xs px-1 align-[0.1em] font-mono text-[0.68rem] font-semibold leading-none transition-colors",
+              "mx-0.5 inline-grid h-[1.15rem] min-w-[1.15rem] place-items-center rounded-xs px-1 align-[0.1em] font-mono text-[0.544rem] font-semibold leading-none transition-colors",
               verified
                 ? "bg-accent-soft text-on-accent-soft hover:bg-accent hover:text-on-accent"
                 : "border border-dashed border-warning bg-warning-soft text-warning",
