@@ -156,10 +156,12 @@ export function studioHandler(db: SupabaseClient, llm: Llm | null, speech: Speec
       await db.from("artifacts").update({ status: "generating", error_code: null }).eq("id", art.id);
       await ctx.progress(10, "sélection des passages");
       const passages = await gatherPassages(db, art.notebook_id, art.source_ids ?? []);
-      const [{ data: profile }, { data: modelPreference }] = await Promise.all([
+      const promptKey = audioOverview ? "studio.audio_overview" : `studio.${art.type === "report" ? "report" : art.type}`;
+      const [{ data: profile }, { data: modelPreference }, { data: promptOverride }] = await Promise.all([
         db.from("profiles").select("output_language").eq("id", art.created_by).maybeSingle(),
         db.from("ai_model_preferences").select("model_id").eq("user_id", art.created_by)
           .eq("feature_key", art.type === "audio" || (art.type === "report" && isAudioOverviewPrompt(art.custom_prompt)) ? "audio_overview" : art.type).maybeSingle(),
+        db.from("ai_prompt_overrides").select("content").eq("user_id", art.created_by).eq("prompt_key", promptKey).maybeSingle(),
       ]);
       const language = (art.options as { language?: string })?.language ?? profile?.output_language ?? "fr";
       const audioOverview = art.type === "audio" || (art.type === "report" && isAudioOverviewPrompt(art.custom_prompt));
@@ -169,6 +171,9 @@ export function studioHandler(db: SupabaseClient, llm: Llm | null, speech: Speec
       const prompt = audioOverview
         ? { messages: buildAudioOverviewMessages(formatPassages(passages), language, customPrompt, (art.options ?? {}) as { format?: string; duration?: string; style?: string }), json: true }
         : buildPrompt(art.type, art.options ?? {}, customPrompt, formatPassages(passages), language);
+      if (promptOverride?.content && prompt.messages[0]) {
+        prompt.messages[0].content = `${prompt.messages[0].content}\\n\\nInstructions personnalisées de l’utilisateur :\\n${promptOverride.content}`;
+      }
       await ctx.progress(30, audioOverview ? "écriture du dialogue" : "rédaction");
       const out = await llm(prompt.messages, { json: prompt.json, model: modelPreference?.model_id ?? undefined, maxTokens: audioOverview ? ((art.options as { duration?: string } | null)?.duration === "long" ? 7000 : (art.options as { duration?: string } | null)?.duration === "short" ? 3000 : 5000) : art.type === "report" ? 6000 : 4000 });
       let content: Record<string, unknown>;
