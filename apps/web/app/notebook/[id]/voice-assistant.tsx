@@ -510,7 +510,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
                         <span key={index} className={`w-1 rounded-full bg-current ${state === "speaking" ? "animate-pulse" : ""}`} style={{ height: `${8 + ((index * 7) % 17)}px`, animationDelay: `${index * 90}ms` }} />
                       ))}
                     </div>
-                    <span className="text-[10px] font-medium uppercase tracking-[0.18em] text-text-subtle">Duo vocal</span>
+                    <span className="text-[10px] font-medium uppercase tracking-[0.18em] text-text-subtle">{roxaneEnabled ? "Duo vocal" : "Voix principale"}</span>
                   </div>
                   <div className={`grid size-14 place-items-center rounded-2xl border text-lg font-semibold shadow-sm transition-colors sm:size-16 ${roxaneEnabled && roxaneAnswer && state !== "speaking" ? "border-violet-500/50 bg-violet-500/10 text-violet-500" : "border-border bg-surface text-text-subtle"}`}>
                     R
