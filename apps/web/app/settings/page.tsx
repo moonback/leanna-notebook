@@ -9,6 +9,7 @@ import { ProfileForm } from "../profile-form";
 import { DeleteAccount } from "./delete-account";
 import { PlanCard } from "./plan-card";
 import { SettingsTabs } from "./settings-tabs";
+import { VoicePromptForm } from "./voice-prompt-form";
 
 export const metadata: Metadata = { title: "Réglages · Notebook" };
 
@@ -17,7 +18,7 @@ export default async function SettingsPage() {
   if (!user) redirect("/login?next=/settings");
   const supabase = await createUserClient();
   const [{ data: profile }, { data: workspaces }, { data: plans }] = await Promise.all([
-    supabase.from("profiles").select("display_name, output_language, theme, web_notifications").eq("id", user.id).single(),
+    supabase.from("profiles").select("display_name, output_language, theme, web_notifications, voice_system_prompt").eq("id", user.id).single(),
     supabase.from("workspaces").select("id, kind, name, plan_id").order("created_at"),
     supabase.from("plans").select("id, name, price_cents, currency, billing_interval, limits").order("price_cents"),
   ]);
@@ -45,6 +46,19 @@ export default async function SettingsPage() {
                 <Card className="grid gap-4 p-5">
                   <h2 className="text-lg">Préférences</h2>
                   {profile ? <ProfileForm initial={{ ...profile, theme: profile.theme as "light" | "dark" | "system" }} /> : <p role="alert" className="text-sm text-danger">Profil introuvable.</p>}
+                </Card>
+              ),
+            },
+            {
+              id: "voice",
+              label: "Mode vocal",
+              content: (
+                <Card className="grid gap-4 p-5">
+                  <div className="grid gap-1">
+                    <h2 className="text-lg">Personnaliser le mode vocal</h2>
+                    <p className="text-sm text-text-muted">Configurez les instructions système envoyées à Gemini Live lorsque vous discutez avec les sources de vos notebooks.</p>
+                  </div>
+                  {profile ? <VoicePromptForm initialPrompt={profile.voice_system_prompt} /> : <p role="alert" className="text-sm text-danger">Profil introuvable.</p>}
                 </Card>
               ),
             },
