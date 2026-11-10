@@ -10,6 +10,7 @@ import { DeleteAccount } from "./delete-account";
 import { PlanCard } from "./plan-card";
 import { SettingsTabs } from "./settings-tabs";
 import { OpenRouterSettings } from "./openrouter-settings";
+import { GoogleDriveSettings } from "./google-drive-settings";
 
 export const metadata: Metadata = { title: "Réglages · Notebook" };
 
@@ -71,6 +72,11 @@ export default async function SettingsPage() {
               id: "ai",
               label: "Intelligence artificielle",
               content: <OpenRouterSettings />,
+            },
+            {
+              id: "integrations",
+              label: "Intégrations",
+              content: <GoogleDriveSettings />,
             },
             {
               id: "data",
