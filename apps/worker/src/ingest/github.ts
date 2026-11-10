@@ -33,7 +33,7 @@ export async function extractGitHubCodebase(rawUrl: string): Promise<string> {
 
   const headers = { Accept: "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28", "User-Agent": "Leanna-Notebook" };
   const request = async (path: string) => {
-    const response = await fetch(`${API}\${path}`, { headers, signal: AbortSignal.timeout(20_000) });
+    const response = await fetch(`${API}${path}`, { headers, signal: AbortSignal.timeout(20_000) });
     if (response.status === 404) throw new PermanentError("github_not_found");
     if (response.status === 403 || response.status === 429) throw new Error("github_rate_limited");
     if (!response.ok) throw new Error(`github_http_${response.status}`);
@@ -73,5 +73,5 @@ export async function extractGitHubCodebase(rawUrl: string): Promise<string> {
     sections.push(...batch.filter((value): value is string => Boolean(value)));
   }
   if (!sections.length) throw new PermanentError("github_no_indexable_files");
-  return `GITHUB CODEBASE: ${owner}/${repo}\nREF: ${ref}\nFILES INDEXED: ${sections.length}\n\n${sections.join("\n\n---\n\n")}`;
+  return `GITHUB CODEBASE: ${owner}/${repo}\nREF: ${ref}\nCOMMIT: ${commitSha}\nFILES INDEXED: ${sections.length}\n\n${sections.join("\n\n---\n\n")}`;
 }
