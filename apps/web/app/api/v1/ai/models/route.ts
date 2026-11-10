@@ -40,7 +40,7 @@ export const GET = handle(async () => {
     catalog(),
   ]);
   if (error) throw error;
-  return NextResponse.json({ features: AI_FEATURES, models, preferences: (data ?? []).map((p) => ({ feature: p.feature_key, modelId: p.model_id, updatedAt: p.updated_at })) });
+  return NextResponse.json({ features: AI_FEATURES, models, defaultModelId: process.env.OPENROUTER_CHAT_MODEL ?? null, defaultEmbeddingModelId: process.env.OPENROUTER_EMBEDDINGS_MODEL ?? null, preferences: (data ?? []).map((p) => ({ feature: p.feature_key, modelId: p.model_id, updatedAt: p.updated_at })) });
 });
 
 export const PUT = handle(async (req: NextRequest) => {
