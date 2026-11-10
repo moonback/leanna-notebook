@@ -41,13 +41,13 @@ export function FastResearch({ notebookId, onImported }: { notebookId: string; o
         if (j.job.status === "succeeded") {
           setResults(j.results ?? []);
           setSelected(new Set((j.results ?? []).map((x: Result) => x.url)));
-          setBusy(false);
+          setSearching(false);
           setStage("Recherche terminée");
           return;
         }
         if (j.job.status === "failed" || j.job.status === "cancelled") {
           setError(errors[j.job.errorCode] ?? "La recherche a échoué. Réessayez.");
-          setBusy(false);
+          setSearching(false);
           return;
         }
         timer = setTimeout(poll, 1800);
@@ -70,12 +70,12 @@ export function FastResearch({ notebookId, onImported }: { notebookId: string; o
       const j = await r.json();
       if (!r.ok) throw new Error(errors[j.error] ?? "Impossible de lancer la recherche.");
       setJobId(j.jobId);
-    } catch (e) { setError(e instanceof Error ? e.message : "Recherche indisponible."); setBusy(false); }
+    } catch (e) { setError(e instanceof Error ? e.message : "Recherche indisponible."); setSearching(false); }
   }
 
   async function importSelected() {
     if (!jobId || !selected.size) return;
-    setBusy(true); setError("");
+    setImporting(true); setError("");
     try {
       const r = await fetch(`/api/v1/research/${jobId}/import`, {
         method: "POST", headers: { "content-type": "application/json" },
