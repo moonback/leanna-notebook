@@ -1,6 +1,6 @@
 "use client";
 import * as React from "react";
-import { AudioLines, BookOpen, Check, ChevronDown, ChevronRight, Download, Layers, ListChecks, Network, RotateCcw, Sparkles, Trash2, X, Clock3, Table2, BookText, CircleHelp, Workflow, Newspaper, CalendarDays, ChartNoAxesCombined } from "lucide-react";
+import { AudioLines, BookOpen, Check, ChevronDown, ChevronRight, Download, Layers, ListChecks, Network, RotateCcw, Sparkles, Trash2, X, Clock3, Table2, BookText, CircleHelp, Workflow, Newspaper, CalendarDays, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, Textarea } from "@/components/ui/field";
 import { Alert, Badge, EmptyState, Progress, Skeleton } from "@/components/ui/feedback";
