@@ -21,7 +21,7 @@ const TYPES: Record<ArtType, { label: string; icon: React.ReactNode; hint: strin
   quiz: { label: "Quiz", icon: <ListChecks />, hint: "QCM corrigé avec explications" },
   mind_map: { label: "Carte mentale", icon: <Network />, hint: "Les thèmes et leurs liens" },
   audio: { label: "Audio Overview", icon: <AudioLines />, hint: "Podcast dialogué à deux voix à partir des sources" },
-  infographic: { label: "Infographie", icon: <ChartNoAxesCombined />, hint: "Synthèse visuelle structurée et sourcée" },
+  infographic: { label: "Infographie", icon: <BarChart3 />, hint: "Synthèse visuelle structurée et sourcée" },
   timeline: { label: "Chronologie", icon: <Clock3 />, hint: "Événements classés par date avec citations" },
   comparison: { label: "Tableau comparatif", icon: <Table2 />, hint: "Comparaison sourcée de concepts ou de sources" },
   glossary: { label: "Glossaire", icon: <BookText />, hint: "Termes clés et définitions sourcées" },
