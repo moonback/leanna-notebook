@@ -49,19 +49,22 @@ export default async function SettingsPage() {
                 </Card>
               ),
             },
-            {
-              id: "voice",
-              label: "Mode vocal",
-              content: (
-                <Card className="grid gap-4 p-5">
-                  <div className="grid gap-1">
-                    <h2 className="text-lg">Personnaliser le mode vocal</h2>
-                    <p className="text-sm text-text-muted">Configurez les instructions système envoyées à Gemini Live lorsque vous discutez avec les sources de vos notebooks.</p>
-                  </div>
-                  {profile ? <VoicePromptForm initialPrompt={profile.voice_system_prompt} /> : <p role="alert" className="text-sm text-danger">Profil introuvable.</p>}
-                </Card>
-              ),
-            },
+            ...(process.env.prompt === "true" ? [
+                          {
+                            id: "voice",
+                            label: "Mode vocal",
+                            content: (
+                              <Card className="grid gap-4 p-5">
+                                <div className="grid gap-1">
+                                  <h2 className="text-lg">Personnaliser le mode vocal</h2>
+                                  <p className="text-sm text-text-muted">Configurez les instructions système envoyées à Gemini Live lorsque vous discutez avec les sources de vos notebooks.</p>
+                                </div>
+                                {profile ? <VoicePromptForm initialPrompt={profile.voice_system_prompt} /> : <p role="alert" className="text-sm text-danger">Profil introuvable.</p>}
+                              </Card>
+                            ),
+                          },
+              
+            ] : []),
             {
               id: "plan",
               label: "Offre",
