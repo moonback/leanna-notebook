@@ -4,9 +4,9 @@ import { Readability } from "@mozilla/readability";
 import { parseHTML } from "linkedom";
 import { PermanentError } from "../worker.ts";
 import { FetchRefused, safeFetch } from "./ssrf.ts";
-import { fromEpub, fromPptx, readZip } from "./office.ts";
+import { fromEpub, fromPptx, readZip } from "./office.ts";\nimport type { Transcriber } from "../ai/transcription.ts";\nimport type { ChunkTimeRange } from "./chunker.ts";
 
-export type Extracted = { text: string; pageStarts: number[]; pageCount: number | null; title?: string };
+export type Extracted = { text: string; pageStarts: number[]; pageCount: number | null; title?: string; timeRanges?: ChunkTimeRange[] };
 
 const MAX_WORDS = 500_000;
 
@@ -40,7 +40,7 @@ function fromHtml(html: string): Extracted {
 }
 
 /** Texte brut d'une source, selon son type. Les erreurs attendues sont des PermanentError (code stable). */
-export async function extract(kind: string, data: { file?: Uint8Array; url?: string; noteText?: string }): Promise<Extracted> {
+export async function extract(kind: string, data: { file?: Uint8Array; url?: string; noteText?: string; mimeType?: string }, transcriber?: Transcriber | null): Promise<Extracted> {
   switch (kind) {
     case "note":
       return finalize({ text: data.noteText ?? "", pageStarts: [], pageCount: null });
