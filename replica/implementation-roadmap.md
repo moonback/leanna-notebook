@@ -101,7 +101,8 @@ Date : 2026-11-09.
 > | Export RGPD (`GET /me/export`) | fait, synchrone et en JSON (au lieu du ZIP via job `export_account` prévu) ; à passer en job si les volumes grossissent |
 > | Suppression du compte (`DELETE /me`) | fait, synchrone (au lieu du job `delete_account`) avec confirmation par e-mail, au lieu de la double confirmation + ré-authentification prévue ; purge Storage ratée seulement journalisée, le job `purge_storage` n'est pas écrit |
 > | Z04 pages `/privacy` et `/terms` | faites ; restent DPA, registre des sous-traitants, rétention chez les fournisseurs d'IA, mentions légales, relecture juridique |
-> | B17 Fast Research | implémentation ajoutée sur `feat/m4-public-artifacts-research` : job avec quota atomique, worker Tavily, progression, 5 résultats maximum, sélection et import via `add_source` / `ingest_source` ; tests et validation runtime à faire |\n> | Onglet Découvrir (S04), pg_cron `cleanup_invitations` | à faire |
+> | B17 Fast Research | implémentation ajoutée sur `feat/m4-public-artifacts-research` : job avec quota atomique, worker Tavily, progression, 5 résultats maximum, sélection et import via `add_source` / `ingest_source` ; tests et validation runtime à faire |
+> | Onglet Découvrir (S04), pg_cron `cleanup_invitations` | à faire |
 >
 > Critère de sortie M4 : le critère « suppression sans objet restant dans Storage » n'est garanti qu'en l'absence d'erreur de purge ; aucun test E2E de la suppression ni de l'export n'existe encore. Annulation Stripe à brancher avec le paiement réel.
 
