@@ -3,6 +3,7 @@ import { PermanentError } from "../worker.ts";
 const MAX_FILES = 400;
 const MAX_FILE_BYTES = 256 * 1024;
 const MAX_TOTAL_BYTES = 8 * 1024 * 1024;
+const MAX_MARKDOWN_BYTES = 10 * 1024 * 1024;
 const API = "https://api.github.com";
 const IGNORE_DIRS = new Set([".git", "node_modules", ".next", "dist", "build", "coverage", "vendor", ".venv", "__pycache__", ".turbo"]);
 const IGNORE_FILES = /(^|\/)(\.env(?:\..*)?|\.npmrc|\.pypirc|id_rsa|id_ed25519|package-lock\.json|pnpm-lock\.yaml|yarn\.lock|bun\.lockb?|.*\.pem|.*\.key|.*\.p12|.*\.pfx|.*\.secret)$/i;
@@ -20,7 +21,96 @@ export function containsPotentialSecret(value: string): boolean {
   return /-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----|gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16}|(?:api[_-]?key|client[_-]?secret|password|access[_-]?token)\s*[:=]\s*["'][^"'\n]{12,}["']/i.test(value);
 }
 
-/** Capture un dépôt public à un commit précis. Les fichiers sont numérotés pour ancrer les citations. */
+const LANGUAGE_BY_EXTENSION: Record<string, string> = {
+  c: "c", cc: "cpp", cpp: "cpp", cs: "csharp", css: "css", go: "go", h: "c",
+  hpp: "cpp", html: "html", java: "java", js: "javascript", jsx: "jsx",
+  json: "json", md: "markdown", mjs: "javascript", mts: "typescript",
+  py: "python", rb: "ruby", rs: "rust", sh: "bash", sql: "sql",
+  svelte: "svelte", swift: "swift", toml: "toml", ts: "typescript",
+  tsx: "tsx", vue: "vue", xml: "xml", yaml: "yaml", yml: "yaml",
+  y: "verilog", zsh: "bash",
+};
+
+export function languageForGitHubPath(path: string): string {
+  const name = path.split("/").pop() ?? path;
+  if (name === "Dockerfile") return "dockerfile";
+  if (name === "Makefile") return "makefile";
+  if (name === "Gemfile") return "ruby";
+  if (name === " justfile") return "makefile";
+  const extension = name.includes(".") ? name.split(".").pop()!.toLowerCase() : "";
+  return LANGUAGE_BY_EXTENSION[extension] ?? "text";
+}
+
+/** Choisit un délimiteur Markdown plus long que toute séquence présente dans le contenu. */
+export function markdownFence(content: string): string {
+  const backticks = Math.max(0, ...Array.from(content.matchAll(/`+/g), (match) => match[0].length));
+  const tildes = Math.max(0, ...Array.from(content.matchAll(/~+/g), (match) => match[0].length));
+  return backticks <= tildes ? "`".repeat(Math.max(3, backticks + 1)) : "~".repeat(Math.max(3, tildes + 1));
+}
+
+function numberedContent(content: string): string {
+  const normalized = content.replace(/\r\n?/g, "\n");
+  return normalized.split("\n").map((line, index) => `${String(index + 1).padStart(5, "0")} | ${line}`).join("\n");
+}
+
+function markdownPath(path: string): string {
+  return path.replace(/\\/g, "/").replace(/([\\`])/g, "\\$1");
+}
+
+export type GitHubMarkdownFile = { path: string; content: string };
+
+export function renderGitHubMarkdown(input: {
+  owner: string;
+  repo: string;
+  ref: string;
+  commitSha: string;
+  files: GitHubMarkdownFile[];
+}): string {
+  const { owner, repo, ref, commitSha, files } = input;
+  const tree = files.map(({ path }) => `- \`${markdownPath(path)}\``).join("\n");
+  const toc = files.map(({ path }) => `- [${path.replace(/\\/g, "/")}](#file-${path.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")})`).join("\n");
+  const sections = files.map(({ path, content }) => {
+    const fence = markdownFence(content);
+    const language = languageForGitHubPath(path);
+    return [
+      `## FILE: ${path}`,
+      "",
+      `- **Chemin :** \`${markdownPath(path)}\``,
+      `- **Langage :** ${language}`,
+      `- **Lignes :** ${content.replace(/\\r\\n?/g, "\\n").split("\\n").length}`,
+      "",
+      `${fence}${language}`,
+      numberedContent(content),
+      fence,
+    ].join("\n");
+  }).join("\n\n---\n\n");
+
+  return [
+    "# Codebase GitHub",
+    "",
+    "## Métadonnées",
+    "",
+    `- **Dépôt :** [${owner}/${repo}](https://github.com/${owner}/${repo})`,
+    `- **Branche / référence :** \`${ref}\``,
+    `- **Commit immuable :** \`${commitSha}\``,
+    `- **Fichiers indexés :** ${files.length}`,
+    "",
+    "## Arborescence indexée",
+    "",
+    tree,
+    "",
+    "## Sommaire des fichiers",
+    "",
+    toc,
+    "",
+    "---",
+    "",
+    sections,
+    "",
+  ].join("\n");
+}
+
+/** Capture un dépôt public à un commit précis puis le convertit en un document Markdown unique. */
 export async function extractGitHubCodebase(rawUrl: string): Promise<string> {
   let url: URL;
   try { url = new URL(rawUrl); } catch { throw new PermanentError("github_invalid_url"); }
@@ -46,14 +136,14 @@ export async function extractGitHubCodebase(rawUrl: string): Promise<string> {
   if (typeof commitSha !== "string") throw new PermanentError("github_invalid_ref");
   const tree = await request(`/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/git/trees/${commitSha}?recursive=1`);
   if (tree.truncated) throw new PermanentError("github_repo_too_large");
-  const files = (tree.tree ?? []).filter((entry: any) => entry.type === "blob" && typeof entry.path === "string" && shouldIndexGitHubPath(entry.path));
-  if (!files.length) throw new PermanentError("github_no_indexable_files");
-  if (files.length > MAX_FILES) throw new PermanentError("github_repo_too_large");
+  const entries = (tree.tree ?? []).filter((entry: any) => entry.type === "blob" && typeof entry.path === "string" && shouldIndexGitHubPath(entry.path));
+  if (!entries.length) throw new PermanentError("github_no_indexable_files");
+  if (entries.length > MAX_FILES) throw new PermanentError("github_repo_too_large");
 
   let total = 0;
-  const sections: string[] = [];
-  for (let i = 0; i < files.length; i += 8) {
-    const batch = await Promise.all(files.slice(i, i + 8).map(async (entry: any) => {
+  const files: GitHubMarkdownFile[] = [];
+  for (let i = 0; i < entries.length; i += 8) {
+    const batch = await Promise.all(entries.slice(i, i + 8).map(async (entry: any) => {
       if (typeof entry.size !== "number" || entry.size > MAX_FILE_BYTES) return null;
       const rawPath = entry.path.split("/").map(encodeURIComponent).join("/");
       const rawRef = commitSha.split("/").map(encodeURIComponent).join("/");
@@ -63,16 +153,17 @@ export async function extractGitHubCodebase(rawUrl: string): Promise<string> {
       if (response.status === 404) return null;
       if (!response.ok) throw new Error(`github_raw_http_${response.status}`);
       const content = await response.text();
-      if (content.includes("\u0000") || containsPotentialSecret(content)) return null;
+      if (content.includes("\\u0000") || containsPotentialSecret(content)) return null;
       const bytes = Buffer.byteLength(content, "utf8");
       total += bytes;
       if (total > MAX_TOTAL_BYTES) throw new PermanentError("github_repo_too_large");
-      const lines = content.replace(/\r\n?/g, "\n").split("\n");
-      const numbered = lines.map((line, index) => `${String(index + 1).padStart(5, "0")} | ${line}`).join("\n");
-      return `## FILE: ${entry.path}\n${numbered}`;
+      return { path: entry.path as string, content };
     }));
-    sections.push(...batch.filter((value): value is string => Boolean(value)));
+    files.push(...batch.filter((file): file is GitHubMarkdownFile => Boolean(file)));
   }
-  if (!sections.length) throw new PermanentError("github_no_indexable_files");
-  return `GITHUB CODEBASE: ${owner}/${repo}\nREF: ${ref}\nCOMMIT: ${commitSha}\nFILES INDEXED: ${sections.length}\n\n${sections.join("\n\n---\n\n")}`;
+  if (!files.length) throw new PermanentError("github_no_indexable_files");
+
+  const markdown = renderGitHubMarkdown({ owner, repo, ref, commitSha, files });
+  if (Buffer.byteLength(markdown, "utf8") > MAX_MARKDOWN_BYTES) throw new PermanentError("github_repo_too_large");
+  return markdown;
 }
