@@ -43,8 +43,8 @@ export function languageForGitHubPath(path: string): string {
 
 /** Choisit un délimiteur Markdown plus long que toute séquence présente dans le contenu. */
 export function markdownFence(content: string): string {
-  const backticks = Math.max(0, ...Array.from(content.matchAll(/`+/g), (match) => match[0].length));
-  const tildes = Math.max(0, ...Array.from(content.matchAll(/~+/g), (match) => match[0].length));
+  const backticks = Array.from(content.matchAll(/`+/g)).reduce((max, match) => Math.max(max, match[0].length), 0);
+  const tildes = Array.from(content.matchAll(/~+/g)).reduce((max, match) => Math.max(max, match[0].length), 0);
   return backticks <= tildes ? "`".repeat(Math.max(3, backticks + 1)) : "~".repeat(Math.max(3, tildes + 1));
 }
 
@@ -73,7 +73,7 @@ export function renderGitHubMarkdown(input: {
     const fence = markdownFence(content);
     const language = languageForGitHubPath(path);
     return [
-      `## FILE: ${path}`,
+      `## FILE: \`${markdownPath(path)}\``,
       "",
       `- **Chemin :** \`${markdownPath(path)}\``,
       `- **Langage :** ${language}`,
