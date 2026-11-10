@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PendingVoiceSearches, VoiceTurnCitationStore, type RetrievedVoicePassage } from "./voice-turn";
+import { PendingVoiceSearches, resolveCitationIndex, VoiceTurnCitationStore, type RetrievedVoicePassage } from "./voice-turn";
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -86,5 +86,17 @@ describe("PendingVoiceSearches", () => {
     await expect(failed).rejects.toThrow("RAG indisponible");
     await expect(pending.waitForIdle()).resolves.toBeUndefined();
     expect(pending.count).toBe(0);
+  });
+});
+
+describe("resolveCitationIndex", () => {
+  it("navigue sans dépasser les bornes et respecte le numéro demandé", () => {
+    expect(resolveCitationIndex("open", 0, 3, 3)).toBe(2);
+    expect(resolveCitationIndex("open", 0, 3, 4)).toBeNull();
+    expect(resolveCitationIndex("next", 1, 3)).toBe(2);
+    expect(resolveCitationIndex("next", 2, 3)).toBeNull();
+    expect(resolveCitationIndex("previous", 0, 3)).toBeNull();
+    expect(resolveCitationIndex("previous", 2, 3)).toBe(1);
+    expect(resolveCitationIndex("open", 0, 0)).toBeNull();
   });
 });
