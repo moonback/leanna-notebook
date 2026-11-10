@@ -118,7 +118,7 @@ Date : 2026-11-09.
 > | Tests | Tests unitaires ajoutés pour l'adaptateur et l'association des timestamps aux chunks ; non exécutés à ce stade. |
 > | Reste B06 | Lecteur source et navigation transcript → position audio ajoutés dans la visionneuse : chaque segment horodaté permet de reprendre la lecture au bon instant. Restent le benchmark français (qualité, latence, coût/minute) et les tests d'intégration réels. |
 > | B08 Google Drive | Pas encore implémenté : OAuth, sélecteur, import Docs/Slides/Sheets et synchronisation restent à faire. |
-> | G01 Audio Overview | Pas encore implémenté : script dialogué, TTS segmenté, ffmpeg, cache/idempotence et lecteur restent à faire. |
+> | G01 Audio Overview | Première implémentation sur `feat/g01-audio-overview-generation` : script dialogué sourcé, deux voix ElevenLabs segmentées, assemblage ffmpeg, MP3 privé et lecteur Studio. Restent validation locale, tests d'intégration, contrôle qualité/coût, vitesse de lecture et téléchargement. |
 >
 > **Décision D3 provisoire** : Deepgram Nova-3 est le premier adaptateur STT, car son API expose des segments horodatés. Ce n'est pas une décision fournisseur définitive : comparer la qualité française et le coût réel avant lancement. Sans clé Deepgram, les autres types de sources continuent à fonctionner et une source audio échoue avec un code explicite.
 >

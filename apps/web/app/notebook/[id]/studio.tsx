@@ -1,6 +1,6 @@
 "use client";
 import * as React from "react";
-import { BookOpen, Check, ChevronDown, ChevronRight, Layers, ListChecks, Network, RotateCcw, Sparkles, Trash2, X } from "lucide-react";
+import { AudioLines, BookOpen, Check, ChevronDown, ChevronRight, Layers, ListChecks, Network, RotateCcw, Sparkles, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, Textarea } from "@/components/ui/field";
 import { Alert, Badge, EmptyState, Progress, Skeleton } from "@/components/ui/feedback";
@@ -11,8 +11,8 @@ import { toast } from "@/components/ui/toast";
 import { ArtifactShareButton } from "./artifact-share-button";
 import { cn } from "@/lib/utils";
 
-type ArtType = "report" | "flashcards" | "quiz" | "mind_map";
-type Art = { id: string; type: ArtType; title: string | null; status: string; error_code: string | null; options: Record<string, string> | null; created_at: string; progress?: number; stage?: string; unread?: boolean };
+type ArtType = "report" | "flashcards" | "quiz" | "mind_map" | "audio";
+type Art = { id: string; type: ArtType; title: string | null; status: string; error_code: string | null; options: Record<string, string> | null; custom_prompt?: string | null; created_at: string; progress?: number; stage?: string; unread?: boolean };
 type Cite = { marker: number; source_id: string; quote_text: string; char_start: number; char_end: number; verified: boolean };
 
 const TYPES: Record<ArtType, { label: string; icon: React.ReactNode; hint: string }> = {
@@ -20,14 +20,20 @@ const TYPES: Record<ArtType, { label: string; icon: React.ReactNode; hint: strin
   flashcards: { label: "Fiches", icon: <Layers />, hint: "Recto / verso pour réviser" },
   quiz: { label: "Quiz", icon: <ListChecks />, hint: "QCM corrigé avec explications" },
   mind_map: { label: "Carte mentale", icon: <Network />, hint: "Les thèmes et leurs liens" },
+  audio: { label: "Audio Overview", icon: <AudioLines />, hint: "Podcast dialogué à deux voix à partir des sources" },
 };
 const ERRORS: Record<string, string> = {
   ai_not_configured: "L’assistant n’est pas configuré côté serveur.",
   ai_config: "Configuration du modèle invalide (clé ou modèle).",
   no_sources: "Aucune source prête au moment de la génération.",
   generation_failed: "Le modèle n’a pas produit un résultat exploitable.",
+  audio_tts_not_configured: "La synthèse vocale n’est pas configurée côté worker.",
+  audio_tts_config: "La configuration du fournisseur de voix est invalide.",
+  audio_voices_invalid: "Configurez deux identifiants de voix différents.",
+  audio_ffmpeg_not_installed: "ffmpeg est absent du PATH du worker. Installez-le puis redémarrez le worker.",
 };
 const busy = (s: string) => s === "queued" || s === "scheduled" || s === "generating";
+const AUDIO_OVERVIEW_MARKER = "[[NOTEBOOK_AUDIO_OVERVIEW_V1]]";
 const label = (a: Art) => a.title || TYPES[a.type].label;
 const fmt = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
@@ -74,7 +80,7 @@ export function Studio({ notebookId, canEdit, sourceIds, sourceTitle, onOpenCita
     if (r.status === 429) { toast({ title: "Quota atteint", description: "Changez d’offre dans les réglages ou réessayez plus tard.", tone: "error" }); return false; }
     if (r.status === 503) { toast({ title: "Assistant non configuré", description: "La clé OpenRouter doit être renseignée côté serveur.", tone: "error" }); return false; }
     if (!r.ok) { toast({ title: "Génération impossible", description: j.message, tone: "error" }); return false; }
-    toast({ title: `${TYPES[type].label} en préparation`, description: "Vous pouvez continuer à travailler : il apparaîtra ici une fois prêt." });
+    toast({ title: `${customPrompt?.startsWith(AUDIO_OVERVIEW_MARKER) ? "Audio Overview" : TYPES[type].label} en préparation`, description: "Vous pouvez continuer à travailler : il apparaîtra ici une fois prêt." });
     // demandé au moment d'un geste de l'utilisateur, une seule fois ; un refus est respecté
     if ("Notification" in window && Notification.permission === "default") void Notification.requestPermission();
     void load();
@@ -96,11 +102,20 @@ export function Studio({ notebookId, canEdit, sourceIds, sourceTitle, onOpenCita
     <Panel id="studio" title="Studio" className="h-full">
       {canEdit && (
         <div className="grid grid-cols-2 gap-2 border-b p-3">
-          {(Object.keys(TYPES) as ArtType[]).map((t) => (
+          {(["report", "flashcards", "quiz", "mind_map"] as ArtType[]).map((t) => (
             <Button key={t} variant="secondary" className="justify-start" disabled={!readyCount} title={readyCount ? TYPES[t].hint : "Ajoutez d’abord une source"} onClick={() => setCreating(t)}>
               {TYPES[t].icon} {TYPES[t].label}
             </Button>
           ))}
+          <Button
+            variant="secondary"
+            className="col-span-2 justify-start"
+            disabled={!readyCount}
+            title={readyCount ? "Créer un podcast dialogué à deux voix à partir des sources sélectionnées" : "Ajoutez d’abord une source"}
+            onClick={() => void generate("audio", {}, AUDIO_OVERVIEW_MARKER)}
+          >
+            <AudioLines aria-hidden /> Audio Overview · Podcast à deux voix
+          </Button>
         </div>
       )}
       {failedLoad ? (
@@ -127,7 +142,7 @@ export function Studio({ notebookId, canEdit, sourceIds, sourceTitle, onOpenCita
                   <span className="flex items-center gap-1">
                     {a.unread && <span role="img" aria-label="Non lu" className="size-2 rounded-pill bg-accent" />}
                     {busy(a.status) && <Badge tone="accent">{a.progress ? `${a.progress} %` : "En cours"}</Badge>}
-                    {a.status === "failed" && canEdit && <Button size="icon-sm" variant="ghost" aria-label={`Relancer ${label(a)}`} onClick={() => void generate(a.type, a.options ?? {})}><RotateCcw aria-hidden /></Button>}
+                    {a.status === "failed" && canEdit && <Button size="icon-sm" variant="ghost" aria-label={`Relancer ${label(a)}`} onClick={() => void generate(a.type, a.options ?? {}, a.custom_prompt ?? undefined)}><RotateCcw aria-hidden /></Button>}
                     {canEdit && !busy(a.status) && <Button size="icon-sm" variant="ghost" aria-label={`Supprimer ${label(a)}`} onClick={() => void remove(a)}><Trash2 aria-hidden /></Button>}
                   </span>
                 }
@@ -194,7 +209,7 @@ function CreateDialog({ type, onClose, onGenerate }: { type: ArtType | null; onC
 
 /* ---------------------------------------------------------- Visionneuses ---- */
 
-type Content = { markdown?: string; cards?: Card[]; questions?: QuizQ[]; root?: MapNode };
+type Content = { markdown?: string; cards?: Card[]; questions?: QuizQ[]; root?: MapNode; audio_path?: string; audio_format?: string };
 
 type Progress = { item_key: string; state: string; answer: number | null };
 
@@ -222,10 +237,10 @@ function ArtifactViewer({ id, canShare, onClose, sourceTitle, onOpenCitation, on
       <DialogContent size="lg" title={art ? (art.title || TYPES[art.type].label) : "Contenu du Studio"}>
         {id && canShare && <ArtifactShareButton artifactId={id} disabled={!art} />}
         <div className="max-h-[70dvh] overflow-y-auto pr-1">
-          {art?.custom_prompt && <p className="mb-4 rounded-md bg-surface px-3 py-2 text-xs text-text-muted"><span className="font-medium">Consignes de génération :</span> {art.custom_prompt}</p>}
+          {art?.custom_prompt && !art.custom_prompt.startsWith(AUDIO_OVERVIEW_MARKER) && <p className="mb-4 rounded-md bg-surface px-3 py-2 text-xs text-text-muted"><span className="font-medium">Consignes de génération :</span> {art.custom_prompt}</p>}
           {failed ? <Alert tone="danger" title="Contenu indisponible" />
             : !art ? <div className="grid gap-2" aria-busy="true" aria-label="Chargement"><Skeleton className="h-5 w-2/3" /><Skeleton className="h-4" /><Skeleton className="h-4 w-5/6" /></div>
-            : art.type === "report" ? <Markdown text={art.content.markdown ?? ""} citations={data!.citations} sourceTitle={sourceTitle} onOpen={onOpenCitation ? (c) => { onClose(); onOpenCitation(c); } : undefined} />
+             : art.type === "report" || art.type === "audio" ? <div className="grid gap-4">{art.content.audio_path && <audio controls preload="metadata" className="w-full" src={`/api/v1/artifacts/${art.id}/audio`} />}<Markdown text={art.content.markdown ?? ""} citations={data!.citations} sourceTitle={sourceTitle} onOpen={onOpenCitation ? (c) => { onClose(); onOpenCitation(c); } : undefined} /></div>
             : art.type === "flashcards" ? <Flashcards id={art.id} title={art.title || "fiches"} cards={art.content.cards ?? []} progress={data!.progress} />
             : art.type === "quiz" ? <Quiz id={art.id} questions={art.content.questions ?? []} progress={data!.progress} onExplain={onAsk} />
             : art.content.root ? <MindMap root={art.content.root} onAsk={(l) => onAsk(`Explique « ${l} » à partir de mes sources.`)} />

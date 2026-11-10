@@ -3,6 +3,8 @@ import { z } from "zod";
 import { formatPassages, resolveCitations, type Passage } from "@notebook/core/citations";
 import { PermanentError, type Handler } from "../worker.ts";
 import type { Llm, LlmMessage } from "../ai/llm.ts";
+import type { SpeechSynthesizer } from "../ai/speech.ts";
+import { audioOverviewInstructions, buildAudioOverviewMessages, isAudioOverviewPrompt, parseAudioOverviewScript, renderAudioOverview } from "./audio-overview.ts";
 
 const MAX_CONTEXT_CHARS = 60_000; // ≈ 15k tokens de passages
 
@@ -115,7 +117,7 @@ export async function gatherPassages(db: SupabaseClient, notebookId: string, sou
 }
 
 /** Job generate_artifact : passages → modèle → validation → contenu + citations. Statut de l'artefact persistant. */
-export function studioHandler(db: SupabaseClient, llm: Llm | null): Handler {
+export function studioHandler(db: SupabaseClient, llm: Llm | null, speech: SpeechSynthesizer | null = null, audioEnv = process.env): Handler {
   return async (job, ctx) => {
     const { data: art } = await db.from("artifacts").select("id, type, options, custom_prompt, source_ids, notebook_id, workspace_id, created_by").eq("id", job.target_id!).single();
     if (!art) throw new PermanentError("artifact_not_found");
@@ -126,13 +128,41 @@ export function studioHandler(db: SupabaseClient, llm: Llm | null): Handler {
       await ctx.progress(10, "sélection des passages");
       const passages = await gatherPassages(db, art.notebook_id, art.source_ids ?? []);
       const { data: profile } = await db.from("profiles").select("output_language").eq("id", art.created_by).maybeSingle();
-      const { messages, json } = buildPrompt(art.type, art.options ?? {}, art.custom_prompt, formatPassages(passages), (art.options as { language?: string })?.language ?? profile?.output_language ?? "fr");
-      await ctx.progress(30, "rédaction");
-      const out = await llm(messages, { json, maxTokens: art.type === "report" ? 6000 : 4000 });
-      await ctx.progress(85, "vérification");
-      const { content, citations } = toContent(art.type, out.text, passages);
-      const title = art.type === "report" ? (/^#{1,3}\s+(.+)$/m.exec(String((content as { markdown: string }).markdown))?.[1] ?? null)
-        : art.type === "mind_map" ? String((content as { root: { label: string } }).root.label) : null;
+      const language = (art.options as { language?: string })?.language ?? profile?.output_language ?? "fr";
+      const audioOverview = art.type === "audio" || (art.type === "report" && isAudioOverviewPrompt(art.custom_prompt));
+      const customPrompt = audioOverview ? audioOverviewInstructions(art.custom_prompt) : art.custom_prompt;
+      if (audioOverview && !speech) throw new PermanentError("audio_tts_not_configured", "Configurez ELEVENLABS_API_KEY et les deux identifiants de voix.");
+      if (audioOverview && (!audioEnv.AUDIO_OVERVIEW_HOST_VOICE_ID || !audioEnv.AUDIO_OVERVIEW_GUEST_VOICE_ID || audioEnv.AUDIO_OVERVIEW_HOST_VOICE_ID === audioEnv.AUDIO_OVERVIEW_GUEST_VOICE_ID)) throw new PermanentError("audio_voices_invalid");
+      const prompt = audioOverview
+        ? { messages: buildAudioOverviewMessages(formatPassages(passages), language, customPrompt), json: true }
+        : buildPrompt(art.type, art.options ?? {}, customPrompt, formatPassages(passages), language);
+      await ctx.progress(30, audioOverview ? "écriture du dialogue" : "rédaction");
+      const out = await llm(prompt.messages, { json: prompt.json, maxTokens: audioOverview ? 5000 : art.type === "report" ? 6000 : 4000 });
+      let content: Record<string, unknown>;
+      let citations: ReturnType<typeof toContent>["citations"];
+      let title: string | null;
+      if (audioOverview) {
+        if (!speech) throw new PermanentError("audio_tts_not_configured", "Configurez ELEVENLABS_API_KEY et les deux identifiants de voix.");
+        const script = parseAudioOverviewScript(out.text);
+        const rendered = await renderAudioOverview({
+          db, artifactId: art.id, workspaceId: art.workspace_id, notebookId: art.notebook_id, script,
+          synthesize: speech,
+          hostVoiceId: audioEnv.AUDIO_OVERVIEW_HOST_VOICE_ID ?? "",
+          guestVoiceId: audioEnv.AUDIO_OVERVIEW_GUEST_VOICE_ID ?? "",
+          ffmpegPath: audioEnv.FFMPEG_PATH || "ffmpeg",
+          onProgress: ctx.progress,
+        });
+        content = { markdown: rendered.transcript, audio_path: rendered.storagePath, audio_format: "mp3", model: out.model };
+        title = script.title || "Audio Overview";
+        citations = [];
+      } else {
+        await ctx.progress(85, "vérification");
+        const generated = toContent(art.type, out.text, passages);
+        content = generated.content as Record<string, unknown>;
+        citations = generated.citations;
+        title = art.type === "report" ? (/^#{1,3}\\s+(.+)$/m.exec(String((content as { markdown: string }).markdown))?.[1] ?? null)
+          : art.type === "mind_map" ? String((content as { root: { label: string } }).root.label) : null;
+      }
       await db.from("citations").delete().eq("artifact_id", art.id);
       if (citations.length) {
         const { error } = await db.from("citations").insert(citations.map((c) => ({
