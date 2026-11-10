@@ -26,9 +26,9 @@ type Message = { id: string; role: "user" | "assistant"; content: string; status
 
 const ERRORS: Record<string, string> = {
   protected_pdf: "PDF protégé : retirez la protection puis réimportez-le.",
-  needs_ocr: "Aucun texte détecté. Vérifiez la qualité du scan ou la configuration OCR (GEMINI_API_KEY).",
-  ocr_not_configured: "La reconnaissance de texte des images nécessite GEMINI_API_KEY côté worker.",
-  ocr_config: "Le service OCR Gemini est mal configuré.",
+  needs_ocr: "Aucun texte détecté. Vérifiez la qualité du scan ou la configuration OCR (OPENROUTER_API_KEY).",
+  ocr_not_configured: "La reconnaissance de texte des images nécessite OPENROUTER_API_KEY côté worker.",
+  ocr_config: "Le service OCR OpenRouter est mal configuré.",
   video_transcode_unavailable: "Extraction audio vidéo impossible : FFmpeg doit être installé sur le worker.",
   unreadable_file: "Fichier illisible ou corrompu.",
   empty_content: "Aucun texte exploitable dans cette source.",
