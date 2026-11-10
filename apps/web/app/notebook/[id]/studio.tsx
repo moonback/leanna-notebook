@@ -1,6 +1,6 @@
 "use client";
 import * as React from "react";
-import { AudioLines, BookOpen, Check, ChevronDown, ChevronRight, Download, Layers, ListChecks, Network, RotateCcw, Sparkles, Trash2, X } from "lucide-react";
+import { AudioLines, BookOpen, Check, ChevronDown, ChevronRight, Download, Layers, ListChecks, Network, RotateCcw, Sparkles, Trash2, X, Clock3, Table2, BookText, CircleHelp, Workflow, Newspaper, CalendarDays, ChartNoAxesCombined } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, Textarea } from "@/components/ui/field";
 import { Alert, Badge, EmptyState, Progress, Skeleton } from "@/components/ui/feedback";
@@ -11,7 +11,7 @@ import { toast } from "@/components/ui/toast";
 import { ArtifactShareButton } from "./artifact-share-button";
 import { cn } from "@/lib/utils";
 
-type ArtType = "report" | "flashcards" | "quiz" | "mind_map" | "audio";
+type ArtType = "report" | "flashcards" | "quiz" | "mind_map" | "audio" | "infographic" | "timeline" | "comparison" | "glossary" | "faq" | "diagram" | "editorial" | "study_plan";
 type Art = { id: string; type: ArtType; title: string | null; status: string; error_code: string | null; options: Record<string, string> | null; custom_prompt?: string | null; created_at: string; progress?: number; stage?: string; unread?: boolean };
 type Cite = { marker: number; source_id: string; quote_text: string; char_start: number; char_end: number; verified: boolean };
 
@@ -21,6 +21,14 @@ const TYPES: Record<ArtType, { label: string; icon: React.ReactNode; hint: strin
   quiz: { label: "Quiz", icon: <ListChecks />, hint: "QCM corrigé avec explications" },
   mind_map: { label: "Carte mentale", icon: <Network />, hint: "Les thèmes et leurs liens" },
   audio: { label: "Audio Overview", icon: <AudioLines />, hint: "Podcast dialogué à deux voix à partir des sources" },
+  infographic: { label: "Infographie", icon: <ChartNoAxesCombined />, hint: "Synthèse visuelle structurée et sourcée" },
+  timeline: { label: "Chronologie", icon: <Clock3 />, hint: "Événements classés par date avec citations" },
+  comparison: { label: "Tableau comparatif", icon: <Table2 />, hint: "Comparaison sourcée de concepts ou de sources" },
+  glossary: { label: "Glossaire", icon: <BookText />, hint: "Termes clés et définitions sourcées" },
+  faq: { label: "FAQ", icon: <CircleHelp />, hint: "Questions fréquentes et réponses sourcées" },
+  diagram: { label: "Diagramme", icon: <Workflow />, hint: "Flux ou organigramme Mermaid éditable" },
+  editorial: { label: "Contenu éditorial", icon: <Newspaper />, hint: "Newsletter, article ou fil social" },
+  study_plan: { label: "Plan d'étude", icon: <CalendarDays />, hint: "Planning de révision construit depuis les sources" },
 };
 const ERRORS: Record<string, string> = {
   ai_not_configured: "L’assistant n’est pas configuré côté serveur.",
@@ -102,7 +110,7 @@ export function Studio({ notebookId, canEdit, sourceIds, sourceTitle, onOpenCita
     <Panel id="studio" title="Studio" className="h-full">
       {canEdit && (
         <div className="grid grid-cols-2 gap-2 border-b p-3">
-          {(["report", "flashcards", "quiz", "mind_map"] as ArtType[]).map((t) => (
+          {(["report", "flashcards", "quiz", "mind_map", "infographic", "timeline", "comparison", "glossary", "faq", "diagram", "editorial", "study_plan"] as ArtType[]).map((t) => (
             <Button key={t} variant="secondary" className="justify-start" disabled={!readyCount} title={readyCount ? TYPES[t].hint : "Ajoutez d’abord une source"} onClick={() => setCreating(t)}>
               {TYPES[t].icon} {TYPES[t].label}
             </Button>
@@ -295,7 +303,7 @@ function ArtifactViewer({ id, canShare, onClose, sourceTitle, onOpenCitation, on
           {art?.custom_prompt && !art.custom_prompt.startsWith(AUDIO_OVERVIEW_MARKER) && <p className="mb-4 rounded-md bg-surface px-3 py-2 text-xs text-text-muted"><span className="font-medium">Consignes de génération :</span> {art.custom_prompt}</p>}
           {failed ? <Alert tone="danger" title="Contenu indisponible" />
             : !art ? <div className="grid gap-2" aria-busy="true" aria-label="Chargement"><Skeleton className="h-5 w-2/3" /><Skeleton className="h-4" /><Skeleton className="h-4 w-5/6" /></div>
-             : art.type === "report" || art.type === "audio" ? <div className="grid gap-4">{art.content.audio_path && <div className="grid gap-2 rounded-lg border border-border p-3"><audio ref={audioRef} controls preload="metadata" className="w-full" src={`/api/v1/artifacts/${art.id}/audio`} /><div className="flex flex-wrap items-center justify-between gap-2"><div className="flex flex-wrap items-center gap-3 text-xs text-text-muted">{typeof art.content.estimated_duration_seconds === "number" && <span>Durée estimée : {Math.floor(art.content.estimated_duration_seconds / 60)} min</span>}{typeof art.content.tts_characters === "number" && <span>{art.content.tts_characters.toLocaleString("fr-FR")} caractères TTS</span>}{typeof art.content.segment_count === "number" && <span>{art.content.segment_count} répliques</span>}</div><label className="flex items-center gap-2 text-xs text-text-muted">Vitesse <select aria-label="Vitesse de lecture" className="h-8 rounded-md border border-border-input bg-surface-raised px-2 text-sm text-text" value={playbackRate} onChange={(e) => setPlaybackRate(e.target.value)}>{["0.75", "1", "1.25", "1.5", "1.75", "2"].map((v) => <option key={v} value={v}>{v}×</option>)}</select></label><a className="inline-flex items-center gap-2 text-sm font-medium text-accent hover:underline" href={`/api/v1/artifacts/${art.id}/audio?download=1`}><Download aria-hidden size={16} /> Télécharger le MP3</a></div></div>}<Markdown text={art.content.markdown ?? ""} citations={data!.citations} sourceTitle={sourceTitle} onOpen={onOpenCitation ? (c) => { onClose(); onOpenCitation(c); } : undefined} /></div>
+             : art.type === "report" || art.type === "audio" || ["infographic", "timeline", "comparison", "glossary", "faq", "diagram", "editorial", "study_plan"].includes(art.type) ? <div className="grid gap-4">{art.content.audio_path && <div className="grid gap-2 rounded-lg border border-border p-3"><audio ref={audioRef} controls preload="metadata" className="w-full" src={`/api/v1/artifacts/${art.id}/audio`} /><div className="flex flex-wrap items-center justify-between gap-2"><div className="flex flex-wrap items-center gap-3 text-xs text-text-muted">{typeof art.content.estimated_duration_seconds === "number" && <span>Durée estimée : {Math.floor(art.content.estimated_duration_seconds / 60)} min</span>}{typeof art.content.tts_characters === "number" && <span>{art.content.tts_characters.toLocaleString("fr-FR")} caractères TTS</span>}{typeof art.content.segment_count === "number" && <span>{art.content.segment_count} répliques</span>}</div><label className="flex items-center gap-2 text-xs text-text-muted">Vitesse <select aria-label="Vitesse de lecture" className="h-8 rounded-md border border-border-input bg-surface-raised px-2 text-sm text-text" value={playbackRate} onChange={(e) => setPlaybackRate(e.target.value)}>{["0.75", "1", "1.25", "1.5", "1.75", "2"].map((v) => <option key={v} value={v}>{v}×</option>)}</select></label><a className="inline-flex items-center gap-2 text-sm font-medium text-accent hover:underline" href={`/api/v1/artifacts/${art.id}/audio?download=1`}><Download aria-hidden size={16} /> Télécharger le MP3</a></div></div>}<Markdown text={art.content.markdown ?? ""} citations={data!.citations} sourceTitle={sourceTitle} onOpen={onOpenCitation ? (c) => { onClose(); onOpenCitation(c); } : undefined} /></div>
             : art.type === "flashcards" ? <Flashcards id={art.id} title={art.title || "fiches"} cards={art.content.cards ?? []} progress={data!.progress} />
             : art.type === "quiz" ? <Quiz id={art.id} questions={art.content.questions ?? []} progress={data!.progress} onExplain={onAsk} />
             : art.content.root ? <MindMap root={art.content.root} onAsk={(l) => onAsk(`Explique « ${l} » à partir de mes sources.`)} />
