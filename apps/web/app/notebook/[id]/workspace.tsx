@@ -29,8 +29,10 @@ const ERRORS: Record<string, string> = {
   too_many_words: "Source trop longue (plus de 500 000 mots).",
   paywall: "Page réservée aux abonnés : contenu inaccessible.",
   url_refused: "Adresse refusée ou injoignable.",
-  unsupported_type: "Type de fichier non pris en charge.",\n  transcription_not_configured: "La transcription audio n’est pas configurée côté serveur.",\n  transcription_config: "Le service de transcription audio est mal configuré.",
-  no_speech: "Aucune parole exploitable détectée dans ce fichier audio.",\n  no_speech: "Aucune parole exploitable détectée dans ce fichier audio.",
+  unsupported_type: "Type de fichier non pris en charge.",
+  transcription_not_configured: "La transcription audio n’est pas configurée côté serveur.",
+  transcription_config: "Le service de transcription audio est mal configuré.",
+  no_speech: "Aucune parole exploitable détectée dans ce fichier audio.",
   embeddings_config: "Indexation impossible : configuration des embeddings invalide.",
   file_missing: "Fichier introuvable : réimportez-le.",
   temporary_error: "Erreur temporaire : nouvelle tentative en cours.",
@@ -576,7 +578,7 @@ function AddSourcesDialog({ open, onOpenChange, notebookId, onAdded }: { open: b
               <TabsTrigger value="text"><Type className="mr-1.5 inline size-3.5" aria-hidden />Texte</TabsTrigger>
             </TabsList>
             <TabsContent value="file" className="pt-4">
-              <Field id="files" label="Fichiers" hint="PDF, DOCX, PPTX, EPUB, TXT, MD, CSV, MP3, WAV, M4A, AAC, OGG ou FLAC — 200 Mo maximum par fichier.">
+              <Field id="files" label="Fichiers" hint="PDF, DOCX, PPTX, EPUB, TXT, MD, CSV, MP3, WAV, M4A, AAC, OGG, FLAC ou WEBM — 200 Mo maximum par fichier.">
                 <input ref={fileRef} type="file" multiple accept=".pdf,.docx,.pptx,.epub,.txt,.md,.csv,.mp3,.wav,.m4a,.aac,.ogg,.flac,.webm" className="block w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-accent-soft file:px-3 file:py-2 file:text-sm file:font-medium file:text-on-accent-soft" />
               </Field>
             </TabsContent>
