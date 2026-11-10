@@ -27,6 +27,9 @@ const ERRORS: Record<string, string> = {
   ai_config: "Configuration du modèle invalide (clé ou modèle).",
   no_sources: "Aucune source prête au moment de la génération.",
   generation_failed: "Le modèle n’a pas produit un résultat exploitable.",
+  audio_tts_not_configured: "La synthèse vocale n’est pas configurée côté worker.",
+  audio_tts_config: "La configuration du fournisseur de voix est invalide.",
+  audio_voices_invalid: "Configurez deux identifiants de voix différents.",
 };
 const busy = (s: string) => s === "queued" || s === "scheduled" || s === "generating";
 const AUDIO_OVERVIEW_MARKER = "[[NOTEBOOK_AUDIO_OVERVIEW_V1]]";
@@ -236,7 +239,7 @@ function ArtifactViewer({ id, canShare, onClose, sourceTitle, onOpenCitation, on
           {art?.custom_prompt && <p className="mb-4 rounded-md bg-surface px-3 py-2 text-xs text-text-muted"><span className="font-medium">Consignes de génération :</span> {art.custom_prompt}</p>}
           {failed ? <Alert tone="danger" title="Contenu indisponible" />
             : !art ? <div className="grid gap-2" aria-busy="true" aria-label="Chargement"><Skeleton className="h-5 w-2/3" /><Skeleton className="h-4" /><Skeleton className="h-4 w-5/6" /></div>
-            : art.type === "report" ? <div className="grid gap-4">{art.content.audio_path && <audio controls preload="metadata" className="w-full" src={`/api/v1/artifacts/${art.id}/audio`} />}<Markdown text={art.content.markdown ?? ""} citations={data!.citations} sourceTitle={sourceTitle} onOpen={onOpenCitation ? (c) => { onClose(); onOpenCitation(c); } : undefined} /></div>
+             : art.type === "report" || art.type === "audio" ? <div className="grid gap-4">{art.content.audio_path && <audio controls preload="metadata" className="w-full" src={`/api/v1/artifacts/${art.id}/audio`} />}<Markdown text={art.content.markdown ?? ""} citations={data!.citations} sourceTitle={sourceTitle} onOpen={onOpenCitation ? (c) => { onClose(); onOpenCitation(c); } : undefined} /></div>
             : art.type === "flashcards" ? <Flashcards id={art.id} title={art.title || "fiches"} cards={art.content.cards ?? []} progress={data!.progress} />
             : art.type === "quiz" ? <Quiz id={art.id} questions={art.content.questions ?? []} progress={data!.progress} onExplain={onAsk} />
             : art.content.root ? <MindMap root={art.content.root} onAsk={(l) => onAsk(`Explique « ${l} » à partir de mes sources.`)} />
