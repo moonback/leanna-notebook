@@ -40,6 +40,11 @@ const TEMPLATES: Record<string, string> = {
   briefing: "Note de synthèse pour un décideur : contexte, points clés, chiffres, risques, recommandations.",
   study_guide: "Guide d'étude : notions clés définies, résumé par thème, 5 questions de révision avec réponses, glossaire.",
   faq: "FAQ : les 8 à 12 questions les plus utiles, chacune avec une réponse courte et sourcée.",
+  blog_post: "Article de blog : un titre accrocheur, une introduction, des sections fluides, des exemples concrets et une conclusion. Reste fidèle aux sources.",
+  specification: "Spécification : contexte, objectifs, périmètre, exigences fonctionnelles, contraintes, cas limites et critères d’acceptation. Signale explicitement les éléments absents des sources.",
+  action_plan: "Plan d’action : objectifs, étapes ordonnées, priorités, dépendances, livrables et indicateurs de réussite. N’invente pas de responsables ni d’échéances.",
+  practical_sheet: "Fiche pratique : objectif, prérequis, informations nécessaires, étapes numérotées, conseils, erreurs à éviter et checklist finale.",
+  detailed_guide: "Guide détaillé : introduction, progression pédagogique par étapes, explications, exemples tirés des sources, bonnes pratiques et synthèse finale.",
 };
 
 /** Construit le prompt d'un type d'artefact. Exporté pour les tests. */
@@ -50,7 +55,11 @@ export function buildPrompt(type: string, options: Record<string, unknown>, cust
   switch (type) {
     case "report": {
       const t = TEMPLATES[String(options.template ?? "briefing")] ?? TEMPLATES.briefing;
-      return { json: false, messages: [sys(`TÂCHE : rédige un rapport en Markdown (titres ##, listes). Format : ${t}\nChaque affirmation tirée d'un passage se termine par son numéro entre crochets, ex. [3] ou [1, 4]. N'invente jamais de numéro.`), user] };
+      const mode = options.reportFormat === "interactive"
+        ? "Présente le résultat comme un rapport interactif à parcourir dans le Studio : sections courtes et autonomes, encadrés « À retenir », questions de réflexion et listes d’actions lorsque les sources le permettent. N’utilise pas de HTML ni de code."
+        : "Présente le résultat comme un document final soigné, directement exploitable et facile à exporter.";
+      const task = "TÂCHE : rédige un rapport en Markdown (titres ##, listes). Format : " + t + "\n" + mode + "\nChaque affirmation tirée d’un passage se termine par son numéro entre crochets, ex. [3] ou [1, 4]. N’invente jamais de numéro.";
+      return { json: false, messages: [sys(task), user] };
     }
     case "flashcards": {
       const n = COUNT[(options.count as keyof typeof COUNT) ?? "standard"] ?? 15;
