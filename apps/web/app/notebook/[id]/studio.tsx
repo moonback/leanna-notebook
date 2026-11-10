@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Field, Textarea } from "@/components/ui/field";
 import { Alert, Badge, EmptyState, Progress, Skeleton } from "@/components/ui/feedback";
 import { Dialog, DialogClose, DialogContent } from "@/components/ui/overlay";
+import { useConfirm } from "@/components/ui/confirm";
 import { ListRow, Panel } from "@/components/ui/surfaces";
 import { Citation } from "@/components/ui/citation";
 import { toast } from "@/components/ui/toast";
@@ -53,6 +54,7 @@ export function Studio({ notebookId, canEdit, sourceIds, sourceTitle, onOpenCita
   const [failedLoad, setFailedLoad] = React.useState(false);
   const [creating, setCreating] = React.useState<ArtType | null>(null);
   const [open, setOpen] = React.useState<string | null>(null);
+  const [confirm, confirmDialog] = useConfirm();
   const readyCount = sourceIds.length;
 
   const seen = React.useRef(new Map<string, string>());
@@ -96,7 +98,7 @@ export function Studio({ notebookId, canEdit, sourceIds, sourceTitle, onOpenCita
   }
 
   async function remove(a: Art) {
-    if (!confirm(`Supprimer « ${label(a)} » ?`)) return;
+    if (!(await confirm({ title: `Supprimer « ${label(a)} » ?`, description: "Ce contenu généré sera supprimé définitivement.", confirmLabel: "Supprimer" }))) return;
     const r = await fetch(`/api/v1/artifacts/${a.id}`, { method: "DELETE" });
     if (r.ok) setArts((xs) => xs?.filter((x) => x.id !== a.id) ?? null); else toast({ title: "Suppression impossible", tone: "error" });
   }
@@ -108,6 +110,7 @@ export function Studio({ notebookId, canEdit, sourceIds, sourceTitle, onOpenCita
 
   return (
     <Panel id="studio" title="Studio" className="h-full">
+      {confirmDialog}
       {canEdit && (
         <div className="grid grid-cols-2 gap-2 border-b p-3">
           {(["report", "flashcards", "quiz", "mind_map", "infographic", "timeline", "comparison", "glossary", "faq", "diagram", "editorial", "study_plan"] as ArtType[]).map((t) => (
@@ -513,7 +516,10 @@ function Flashcards({ id, title, cards, progress }: { id: string; title: string;
     setFlipped(false); setI((x) => x + 1);
   };
   const restart = (next: Card[]) => { setDeck(next); setI(0); setMissed([]); setFlipped(false); };
-  const restartAll = async () => { await resetProgress(id); setAcquired(new Set()); restart([...cards].sort(() => Math.random() - 0.5)); };
+  const [confirm, confirmDialog] = useConfirm();
+  const restartAll = async () => {
+    if (!(await confirm({ title: "Tout reprendre à zéro ?", description: "Votre progression sur ces fiches sera effacée.", confirmLabel: "Tout reprendre" }))) return;
+    await resetProgress(id); setAcquired(new Set()); restart([...cards].sort(() => Math.random() - 0.5)); };
   const exportBtn = <Button size="sm" variant="ghost" onClick={() => downloadCsv(title, cardsToCsv(cards))}>Exporter (CSV)</Button>;
   if (!cards.length) return <Alert tone="warning" title="Aucune fiche" />;
   if (i >= deck.length) return (
@@ -524,6 +530,7 @@ function Flashcards({ id, title, cards, progress }: { id: string; title: string;
         <Button variant="secondary" onClick={() => void restartAll()}><RotateCcw aria-hidden /> Tout reprendre (mélangé)</Button>
         {exportBtn}
       </div>
+      {confirmDialog}
     </div>
   );
   const c = deck[i];
@@ -555,12 +562,16 @@ function Quiz({ id, questions, progress, onExplain }: { id: string; questions: Q
   const [picked, setPicked] = React.useState<number | null>(null);
   const [score, setScore] = React.useState(() => progress.filter((p) => p.state === "correct").length);
   const [hint, setHint] = React.useState(false);
-  const restart = async () => { await resetProgress(id); setI(0); setScore(0); setPicked(null); setHint(false); };
+  const [confirm, confirmDialog] = useConfirm();
+  const restart = async () => {
+    if (!(await confirm({ title: "Recommencer le quiz ?", description: "Votre score et vos réponses seront effacés.", confirmLabel: "Recommencer" }))) return;
+    await resetProgress(id); setI(0); setScore(0); setPicked(null); setHint(false); };
   if (!questions.length) return <Alert tone="warning" title="Aucune question" />;
   if (i >= questions.length) return (
     <div className="grid justify-items-center gap-4 py-6 text-center">
       <p className="text-2xl">Score : {score} / {questions.length}</p>
       <Button variant="secondary" onClick={() => void restart()}><RotateCcw aria-hidden /> Recommencer</Button>
+      {confirmDialog}
     </div>
   );
   const q = questions[i];

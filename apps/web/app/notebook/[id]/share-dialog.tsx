@@ -6,6 +6,7 @@ import { Field, Input } from "@/components/ui/field";
 import { Alert, Badge, Skeleton } from "@/components/ui/feedback";
 import { Switch } from "@/components/ui/controls";
 import { Dialog, DialogContent } from "@/components/ui/overlay";
+import { useConfirm } from "@/components/ui/confirm";
 import { ListRow } from "@/components/ui/surfaces";
 import { toast } from "@/components/ui/toast";
 
@@ -29,6 +30,7 @@ export function ShareButton({ notebookId, allowCopies }: { notebookId: string; a
     if (!r?.ok) { setCopies(!v); toast({ title: "Réglage non enregistré", tone: "error" }); }
   }
   const [open, setOpen] = React.useState(false);
+  const [confirm, confirmDialog] = useConfirm();
   const [people, setPeople] = React.useState<Person[] | null>(null);
   const [failed, setFailed] = React.useState(false);
   const [email, setEmail] = React.useState("");
@@ -53,7 +55,7 @@ export function ShareButton({ notebookId, allowCopies }: { notebookId: string; a
     await navigator.clipboard?.writeText(link.url).then(() => toast({ title: "Lien copié", tone: "success" }), () => undefined);
   }
   async function revoke(l: Link) {
-    if (!confirm("Révoquer ce lien ? Les personnes qui l’ont ouvert perdent aussitôt l’accès.")) return;
+    if (!(await confirm({ title: "Révoquer ce lien ?", description: "Les personnes qui l’ont ouvert perdent aussitôt l’accès.", confirmLabel: "Révoquer" }))) return;
     const r = await fetch(`/api/v1/share-links/${l.id}`, { method: "DELETE" });
     if (r.ok) { setLinks((xs) => xs.filter((x) => x.id !== l.id)); setCreated(null); } else toast({ title: "Révocation impossible", tone: "error" });
   }
@@ -75,7 +77,7 @@ export function ShareButton({ notebookId, allowCopies }: { notebookId: string; a
     else toast({ title: "Rôle non modifié", tone: "error" });
   }
   async function remove(p: Person) {
-    if (!confirm(`Retirer l’accès de ${p.email} ?`)) return;
+    if (!(await confirm({ title: `Retirer l’accès de ${p.email} ?`, description: "Cette personne ne pourra plus ouvrir ce notebook.", confirmLabel: "Retirer" }))) return;
     const r = await fetch(`/api/v1/notebook-members/${p.member_id}`, { method: "DELETE" });
     if (r.ok) setPeople((xs) => xs?.filter((x) => x.member_id !== p.member_id) ?? null);
     else toast({ title: "Retrait impossible", tone: "error" });
@@ -83,6 +85,7 @@ export function ShareButton({ notebookId, allowCopies }: { notebookId: string; a
 
   return (
     <>
+      {confirmDialog}
       <Button size="sm" variant="secondary" onClick={() => setOpen(true)}><Share2 aria-hidden /> Partager</Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent title="Partager le notebook" description="Les lecteurs consultent et posent des questions ; les éditeurs ajoutent des sources et génèrent du contenu.">

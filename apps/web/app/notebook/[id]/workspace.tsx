@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Field, Input, Textarea } from "@/components/ui/field";
 import { Alert, Badge, EmptyState, Progress, Skeleton } from "@/components/ui/feedback";
 import { Dialog, DialogClose, DialogContent, Tooltip } from "@/components/ui/overlay";
+import { useConfirm } from "@/components/ui/confirm";
 import { Checkbox, Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/controls";
 import { ListRow, Panel } from "@/components/ui/surfaces";
 import { Citation } from "@/components/ui/citation";
@@ -173,8 +174,9 @@ export function Workspace({ notebookId, initialTitle, role, allowCopies }: { not
     return null;
   }
 
+  const [confirm, confirmDialog] = useConfirm();
   async function removeSource(s: Source) {
-    if (!confirm(`Supprimer la source « ${s.title} » ? Les réponses passées gardent leurs extraits cités.`)) return;
+    if (!(await confirm({ title: `Supprimer la source « ${s.title} » ?`, description: "Les réponses passées gardent leurs extraits cités.", confirmLabel: "Supprimer" }))) return;
     const res = await fetch(`/api/v1/sources/${s.id}`, { method: "DELETE" });
     if (res.ok) { setSources((xs) => xs?.filter((x) => x.id !== s.id) ?? null); toast({ title: "Source supprimée", tone: "success" }); void loadOverview(); }
     else toast({ title: "Suppression impossible", tone: "error" });
@@ -247,6 +249,7 @@ export function Workspace({ notebookId, initialTitle, role, allowCopies }: { not
 
   return (
     <>
+      {confirmDialog}
       <div className="flex h-12 shrink-0 items-center gap-2 border-b px-3 sm:px-5">
         {canEdit ? (
           <input aria-label="Titre du notebook" defaultValue={title} placeholder="Notebook sans titre" maxLength={200}
@@ -428,10 +431,12 @@ function Chat({ notebookId, readyCount, onOpenCitation, onOpenPassage, canViewSo
   const [error, setError] = React.useState<{ title: string; body?: string } | null>(null);
   const abort = React.useRef<AbortController | null>(null);
   const [configuring, setConfiguring] = React.useState(false);
+  const [confirm, confirmDialog] = useConfirm();
   async function clearHistory() {
-    if (!conversationId || !confirm("Effacer tout l’historique de cette conversation ? Les notes enregistrées sont conservées.")) return;
-    const r = await fetch(`/api/v1/conversations/${conversationId}/messages`, { method: "DELETE" });
-    if (r.ok) { setMessages([]); setError(null); toast({ title: "Historique effacé" }); }
+    if (!conversationId) return;
+    if (!(await confirm({ title: "Effacer tout l’historique de cette conversation ?", description: "Les notes enregistrées sont conservées.", confirmLabel: "Effacer" }))) return;
+    const r = await fetch(`/api/v1/conversations/${conversationId}/messages`, { method: "DELETE" }).catch(() => null);
+    if (r?.ok) { setMessages([]); setError(null); toast({ title: "Historique effacé" }); }
     else toast({ title: "Effacement impossible", tone: "error" });
   }
   const bottom = React.useRef<HTMLDivElement>(null);
@@ -508,6 +513,7 @@ function Chat({ notebookId, readyCount, onOpenCitation, onOpenPassage, canViewSo
       <div className="flex h-11 shrink-0 items-center justify-end gap-1 border-b px-2">
         {canConfigure && <Button size="sm" variant="ghost" onClick={() => setConfiguring(true)}><Settings2 aria-hidden /> Configurer</Button>}
         <Button size="sm" variant="ghost" disabled={!messages?.length || streaming} onClick={() => void clearHistory()}><Eraser aria-hidden /> Effacer l’historique</Button>
+        {confirmDialog}
       </div>
       <ChatSettingsDialog open={configuring} onClose={() => setConfiguring(false)} notebookId={notebookId} />
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-6 sm:px-6">
@@ -878,6 +884,7 @@ function NoteEditor({ state, notebookId, canEdit, onClose, onSaved }: { state: {
   const [loading, setLoading] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
   const [errors, setErrors] = React.useState<Record<string, string>>({});
+  const [confirm, confirmDialog] = useConfirm();
   const editing = Boolean(state?.id);
 
   React.useEffect(() => {
@@ -893,7 +900,8 @@ function NoteEditor({ state, notebookId, canEdit, onClose, onSaved }: { state: {
   }, [state]);
 
   async function unlock() {
-    if (!state?.id || !confirm("Retirer les citations de cette note pour pouvoir la modifier ? Les liens vers les passages cités seront perdus.")) return;
+    if (!state?.id) return;
+    if (!(await confirm({ title: "Retirer les citations de cette note ?", description: "Les liens vers les passages cités seront perdus. La note pourra ensuite être modifiée.", confirmLabel: "Retirer les citations" }))) return;
     const r = await fetch(`/api/v1/notes/${state.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ unlock: true }) });
     if (r.ok) { setLocked(false); setCitations(0); } else toast({ title: "Action impossible", tone: "error" });
   }
@@ -918,6 +926,7 @@ function NoteEditor({ state, notebookId, canEdit, onClose, onSaved }: { state: {
   return (
     <Dialog open={Boolean(state)} onOpenChange={(o) => !o && onClose()}>
       <DialogContent size="lg" title={editing ? (readOnly ? "Note" : "Modifier la note") : "Nouvelle note"} description="Une note est une source : elle peut être sélectionnée et citée dans les réponses.">
+        {confirmDialog}
         {loading ? (
           <div className="grid gap-2" aria-busy="true"><Skeleton className="h-9" /><Skeleton className="h-40" /></div>
         ) : (
