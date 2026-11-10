@@ -126,7 +126,7 @@ Le fournisseur Fast Research est Tavily côté worker (`TAVILY_API_KEY`, configu
 | méthode et chemin | rôle | qui | entrée | sortie |
 | --- | --- | --- | --- | --- |
 | GET `/api/v1/notebooks/:id/members` | Liste des membres et invitations (H01) | viewer+ | — | `{members[], links[]}` |
-| POST `/api/v1/notebooks/:id/members` | Inviter par email | editor+ | `{emails[] (≤ 50 au total), role}` | `201 {members[]}` + emails. 422 email invalide (Q33), 409 plafond |
+| POST `/api/v1/notebooks/:id/members` | Inviter par email | owner | `{email, role}` | `201 {member}` ; compte existant = accès immédiat, sinon invitation en attente expirant après 30 jours |
 | PATCH `/api/v1/notebooks/:id/members/:memberId` | Changer de rôle | editor+ | `{role}` | 200 |
 | DELETE `/api/v1/notebooks/:id/members/:memberId` | Retirer un membre (ou se retirer soi-même) | editor+ ou la personne | — | 204 |
 | POST `/api/v1/notebooks/:id/links` | Créer un lien public (H02, H03, H04). **Le jeton n'est renvoyé qu'une seule fois.** | editor+ | `{scope:"full"\|"chat_only"\|"artifact", artifactId?}` | `201 {url}` |
