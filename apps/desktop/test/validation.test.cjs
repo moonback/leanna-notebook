@@ -1,6 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { isSafeExternalUrl, normalizeFilters } = require("../dist/shared/validation.js");
+const { isSafeExternalUrl, isAllowedWebUrl, normalizeFilters } = require("../dist/shared/validation.js");
 
 test("external URL validation accepts HTTPS URLs", () => {
   assert.equal(isSafeExternalUrl("https://example.com/path"), true);
@@ -20,6 +20,17 @@ test("external URL validation rejects non-HTTPS and malformed values", () => {
   ]) {
     assert.equal(isSafeExternalUrl(value), false, String(value));
   }
+});
+
+test("application URL allows HTTPS and local development only", () => {
+  assert.equal(isAllowedWebUrl("https://notebook.example.com"), true);
+  assert.equal(isAllowedWebUrl("http://127.0.0.1:3000"), true);
+  assert.equal(isAllowedWebUrl("http://localhost:3000"), true);
+  assert.equal(isAllowedWebUrl("http://[::1]:3000"), true);
+  assert.equal(isAllowedWebUrl("http://notebook.example.com"), false);
+  assert.equal(isAllowedWebUrl("http://127.0.0.1:3000", false), false);
+  assert.equal(isAllowedWebUrl("https://user:pass@example.com"), false);
+  assert.equal(isAllowedWebUrl("file:///C:/app/index.html"), false);
 });
 
 test("external URL validation rejects oversized values", () => {
