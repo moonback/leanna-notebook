@@ -59,7 +59,7 @@ export function Workspace({ notebookId, initialTitle, role, allowCopies }: { not
   const [deselected, setDeselected] = React.useState<Set<string>>(new Set());
   const [loadError, setLoadError] = React.useState(false);
   const [adding, setAdding] = React.useState(false);
-  const [viewer, setViewer] = React.useState<{ sourceId: string; range?: [number, number] } | null>(null);
+  const [viewer, setViewer] = React.useState<{ sourceId: string; range?: [number, number]; timeStartMs?: number } | null>(null);
   const [noteEditor, setNoteEditor] = React.useState<{ id?: string } | null>(null);
   const [renaming, setRenaming] = React.useState<Source | null>(null);
   const [mobileTab, setMobileTab] = React.useState("chat");
