@@ -99,20 +99,25 @@ export function initializeAutoUpdater(getWindow: () => BrowserWindow | null): vo
 
 export async function checkForUpdates(window: BrowserWindow | null, showUpToDate = true): Promise<void> {
   if (!app.isPackaged || checking || downloading) return;
+
+  let notAvailableListener: (() => void) | undefined;
+  if (showUpToDate) {
+    notAvailableListener = () => {
+      if (window && !window.isDestroyed()) {
+        void dialog.showMessageBox(window, {
+          type: "info",
+          title: "Aucune mise à jour",
+          message: "Vous utilisez la dernière version de Leanna Notebook.",
+        });
+      }
+    };
+    autoUpdater.once("update-not-available", notAvailableListener);
+  }
+
   try {
     await autoUpdater.checkForUpdates();
-    if (showUpToDate) {
-      autoUpdater.once("update-not-available", async () => {
-        if (window && !window.isDestroyed()) {
-          await dialog.showMessageBox(window, {
-            type: "info",
-            title: "Aucune mise à jour",
-            message: "Vous utilisez la dernière version de Leanna Notebook.",
-          });
-        }
-      });
-    }
   } catch (error) {
+    if (notAvailableListener) autoUpdater.removeListener("update-not-available", notAvailableListener);
     const detail = error instanceof Error ? error.message : String(error);
     notify(window, "error", { message: detail });
     if (showUpToDate && window && !window.isDestroyed()) {
