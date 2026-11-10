@@ -178,22 +178,34 @@ function CreateDialog({ type, notebookId, sourceIds, onClose, onGenerate }: { ty
   const [selectedAiModel, setSelectedAiModel] = React.useState<string | null>(null);
 
   const sourceKey = sourceIds.join(",");
+  const aiModelsCache = React.useRef<{ notebookId: string; sourceIds: Set<string>; suggestions: AiReportModel[] } | null>(null);
   React.useEffect(() => {
-    setAiModels([]);
-    setAiModelsError(false);
-    setSelectedAiModel(null);
     if (type !== "report" || !sourceKey) return;
+    const currentSourceIds = new Set(sourceKey.split(",").filter(Boolean));
+    const cached = aiModelsCache.current;
+    // Réutiliser les suggestions si les sources n'ont pas changé ou si seules des sources ont été retirées.
+    // Une nouvelle analyse OpenRouter n'est nécessaire que lorsqu'au moins une source inédite est ajoutée.
+    if (cached && cached.notebookId === notebookId && [...currentSourceIds].every((id) => cached.sourceIds.has(id))) {
+      setAiModels(cached.suggestions);
+      setAiModelsError(false);
+      return;
+    }
+
     let active = true;
+    setAiModelsError(false);
     setAiModelsLoading(true);
     fetch(`/api/v1/notebooks/${notebookId}/artifacts/suggestions`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ sourceIds: sourceKey.split(",").filter(Boolean) }),
+      body: JSON.stringify({ sourceIds: [...currentSourceIds] }),
     }).then(async (response) => {
       if (!response.ok) throw new Error("suggestions_unavailable");
       const result = await response.json() as { suggestions?: AiReportModel[] };
       if (!Array.isArray(result.suggestions)) throw new Error("invalid_suggestions");
-      if (active) setAiModels(result.suggestions);
+      if (active) {
+        setAiModels(result.suggestions);
+        aiModelsCache.current = { notebookId, sourceIds: currentSourceIds, suggestions: result.suggestions };
+      }
     }).catch(() => {
       if (active) setAiModelsError(true);
     }).finally(() => {
