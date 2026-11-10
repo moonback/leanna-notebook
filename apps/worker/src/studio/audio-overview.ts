@@ -105,7 +105,7 @@ export function buildAudioOverviewFfmpegArgs(files: string[], output: string, pa
 
 function audioMetrics(script: AudioOverviewScript) {
   const text = script.segments.map((segment) => segment.text).join(" ");
-  const words = text.trim().split(/\\s+/).filter(Boolean).length;
+  const words = text.trim().split(/\s+/).filter(Boolean).length;
   return { ttsCharacters: Array.from(text).length, segmentCount: script.segments.length, estimatedDurationSeconds: Math.round((words / 150) * 60) };
 }
 function runFfmpeg(binary: string, args: string[]): Promise<void> {
