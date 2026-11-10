@@ -1,0 +1,17 @@
+{
+  "name": "@notebook/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "pnpm build && concurrently -k -s first \"pnpm --dir ../web dev -- --hostname 127.0.0.1 --port 3000\" \"wait-on http://127.0.0.1:3000 && electron .\""
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "concurrently": "^9.2.1",
+    "electron": "^38.0.0",
+    "typescript": "^5.9.0",
+    "wait-on": "^8.0.4"
+  }
+}
