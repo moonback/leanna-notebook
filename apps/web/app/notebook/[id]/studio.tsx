@@ -392,9 +392,16 @@ function InfographicView({ markdown, citations, sourceTitle, onOpen }: { markdow
   }
   const cards = sections.filter((x) => x.items.length).slice(0, 6);
   const cols = cards.length > 3 ? 3 : Math.max(1, cards.length);
-  return <div className="grid gap-4">
+  const downloadSvg = () => {
+    const svg = document.getElementById("studio-infographic-preview");
+    if (!svg) return;
+    const blob = new Blob([new XMLSerializer().serializeToString(svg)], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = "infographie-studio.svg"; a.click(); URL.revokeObjectURL(url);
+  };
+  return <div className="grid gap-3">
+    <div className="flex justify-end"><Button size="sm" variant="secondary" onClick={downloadSvg}><Download aria-hidden size={15} /> Exporter en SVG</Button></div>
     <div className="overflow-hidden rounded-xl border border-border bg-surface">
-      <svg viewBox="0 0 960 620" role="img" aria-label={title} className="h-auto w-full">
+      <svg id="studio-infographic-preview" viewBox="0 0 960 620" role="img" aria-label={title} className="h-auto w-full">
         <defs><linearGradient id="studioInfographicBg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="var(--color-accent)" stopOpacity=".16" /><stop offset="100%" stopColor="var(--color-surface)" /></linearGradient></defs>
         <rect width="960" height="620" rx="22" fill="url(#studioInfographicBg)" />
         <text x="48" y="64" fontSize="29" fontWeight="700" fill="currentColor">{title.slice(0, 58)}</text>
