@@ -80,6 +80,34 @@ export function parseAudioOverviewScript(raw: string): AudioOverviewScript {
   return parsed.data;
 }
 
+/** Construit un mixage homogène : rééchantillonnage, pauses courtes et normalisation EBU R128. */
+export function buildAudioOverviewFfmpegArgs(files: string[], output: string, pauseSeconds = 0.28): string[] {
+  if (!files.length) throw new Error("audio_segments_missing");
+  if (!Number.isFinite(pauseSeconds) || pauseSeconds < 0 || pauseSeconds > 2) throw new Error("audio_pause_invalid");
+  const args = ["-y"];
+  for (const file of files) args.push("-i", file);
+  for (let i = 0; i < files.length - 1; i++) args.push("-f", "lavfi", "-t", String(pauseSeconds), "-i", "anullsrc=r=44100:cl=stereo");
+  const filters: string[] = [];
+  const sequence: string[] = [];
+  files.forEach((_, i) => {
+    filters.push("[" + i + ":a]aresample=44100,aformat=sample_fmts=fltp:channel_layouts=stereo[voice" + i + "]");
+    sequence.push("[voice" + i + "]");
+    if (i < files.length - 1) {
+      const silenceInput = files.length + i;
+      filters.push("[" + silenceInput + ":a]asetpts=PTS-STARTPTS[pause" + i + "]");
+      sequence.push("[pause" + i + "]");
+    }
+  });
+  filters.push(sequence.join("") + "concat=n=" + (files.length * 2 - 1) + ":v=0:a=1,loudnorm=I=-16:TP=-1.5:LRA=11[mix]");
+  args.push("-filter_complex", filters.join(";"), "-map", "[mix]", "-vn", "-c:a", "libmp3lame", "-b:a", "128k", "-ar", "44100", "-id3v2_version", "3", output);
+  return args;
+}
+
+function audioMetrics(script: AudioOverviewScript) {
+  const text = script.segments.map((segment) => segment.text).join(" ");
+  const words = text.trim().split(/\\s+/).filter(Boolean).length;
+  return { ttsCharacters: Array.from(text).length, segmentCount: script.segments.length, estimatedDurationSeconds: Math.round((words / 150) * 60) };
+}
 function runFfmpeg(binary: string, args: string[]): Promise<void> {
   return new Promise((resolve, reject) => {
     const child = spawn(binary, args, { stdio: ["ignore", "ignore", "pipe"] });
@@ -103,14 +131,15 @@ export async function renderAudioOverview(args: {
   guestVoiceId: string;
   ffmpegPath?: string;
   onProgress?: (value: number, stage: string) => Promise<void>;
-}): Promise<{ storagePath: string; transcript: string }> {
+}): Promise<{ storagePath: string; transcript: string; ttsCharacters: number; segmentCount: number; estimatedDurationSeconds: number; audioBytes: number | null }> {
   const { db, artifactId, workspaceId, notebookId, script, synthesize, hostVoiceId, guestVoiceId } = args;
+  const metrics = audioMetrics(script);
   if (!hostVoiceId || !guestVoiceId || hostVoiceId === guestVoiceId) throw new PermanentError("audio_voices_invalid");
   const scriptHash = createHash("sha256").update(JSON.stringify(script)).digest("hex").slice(0, 16);
   const storagePath = `audio-overviews/${workspaceId}/${notebookId}/${artifactId}-${scriptHash}.mp3`;
   const { data: existing } = await db.storage.from("artifacts").createSignedUrl(storagePath, 60);
   if (existing?.signedUrl) {
-    return { storagePath, transcript: script.segments.map((s) => `**${s.speaker === "host" ? "Animatrice" : "Co-animateur"} :** ${s.text}`).join("\n\n") };
+    return { storagePath, transcript: script.segments.map((s) => `**${s.speaker === "host" ? "Animatrice" : "Co-animateur"} :** ${s.text}`).join("\n\n"), ...metrics, audioBytes: null };
   }
 
   const dir = await mkdtemp(join(tmpdir(), "notebook-audio-"));
@@ -122,20 +151,20 @@ export async function renderAudioOverview(args: {
       const voice = segment.speaker === "host" ? hostVoiceId : guestVoiceId;
       const audio = await synthesize(segment.text, voice);
       const file = join(dir, `segment-${String(i).padStart(2, "0")}.mp3`);
+      if (audio.byteLength < 128) throw new Error("audio_tts_empty_segment");
       await writeFile(file, audio);
       files.push(file);
     }
-    const list = join(dir, "concat.txt");
-    await writeFile(list, files.map((file) => "file '" + file.replace(/\\/g, "/").replace(/'/g, "'\\''") + "'").join("\n"));
+    await args.onProgress?.(82, "mixage et normalisation audio");
     const output = join(dir, "overview.mp3");
-    await runFfmpeg(args.ffmpegPath || "ffmpeg", ["-y", "-f", "concat", "-safe", "0", "-i", list, "-vn", "-c:a", "libmp3lame", "-b:a", "128k", output]);
+    await runFfmpeg(args.ffmpegPath || "ffmpeg", buildAudioOverviewFfmpegArgs(files, output));
     const bytes = await readFile(output);
     if (bytes.byteLength < 1024) throw new Error("audio_overview_output_too_small");
     await args.onProgress?.(85, "stockage audio");
     const { error } = await db.storage.from("artifacts").upload(storagePath, bytes, { contentType: "audio/mpeg", upsert: true, cacheControl: "3600" });
     if (error) throw error;
     const transcript = script.segments.map((s) => `**${s.speaker === "host" ? "Animatrice" : "Co-animateur"} :** ${s.text}`).join("\n\n");
-    return { storagePath, transcript };
+    return { storagePath, transcript, ...metrics, audioBytes: bytes.byteLength };
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
