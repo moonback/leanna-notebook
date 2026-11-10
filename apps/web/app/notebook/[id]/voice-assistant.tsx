@@ -8,6 +8,7 @@ import { Dialog, DialogContent } from "@/components/ui/overlay";
 
 type VoiceState = "idle" | "connecting" | "listening" | "speaking" | "error";
 type Passage = { number: number; sourceId: string; title: string; page: number | null; excerpt: string; charStart: number; charEnd: number; timeStartMs: number | null };
+type VoiceTurn = { user: string; assistant: string; sources: Passage[] };
 type LiveFunctionCall = { id: string; name: string; args?: Record<string, unknown> };
 type LiveMessage = {
   toolCall?: { functionCalls?: LiveFunctionCall[] };
@@ -75,6 +76,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
   const [transcript, setTranscript] = React.useState("");
   const [answer, setAnswer] = React.useState("");
   const [sources, setSources] = React.useState<Passage[]>([]);
+  const [turnHistory, setTurnHistory] = React.useState<VoiceTurn[]>([]);
   const userTurn = React.useRef("");
   const assistantTurn = React.useRef("");
   const turnSourceIds = React.useRef<Set<string>>(new Set());
@@ -189,6 +191,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
     setTranscript("");
     setAnswer("");
     setSources([]);
+    setTurnHistory([]);
     try {
       if (!conversationId) throw new Error("Conversation du notebook en cours de chargement.");
       userTurn.current = "";
@@ -284,7 +287,13 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
           }
           if (content?.turnComplete) {
             try {
+              const completedTurn = { user: userTurn.current.trim(), assistant: assistantTurn.current.trim(), sources: [...turnPassages.current.values()] };
               await persistVoiceTurn();
+              if (completedTurn.user && completedTurn.assistant) setTurnHistory((history) => [...history, completedTurn]);
+              setTranscript("");
+              setAnswer("");
+              setSources([]);
+              turnPassages.current.clear();
               setState("listening");
               setStatus("À vous de parler.");
             } catch (error) {
@@ -331,8 +340,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
                 )}
               </div>
             </div>
-            {(transcript || answer) && <div className="grid gap-2 text-sm"><p className="font-medium">Conversation</p>{transcript && <p className="rounded-lg bg-surface-secondary p-3"><span className="text-xs text-text-muted">Vous</span><br />{transcript}</p>}{answer && <p className="rounded-lg bg-surface-secondary p-3"><span className="text-xs text-text-muted">Leanna</span><br />{answer}</p>}</div>}
-            {sources.length > 0 && <div className="grid gap-2"><p className="text-sm font-medium">Sources consultées</p>{sources.map((s) => <div key={`${s.sourceId}:${s.charStart}:${s.charEnd}`} className="flex items-start gap-3 rounded-lg border p-3 text-sm"><Citation n={s.number} source={s.title} quote={s.excerpt} onOpen={() => onOpenCitation(s)} /><div className="min-w-0"><p className="font-medium">{s.title}{s.page ? ` · page ${s.page}` : ""}</p><p className="mt-1 line-clamp-3 text-text-muted">{s.excerpt}</p><button type="button" className="mt-2 text-xs font-medium text-accent underline-offset-4 hover:underline" onClick={() => onOpenCitation(s)}>Ouvrir le passage</button></div></div>)}</div>}
+            {(turnHistory.length > 0 || transcript || answer) && <div className="grid gap-4 text-sm"><p className="font-medium">Conversation</p>{turnHistory.map((turn, index) => <div key={index} className="grid gap-2"><p className="rounded-lg bg-surface-secondary p-3"><span className="text-xs text-text-muted">Vous</span><br />{turn.user}</p><p className="rounded-lg bg-surface-secondary p-3"><span className="text-xs text-text-muted">Leanna</span><br />{turn.assistant}</p>{turn.sources.length > 0 && <div className="grid gap-2 pl-1"><p className="text-xs font-medium text-text-muted">Sources consultées</p>{turn.sources.map((s) => <div key={`${s.sourceId}:${s.charStart}:${s.charEnd}`} className="flex items-start gap-3 rounded-lg border p-3"><Citation n={s.number} source={s.title} quote={s.excerpt} onOpen={() => onOpenCitation(s)} /><div className="min-w-0"><p className="font-medium">{s.title}{s.page ? ` · page ${s.page}` : ""}</p><p className="mt-1 line-clamp-3 text-text-muted">{s.excerpt}</p><button type="button" className="mt-2 text-xs font-medium text-accent underline-offset-4 hover:underline" onClick={() => onOpenCitation(s)}>Ouvrir le passage</button></div></div>)}</div>}</div>)}{(transcript || answer) && <div className="grid gap-2"><p className="rounded-lg bg-surface-secondary p-3"><span className="text-xs text-text-muted">Vous</span><br />{transcript}</p>{answer && <p className="rounded-lg bg-surface-secondary p-3"><span className="text-xs text-text-muted">Leanna</span><br />{answer}</p>}{sources.length > 0 && <div className="grid gap-2 pl-1"><p className="text-xs font-medium text-text-muted">Sources consultées</p>{sources.map((s) => <div key={`${s.sourceId}:${s.charStart}:${s.charEnd}`} className="flex items-start gap-3 rounded-lg border p-3"><Citation n={s.number} source={s.title} quote={s.excerpt} onOpen={() => onOpenCitation(s)} /><div className="min-w-0"><p className="font-medium">{s.title}{s.page ? ` · page ${s.page}` : ""}</p><p className="mt-1 line-clamp-3 text-text-muted">{s.excerpt}</p><button type="button" className="mt-2 text-xs font-medium text-accent underline-offset-4 hover:underline" onClick={() => onOpenCitation(s)}>Ouvrir le passage</button></div></div>)}</div>}</div>}</div>}
             <p className="text-xs text-text-subtle">Les réponses vocales s'appuient sur une recherche dans les sources sélectionnées. Une connexion Internet et l'autorisation du microphone sont nécessaires.</p>
           </div>
         </DialogContent>
