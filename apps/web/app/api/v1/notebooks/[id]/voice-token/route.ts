@@ -12,7 +12,7 @@ const voiceSchema = z.object({ voice: z.enum(["Aoede", "Charon", "Fenrir", "Kore
 export const POST = handle(async (req: NextRequest, { params }: Params) => {
   await requireUser();
   const { id } = await params;
-  await requireRole(id, "chat");
+  await requireRole(id, "viewer");
   const { voice } = await parseBody(req, voiceSchema);
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new ApiError(503, "voice_not_configured");
