@@ -62,7 +62,7 @@ export async function extractGitHubCodebase(rawUrl: string): Promise<string> {
       if (response.status === 404) return null;
       if (!response.ok) throw new Error(`github_raw_http_${response.status}`);
       const content = await response.text();
-      if (content.includes("\\u0000") || containsPotentialSecret(content)) return null;
+      if (content.includes("\u0000") || containsPotentialSecret(content)) return null;
       const bytes = Buffer.byteLength(content, "utf8");
       total += bytes;
       if (total > MAX_TOTAL_BYTES) throw new PermanentError("github_repo_too_large");
