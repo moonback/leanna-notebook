@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Source_Serif_4 } from "next/font/google";
 import { Toaster } from "@/components/ui/toast";
+import { createUserClient, getUser } from "@/lib/supabase/server";
 import "./globals.css";
 
 // Polices sous licence OFL, auto-hébergées par next/font au build.
@@ -13,9 +14,23 @@ export const metadata: Metadata = {
   description: "Comprenez vos documents, réponses sourcées.",
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+async function getInitialTheme(): Promise<"light" | "dark" | null> {
+  try {
+    const user = await getUser();
+    if (!user) return null;
+    const supabase = await createUserClient();
+    const { data } = await supabase.from("profiles").select("theme").eq("id", user.id).maybeSingle();
+    return data?.theme === "light" || data?.theme === "dark" ? data.theme : null;
+  } catch {
+    // Le thème système reste le repli sûr si la session ou le profil est indisponible.
+    return null;
+  }
+}
+
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const theme = await getInitialTheme();
   return (
-    <html lang="fr" suppressHydrationWarning>
+    <html lang="fr" data-theme={theme ?? undefined} suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} ${sourceSerif.variable}`}>
         {children}
         <Toaster />
