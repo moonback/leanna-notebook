@@ -5,7 +5,7 @@ import { AudioLines, Mic, MicOff, PhoneOff, Maximize2, Minimize2 } from "lucide-
 import { Button } from "@/components/ui/button";
 import { Citation } from "@/components/ui/citation";
 import { Dialog, DialogContent } from "@/components/ui/overlay";
-import { PendingVoiceSearches, VoiceTurnCitationStore, type NumberedVoicePassage } from "./voice-turn";
+import { PendingVoiceSearches, resolveCitationIndex, VoiceTurnCitationStore, type NumberedVoicePassage } from "./voice-turn";
 
 type VoiceState = "idle" | "connecting" | "listening" | "speaking" | "error";
 type Passage = NumberedVoicePassage;
@@ -70,7 +70,7 @@ function floatToPcm16(input: Float32Array) {
   return new Uint8Array(buffer);
 }
 
-export function VoiceAssistant({ notebookId, conversationId, disabled = false, onOpenCitation, onNavigateStudio }: { notebookId: string; conversationId: string; disabled?: boolean; onOpenCitation: (passage: Passage) => void; onNavigateStudio?: () => void }) {
+export function VoiceAssistant({ notebookId, conversationId, disabled = false, onOpenCitation, onNavigateStudio, onSelectionChanged, onNoteCreated }: { notebookId: string; conversationId: string; disabled?: boolean; onOpenCitation: (passage: Passage) => void; onNavigateStudio?: () => void; onSelectionChanged?: (ids: string[]) => void; onNoteCreated?: () => void }) {
   const [open, setOpen] = React.useState(false);
   const [expanded, setExpanded] = React.useState(false);
   const [state, setState] = React.useState<VoiceState>("idle");
@@ -187,16 +187,16 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
           onOpenCitation(passages[safeIndex]);
           return true;
         };
-        if (["open_current_citation", "show_passage", "repeat_current_citation"].includes(action)) {
-          const index = Number.isInteger(requestedNumber) && requestedNumber > 0 ? passages.findIndex((p) => p.number === requestedNumber) : activePassageIndex;
+        if (["open_current_citation", "open_document", "show_passage", "repeat_current_citation"].includes(action)) {
+          const index = resolveCitationIndex("open", activePassageIndex, passages.length, Number.isInteger(requestedNumber) ? requestedNumber : undefined) ?? -1;
           if (index >= 0 && openPassage(index)) {
             const p = passages[index];
             result = `Passage ouvert : ${p.title}${p.page ? `, page ${p.page}` : p.timeStartMs != null ? `, horodatage ${Math.floor(p.timeStartMs / 1000)} secondes` : ""}. Extrait : ${p.excerpt}`;
             if (action === "repeat_current_citation") result = `Relis cette citation et annonce sa source. ${result}`;
           } else result = "Aucune citation disponible dans ce tour.";
         } else if (action === "next_citation" || action === "previous_citation") {
-          const next = activePassageIndex + (action === "next_citation" ? 1 : -1);
-          if (next >= 0 && next < passages.length && openPassage(next)) {
+          const next = resolveCitationIndex(action === "next_citation" ? "next" : "previous", activePassageIndex, passages.length);
+          if (next !== null && openPassage(next)) {
             const p = passages[next];
             result = `Citation ${p.number} sur ${passages.length} : ${p.title}${p.page ? `, page ${p.page}` : p.timeStartMs != null ? `, horodatage ${Math.floor(p.timeStartMs / 1000)} secondes` : ""}. ${p.excerpt}`;
           } else result = action === "next_citation" ? "Il n'y a pas de citation suivante." : "Il n'y a pas de citation précédente.";
@@ -213,6 +213,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
               if (action === "select_source") deselected.delete(matches[0].id); else deselected.add(matches[0].id);
               const saveResponse = await fetch(`/api/v1/notebooks/${notebookId}/selection`, { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ deselectedSourceIds: [...deselected] }) });
               if (!saveResponse.ok) throw new Error("La sélection des sources n'a pas pu être enregistrée.");
+              onSelectionChanged?.([...deselected]);
               result = `Source ${action === "select_source" ? "sélectionnée" : "retirée de la sélection"} : ${matches[0].title}.`;
             }
           }
@@ -229,7 +230,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
           const instruction = action === "repeat" ? "Répète ta dernière réponse à l'identique, sans ajouter de nouvelle information." : "Résume ta dernière réponse en une seule phrase, sans ajouter de nouvelle information.";
           socket.current?.send(JSON.stringify({ clientContent: { turns: [{ role: "user", parts: [{ text: instruction }] }], turnComplete: true } }));
           result = action === "repeat" ? "Je répète la dernière réponse." : "Je résume la dernière réponse en une phrase.";
-        } else if (action === "save_passage") {
+        } else if (action === "save_passage" || action === "keep_passage") {
           const index = Number.isInteger(requestedNumber) && requestedNumber > 0 ? passages.findIndex((p) => p.number === requestedNumber) : activePassageIndex;
           if (index < 0 || !passages[index]) result = "Aucun passage à conserver. Ouvre d'abord une citation.";
           else {
@@ -237,6 +238,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
             const body = [`Source : ${p.title}`, p.page ? `Page : ${p.page}` : p.timeStartMs != null ? `Horodatage : ${Math.floor(p.timeStartMs / 1000)} s` : "", "", p.excerpt].filter(Boolean).join("\n");
             const saved = await fetch(`/api/v1/notebooks/${notebookId}/notes`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ title: String(call.args?.noteTitle ?? `Passage conservé — ${p.title}`).slice(0, 300), text: body }) });
             if (!saved.ok) throw new Error(saved.status === 403 ? "Le rôle éditeur est requis pour créer une note." : "La note n'a pas pu être créée.");
+            onNoteCreated?.();
             result = `Passage enregistré dans une nouvelle note : ${p.title}.`;
           }
         } else if (action === "add_note") {
@@ -245,6 +247,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
           else {
             const saved = await fetch(`/api/v1/notebooks/${notebookId}/notes`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ title: String(call.args?.noteTitle ?? "Note vocale").slice(0, 300), text: noteText }) });
             if (!saved.ok) throw new Error(saved.status === 403 ? "Le rôle éditeur est requis pour créer une note." : "La note n'a pas pu être créée.");
+            onNoteCreated?.();
             result = "Note vocale créée dans les sources du notebook.";
           }
         }
