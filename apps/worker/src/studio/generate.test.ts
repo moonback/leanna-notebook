@@ -100,6 +100,7 @@ describe("modèles de rapport du Studio", () => {
 
   it("accepte les modèles IA supplémentaires et conserve le modèle par défaut", () => {
     expect(buildPrompt("report", { template: "blog_post" }, null, "sources", "fr").messages[0].content).toContain("Article de blog");
+    expect(buildPrompt("report", { template: "custom" }, "Ajouter un glossaire", "sources", "fr").messages[0].content).toContain("Ajouter un glossaire");
     expect(buildPrompt("report", {}, null, "sources", "fr").messages[0].content).toContain("Note de synthèse");
   });
 });
