@@ -55,7 +55,7 @@ export async function extractGitHubCodebase(rawUrl: string): Promise<string> {
     const batch = await Promise.all(files.slice(i, i + 8).map(async (entry: any) => {
       if (typeof entry.size !== "number" || entry.size > MAX_FILE_BYTES) return null;
       const rawPath = entry.path.split("/").map(encodeURIComponent).join("/");
-      const rawRef = ref.split("/").map(encodeURIComponent).join("/");
+      const rawRef = commitSha.split("/").map(encodeURIComponent).join("/");
       const response = await fetch(\`https://raw.githubusercontent.com/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/${rawRef}/${rawPath}\`, {
         headers: { "User-Agent": "Leanna-Notebook" }, signal: AbortSignal.timeout(20_000),
       });
