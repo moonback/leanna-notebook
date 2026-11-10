@@ -213,7 +213,7 @@ function CreateDialog({ type, onClose, onGenerate }: { type: ArtType | null; onC
   }
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent size={type === "report" ? "xl" : "lg"} title={type === "report" ? "Créer un rapport" : `Générer : ${TYPES[type].label}`} description={type === "report" ? "Choisissez un format et un modèle pour composer un rapport à partir de vos sources." : "À partir des sources sélectionnées. La génération continue en arrière-plan."}>
+      <DialogContent size="lg" title={type === "report" ? "Créer un rapport" : `Générer : ${TYPES[type].label}`} description={type === "report" ? "Choisissez un format et un modèle pour composer un rapport à partir de vos sources." : "À partir des sources sélectionnées. La génération continue en arrière-plan."}>
         <form onSubmit={submit} className="grid gap-5">
           {type === "report" && (
             <>
@@ -251,7 +251,7 @@ function CreateDialog({ type, onClose, onGenerate }: { type: ArtType | null; onC
           </Field>
           <div className="flex justify-end gap-2 border-t pt-4">
             <DialogClose asChild><Button type="button" variant="secondary">Annuler</Button></DialogClose>
-            <Button type="submit" loading={sending}><Sparkles aria-hidden /> Générer le rapport</Button>
+            <Button type="submit" loading={sending}><Sparkles aria-hidden /> {type === "report" ? "Générer le rapport" : "Générer"}</Button>
           </div>
         </form>
       </DialogContent>
