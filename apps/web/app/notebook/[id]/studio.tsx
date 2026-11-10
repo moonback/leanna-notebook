@@ -8,6 +8,7 @@ import { Dialog, DialogClose, DialogContent } from "@/components/ui/overlay";
 import { ListRow, Panel } from "@/components/ui/surfaces";
 import { Citation } from "@/components/ui/citation";
 import { toast } from "@/components/ui/toast";
+import { ArtifactShareButton } from "./artifact-share-button";
 import { cn } from "@/lib/utils";
 
 type ArtType = "report" | "flashcards" | "quiz" | "mind_map";
@@ -137,7 +138,7 @@ export function Studio({ notebookId, canEdit, sourceIds, sourceTitle, onOpenCita
         </ul>
       )}
       <CreateDialog type={creating} onClose={() => setCreating(null)} onGenerate={generate} />
-      <ArtifactViewer id={open} onClose={() => setOpen(null)} sourceTitle={sourceTitle} onOpenCitation={onOpenCitation} onAsk={(t) => { setOpen(null); onAsk(t); }} />
+      <ArtifactViewer id={open} canShare={canEdit} onClose={() => setOpen(null)} sourceTitle={sourceTitle} onOpenCitation={onOpenCitation} onAsk={(t) => { setOpen(null); onAsk(t); }} />
     </Panel>
   );
 }
@@ -207,7 +208,7 @@ async function resetProgress(id: string) {
   if (!r?.ok) toast({ title: "Remise à zéro non enregistrée", tone: "error" });
 }
 
-function ArtifactViewer({ id, onClose, sourceTitle, onOpenCitation, onAsk }: { id: string | null; onClose: () => void; sourceTitle: (id: string) => string | undefined; onOpenCitation?: (c: Cite) => void; onAsk: (t: string) => void }) {
+function ArtifactViewer({ id, canShare, onClose, sourceTitle, onOpenCitation, onAsk }: { id: string | null; canShare: boolean; onClose: () => void; sourceTitle: (id: string) => string | undefined; onOpenCitation?: (c: Cite) => void; onAsk: (t: string) => void }) {
   const [data, setData] = React.useState<{ artifact: { id: string; type: ArtType; title: string | null; content: Content; custom_prompt: string | null }; citations: Cite[]; progress: Progress[] } | null>(null);
   const [failed, setFailed] = React.useState(false);
   React.useEffect(() => {
@@ -219,6 +220,7 @@ function ArtifactViewer({ id, onClose, sourceTitle, onOpenCitation, onAsk }: { i
   return (
     <Dialog open={Boolean(id)} onOpenChange={(o) => !o && onClose()}>
       <DialogContent size="lg" title={art ? (art.title || TYPES[art.type].label) : "Contenu du Studio"}>
+        {id && canShare && <ArtifactShareButton artifactId={id} disabled={!art} />}
         <div className="max-h-[70dvh] overflow-y-auto pr-1">
           {art?.custom_prompt && <p className="mb-4 rounded-md bg-surface px-3 py-2 text-xs text-text-muted"><span className="font-medium">Consignes de génération :</span> {art.custom_prompt}</p>}
           {failed ? <Alert tone="danger" title="Contenu indisponible" />
