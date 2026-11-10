@@ -27,7 +27,9 @@ const llm = llmFromEnv();
 const transcriber = transcriberFromEnv();
 const speech = speechFromEnv();
 if (!speech) console.warn("ELEVENLABS_API_KEY absent : génération Audio Overview désactivée.");
-if (!transcriber) console.warn("DEEPGRAM_API_KEY absent : import audio désactivé (les autres sources restent disponibles).");
+if (!transcriber) console.warn("DEEPGRAM_API_KEY absent : import audio et transcription vidéo désactivés.");
+if (!process.env.GEMINI_API_KEY) console.warn("GEMINI_API_KEY absent : OCR des images et PDF scannés désactivé.");
+if (!process.env.FFMPEG_PATH && process.platform !== "win32") console.warn("FFMPEG_PATH absent : le binaire ffmpeg doit être disponible dans le PATH pour les vidéos.");
 const handlers: Partial<Record<JobKind, Handler>> = {
   ingest_source: ingestHandler(db, embedder, { summaries: Boolean(llm), transcriber }),
   research: researchHandler(db, process.env.TAVILY_API_KEY),
