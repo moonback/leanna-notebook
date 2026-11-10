@@ -173,6 +173,7 @@ function createMainWindow(): void {
     show: false,
     backgroundColor: "#0b0d12",
     title: "Leanna Notebook",
+    icon: join(__dirname, "..", "build", "icon.png"),
     webPreferences: {
       preload: join(__dirname, "preload.js"),
       contextIsolation: true,
