@@ -270,17 +270,29 @@ export function Workspace({ notebookId, initialTitle, role, allowCopies }: { not
           }}
         >
           {sourcesCollapsed ? (
-            <Button
-              type="button"
-              variant="secondary"
-              className="h-full min-h-0 w-full flex-col gap-3 px-1 py-3"
-              aria-label="Afficher le panneau Sources"
-              title="Afficher les sources"
-              onClick={() => setSourcesCollapsed(false)}
-            >
-              <PanelLeftOpen aria-hidden />
-              <span className="[writing-mode:vertical-rl] text-xs">Sources</span>
-            </Button>
+            <div className="flex h-full min-h-0 w-full flex-col items-center gap-2 rounded-lg border bg-surface-raised py-2">
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                aria-label="Afficher le panneau Sources"
+                title="Afficher les sources"
+                onClick={() => setSourcesCollapsed(false)}
+              >
+                <PanelLeftOpen aria-hidden />
+              </Button>
+              <Button
+                type="button"
+                size="icon"
+                variant="soft"
+                aria-label="Ajouter une source"
+                title="Ajouter une source"
+                onClick={() => setAdding(true)}
+              >
+                <Plus aria-hidden />
+              </Button>
+              <span className="[writing-mode:vertical-rl] text-xs text-text-muted">Sources</span>
+            </div>
           ) : (
             <div className="relative min-h-0 min-w-0">
               {sourcesPanel}
