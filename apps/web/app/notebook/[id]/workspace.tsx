@@ -391,7 +391,8 @@ export function Workspace({ notebookId, initialTitle, role, allowCopies }: { not
         <Tabs value={mobileTab} onValueChange={setMobileTab} className="flex min-h-0 flex-1 flex-col">
           <div className="min-h-0 flex-1 p-2">
             <TabsContent value="sources" className="h-full">{sourcesPanel}</TabsContent>
-            <TabsContent value="chat" className="h-full">{chatPanel}</TabsContent>
+            {/* Le Chat reste monté hors de TabsContent : VoiceAssistant possède les WebSockets et le micro. Le masquer ne doit jamais démonter la session vocale. */}
+            <div className={cn("h-full min-h-0", mobileTab !== "chat" && "hidden")} aria-hidden={mobileTab !== "chat"}>{chatPanel}</div>
             <TabsContent value="studio" className="h-full">{studioPanel}</TabsContent>
           </div>
           <TabsList aria-label="Panneaux" className="grid h-14 shrink-0 grid-cols-3 border-t bg-surface-raised px-2">
