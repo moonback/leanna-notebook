@@ -92,6 +92,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
   const roxaneTurnText = React.useRef("");
   const roxaneTurnResolver = React.useRef<(() => void) | null>(null);
   const roxaneAskedForTurn = React.useRef(false);
+  const roxaneSpeaking = React.useRef(false);
   const audioContext = React.useRef<AudioContext | null>(null);
   const mediaStream = React.useRef<MediaStream | null>(null);
   const processor = React.useRef<AudioWorkletNode | null>(null);
@@ -110,6 +111,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
     roxaneSocket.current = null;
     roxaneTurnResolver.current?.();
     roxaneTurnResolver.current = null;
+    roxaneSpeaking.current = false;
     processor.current?.disconnect();
     processor.current = null;
     micSource.current?.disconnect();
@@ -273,7 +275,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
       const node = new AudioWorkletNode(ctx, "pcm-capture");
       processor.current = node;
       node.port.onmessage = (event: MessageEvent<Float32Array>) => {
-        if (mutedRef.current || ws.readyState !== WebSocket.OPEN) return;
+        if (mutedRef.current || roxaneSpeaking.current || ws.readyState !== WebSocket.OPEN) return;
         const pcm = floatToPcm16(downsampleTo16k(event.data, ctx.sampleRate));
         ws.send(JSON.stringify({ realtimeInput: { audio: { mimeType: "audio/pcm;rate=16000", data: bytesToBase64(pcm) } } }));
       };
@@ -286,7 +288,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
       const askRoxane = async () => {
         if (roxaneAskedForTurn.current || !assistantTurn.current.trim()) return;
         roxaneAskedForTurn.current = true;
-        const groundedSources = turnPassages.current.snapshot().map((passage) => `[Source ${passage.number}] ${passage.title}${passage.page ? `, page ${passage.page}` : ""}: ${passage.excerpt}`).join("\\n");
+        const groundedSources = turnPassages.current.snapshot().map((passage) => `[Source ${passage.number}] ${passage.title}${passage.page ? `, page ${passage.page}` : ""}: ${passage.excerpt}`).join("\n");
         const prompt = [
           "Voici le tour qui vient d'avoir lieu. Interviens maintenant comme Roxane, la co-animatrice critique.",
           `Question de l'utilisateur : ${userTurn.current.trim()}`,
@@ -301,6 +303,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
         }
         roxaneTurnText.current = "";
         setRoxaneAnswer("");
+        roxaneSpeaking.current = true;
         setStatus("Roxane analyse la réponse de Leanna…");
         await new Promise<void>((resolve) => {
           const timeout = window.setTimeout(() => {
@@ -310,7 +313,8 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
           roxaneTurnResolver.current = () => { window.clearTimeout(timeout); resolve(); };
           connection.send(JSON.stringify({ clientContent: { turns: [{ role: "user", parts: [{ text: prompt }] }], turnComplete: true } }));
         });
-        if (roxaneTurnText.current.trim()) assistantTurn.current += `\\n\\nRoxane : ${roxaneTurnText.current.trim()}`;
+        roxaneSpeaking.current = false;
+        if (roxaneTurnText.current.trim()) assistantTurn.current += `\n\nRoxane : ${roxaneTurnText.current.trim()}`;
       };
 
       roxaneWs.onmessage = async (event) => {
