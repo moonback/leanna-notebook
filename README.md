@@ -47,7 +47,7 @@ Application SaaS multi-utilisateur (Next.js + Supabase + worker Node), conçue p
 - **Fiches de révision** : retourner, « Je savais » / « À revoir », reprise là où on s'est arrêté, export **CSV**.
 - **Quiz** (QCM) : indice, explication, score enregistré, reprise, « Expliquer dans le chat ».
 - **Carte mentale** dépliable ; cliquer un thème l'explore dans le chat.
-- **Audio Overview (G01)** : script de podcast dialogué, deux voix ElevenLabs, assemblage MP3 par ffmpeg, stockage privé et lecteur intégré au Studio. Nécessite deux identifiants de voix et ffmpeg côté worker.
+- **Audio Overview (G01–G03)** : script dialogué à deux voix ElevenLabs, formats et durées configurables, pauses entre répliques, mixage stéréo à 44,1 kHz, normalisation de loudness à −16 LUFS / −1,5 dBTP, MP3 privé, lecteur avec vitesse réglable et téléchargement. Le Studio affiche la durée estimée et le nombre de caractères TTS (indicateur de consommation, pas une estimation monétaire). Nécessite deux identifiants de voix et ffmpeg côté worker.
 - **Fast Research (B17)** : recherche web asynchrone, cinq résultats maximum avec extrait explicatif, sélection multiple et import direct comme sources indexées.
 - **Découvrir (S04)** : galerie de notebooks éditoriaux publiés, ouverture en lecture seule et copie dans sa bibliothèque si autorisée.
 - **Invitations** : les invitations en attente expirent après 30 jours et sont nettoyées quotidiennement par pg_cron.
