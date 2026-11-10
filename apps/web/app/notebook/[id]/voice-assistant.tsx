@@ -74,8 +74,10 @@ export function VoiceAssistant({ notebookId, disabled = false }: { notebookId: s
   const nextPlaybackTime = React.useRef(0);
   const mutedRef = React.useRef(false);
   const mounted = React.useRef(true);
+  const intentionalClose = React.useRef(false);
 
   const stop = React.useCallback(() => {
+    intentionalClose.current = true;
     socket.current?.close();
     socket.current = null;
     processor.current?.disconnect();
@@ -89,7 +91,8 @@ export function VoiceAssistant({ notebookId, disabled = false }: { notebookId: s
     void audioContext.current?.close();
     audioContext.current = null;
     nextPlaybackTime.current = 0;
-    if (mounted.current) setState("idle");
+    mutedRef.current = false;
+    if (mounted.current) { setMuted(false); setState("idle"); }
   }, []);
 
   React.useEffect(() => {
@@ -141,6 +144,7 @@ export function VoiceAssistant({ notebookId, disabled = false }: { notebookId: s
 
   async function start() {
     if (state === "connecting" || state === "listening" || state === "speaking") { stop(); return; }
+    intentionalClose.current = false;
     setState("connecting");
     setStatus("Connexion sécurisée à Gemini Live…");
     setTranscript("");
@@ -201,7 +205,7 @@ export function VoiceAssistant({ notebookId, disabled = false }: { notebookId: s
       node.connect(ctx.destination);
       setState("listening");
       setStatus("Je vous écoute. Parlez naturellement.");
-      ws.onclose = () => { if (mounted.current) { stop(); setStatus("Session vocale terminée."); } };
+      ws.onclose = () => { if (mounted.current && !intentionalClose.current) { stop(); setStatus("Session vocale terminée."); } };
       ws.onerror = () => { if (mounted.current) setStatus("Connexion vocale instable…"); };
       ws.onmessage = async (event) => {
         try {
