@@ -95,6 +95,7 @@ Date : 2026-11-09.
 > | Élément | État |
 > | --- | --- |
 > | H01 partage privé, H02 lien lecture + chat, H03 lien chat seul | fait |
+> | H04 lien public d'un artefact | implémentation ajoutée sur `feat/m4-public-artifacts-research` : jeton aléatoire haché, lecture anonyme limitée au contenu, révocation ; tests et vérification runtime encore à faire |
 > | H05 copie de notebook (`POST /notebooks/:id/copy`, option `allow_copies`, migration `20261110000000_copy_notebook.sql`) | fait ; test pgTAP `03_copy.test.sql` passé (suite complète : 44 tests) |
 > | Export RGPD (`GET /me/export`) | fait, synchrone et en JSON (au lieu du ZIP via job `export_account` prévu) ; à passer en job si les volumes grossissent |
 > | Suppression du compte (`DELETE /me`) | fait, synchrone (au lieu du job `delete_account`) avec confirmation par e-mail, au lieu de la double confirmation + ré-authentification prévue ; purge Storage ratée seulement journalisée, le job `purge_storage` n'est pas écrit |
