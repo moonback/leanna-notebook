@@ -11,7 +11,8 @@
     "db:start": "supabase start",
     "db:reset": "supabase db reset",
     "db:test": "supabase test db",
-    "desktop:test": "pnpm --dir apps/desktop test"
+    "desktop:test": "pnpm --dir apps/desktop test",
+    "desktop:doctor": "pnpm --dir apps/desktop doctor"
   },
   "devDependencies": {
     "supabase": "^2"
