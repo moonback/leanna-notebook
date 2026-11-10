@@ -80,3 +80,26 @@ describe.skipIf(!env.SUPABASE_URL)("studioHandler (intégration, modèle simulé
     expect((await db.from("usage_ledger").select("status").eq("id", job.usage_id).single()).data!.status).toBe("refunded");
   });
 });
+
+describe("modèles de rapport du Studio", () => {
+  it("sélectionne un modèle de spécification sans perdre les règles de citations", () => {
+    const { messages, json } = buildPrompt("report", { template: "specification", reportFormat: "document" }, null, "<passage n=\"1\">Exigence A</passage>", "fr");
+    expect(json).toBe(false);
+    expect(messages[0].content).toContain("critères d’acceptation");
+    expect(messages[0].content).toContain("document final soigné");
+    expect(messages[0].content).toContain("numéro entre crochets");
+    expect(messages[1].content).toContain("Exigence A");
+  });
+
+  it("active les consignes de rapport interactif dans le Studio", () => {
+    const { messages } = buildPrompt("report", { template: "action_plan", reportFormat: "interactive" }, null, "sources", "fr");
+    expect(messages[0].content).toContain("rapport interactif");
+    expect(messages[0].content).toContain("Plan d’action");
+    expect(messages[0].content).not.toContain("HTML");
+  });
+
+  it("accepte les modèles IA supplémentaires et conserve le modèle par défaut", () => {
+    expect(buildPrompt("report", { template: "blog_post" }, null, "sources", "fr").messages[0].content).toContain("Article de blog");
+    expect(buildPrompt("report", {}, null, "sources", "fr").messages[0].content).toContain("Note de synthèse");
+  });
+});
