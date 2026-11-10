@@ -25,6 +25,17 @@ Application SaaS multi-utilisateur (Next.js + Supabase + worker Node), conçue p
 
 ---
 
+
+### Google Drive (M5 — connexion OAuth)
+
+Pour activer la connexion Google Drive, configurer côté serveur web :
+
+- `GOOGLE_CLIENT_ID` et `GOOGLE_CLIENT_SECRET` : identifiants OAuth 2.0 d'une application Google ;
+- `DRIVE_OAUTH_STATE_SECRET` : secret aléatoire long (au moins 32 octets) pour signer l'état OAuth ;
+- `DRIVE_TOKEN_ENCRYPTION_KEY` : clé AES-256 de 32 octets encodée en Base64 (`openssl rand -base64 32`).
+
+Déclarer l'URI de redirection exacte `https://<domaine>/api/v1/integrations/google-drive/callback` dans Google Cloud Console. Activer l'API Google Drive et l'écran de consentement OAuth. Les scopes demandés sont en lecture seule. La clé de chiffrement et le secret OAuth ne doivent jamais être exposés au navigateur ni commités.
+
 ## Fonctionnalités
 
 ### Notebooks et sources
