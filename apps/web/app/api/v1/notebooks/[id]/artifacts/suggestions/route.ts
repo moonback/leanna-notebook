@@ -84,7 +84,7 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
         max_tokens: 1800,
         response_format: { type: "json_object" },
       }),
-      signal: AbortSignal.timeout(30_000),
+      signal: AbortSignal.timeout(90_000),
     });
   } catch {
     throw new ApiError(503, "ai_suggestions_unavailable");
@@ -94,7 +94,13 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
     throw new ApiError(503, "ai_suggestions_unavailable");
   }
 
-  const payload = await response.json() as { choices?: { message?: { content?: string } }[] };
+  let payload: { choices?: { message?: { content?: string } }[] };
+  try {
+    // Le timeout peut aussi expirer pendant la lecture du corps : on le traite comme une indisponibilité (503).
+    payload = await response.json();
+  } catch {
+    throw new ApiError(503, "ai_suggestions_unavailable");
+  }
   const raw = payload.choices?.[0]?.message?.content ?? "";
   let parsed: unknown;
   try {
