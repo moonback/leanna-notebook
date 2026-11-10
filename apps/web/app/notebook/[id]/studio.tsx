@@ -152,7 +152,7 @@ export function Studio({ notebookId, canEdit, sourceIds, sourceTitle, onOpenCita
           ))}
         </ul>
       )}
-      <CreateDialog type={creating} onClose={() => setCreating(null)} onGenerate={generate} />
+      <CreateDialog type={creating} notebookId={notebookId} sourceIds={sourceIds} onClose={() => setCreating(null)} onGenerate={generate} />
       <ArtifactViewer id={open} canShare={canEdit} onClose={() => setOpen(null)} sourceTitle={sourceTitle} onOpenCitation={onOpenCitation} onAsk={(t) => { setOpen(null); onAsk(t); }} />
     </Panel>
   );
@@ -166,17 +166,53 @@ const REPORT_MODELS = [
   { id: "study_guide", title: "Guide d'étude", description: "Notions clés, explications, questions de révision et glossaire." },
   { id: "blog_post", title: "Article de blog", description: "Un article fluide, structuré et agréable à lire." },
 ] as const;
-const AI_REPORT_MODELS = [
-  { id: "specification", title: "Spécification", description: "Exigences, fonctionnalités, contraintes et critères d'acceptation." },
-  { id: "action_plan", title: "Plan d'action", description: "Objectifs, étapes, priorités, responsables et échéances." },
-  { id: "practical_sheet", title: "Fiche pratique", description: "Une fiche opérationnelle avec méthodes et points de vigilance." },
-  { id: "detailed_guide", title: "Guide détaillé", description: "Un parcours progressif pour comprendre et appliquer le sujet." },
-] as const;
+type AiReportModel = { id: string; title: string; description: string; instruction: string };
 
-function CreateDialog({ type, onClose, onGenerate }: { type: ArtType | null; onClose: () => void; onGenerate: (t: ArtType, o: Record<string, string>, p?: string) => Promise<boolean> }) {
+function CreateDialog({ type, notebookId, sourceIds, onClose, onGenerate }: { type: ArtType | null; notebookId: string; sourceIds: string[]; onClose: () => void; onGenerate: (t: ArtType, o: Record<string, string>, p?: string) => Promise<boolean> }) {
   const [opts, setOpts] = React.useState<Record<string, string>>({});
   const [prompt, setPrompt] = React.useState("");
   const [sending, setSending] = React.useState(false);
+  const [aiModels, setAiModels] = React.useState<AiReportModel[]>([]);
+  const [aiModelsLoading, setAiModelsLoading] = React.useState(false);
+  const [aiModelsError, setAiModelsError] = React.useState(false);
+  const [selectedAiModel, setSelectedAiModel] = React.useState<string | null>(null);
+
+  const sourceKey = sourceIds.join(",");
+  const aiModelsCache = React.useRef<{ notebookId: string; sourceIds: Set<string>; suggestions: AiReportModel[] } | null>(null);
+  React.useEffect(() => {
+    if (type !== "report" || !sourceKey) return;
+    const currentSourceIds = new Set(sourceKey.split(",").filter(Boolean));
+    const cached = aiModelsCache.current;
+    // Réutiliser les suggestions si les sources n'ont pas changé ou si seules des sources ont été retirées.
+    // Une nouvelle analyse OpenRouter n'est nécessaire que lorsqu'au moins une source inédite est ajoutée.
+    if (cached && cached.notebookId === notebookId && [...currentSourceIds].every((id) => cached.sourceIds.has(id))) {
+      setAiModels(cached.suggestions);
+      setAiModelsError(false);
+      return;
+    }
+
+    let active = true;
+    setAiModelsError(false);
+    setAiModelsLoading(true);
+    fetch(`/api/v1/notebooks/${notebookId}/artifacts/suggestions`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ sourceIds: [...currentSourceIds] }),
+    }).then(async (response) => {
+      if (!response.ok) throw new Error("suggestions_unavailable");
+      const result = await response.json() as { suggestions?: AiReportModel[] };
+      if (!Array.isArray(result.suggestions)) throw new Error("invalid_suggestions");
+      if (active) {
+        setAiModels(result.suggestions);
+        aiModelsCache.current = { notebookId, sourceIds: currentSourceIds, suggestions: result.suggestions };
+      }
+    }).catch(() => {
+      if (active) setAiModelsError(true);
+    }).finally(() => {
+      if (active) setAiModelsLoading(false);
+    });
+    return () => { active = false; };
+  }, [type, notebookId, sourceKey]);
   React.useEffect(() => {
     setOpts(type === "report" ? { template: "briefing", reportFormat: "document" } : type === "flashcards" || type === "quiz" ? { difficulty: "medium", count: "standard" } : type === "audio" ? { format: "deep_dive", duration: "standard", style: "accessible" } : {});
     setPrompt("");
@@ -189,7 +225,10 @@ function CreateDialog({ type, onClose, onGenerate }: { type: ArtType | null; onC
       </select>
     </Field>
   );
-  const selectTemplate = (id: string) => setOpts((current) => ({ ...current, template: id }));
+  const selectTemplate = (id: string) => {
+    setSelectedAiModel(null);
+    setOpts((current) => ({ ...current, template: id }));
+  };
   const modelCard = (model: { id: string; title: string; description: string }) => {
     const selected = opts.template === model.id;
     return (
@@ -207,7 +246,9 @@ function CreateDialog({ type, onClose, onGenerate }: { type: ArtType | null; onC
     e.preventDefault();
     setSending(true);
     const audioPrompt = type === "audio" ? `${AUDIO_OVERVIEW_MARKER}${prompt.trim() ? `\\n${prompt.trim()}` : ""}` : undefined;
-    const ok = await onGenerate(type!, opts, type === "audio" ? audioPrompt : prompt.trim() || undefined);
+    const selectedModel = aiModels.find((model) => model.id === selectedAiModel);
+    const reportPrompt = [selectedModel?.instruction, prompt.trim()].filter(Boolean).join("\n\n");
+    const ok = await onGenerate(type!, opts, type === "audio" ? audioPrompt : type === "report" ? reportPrompt || undefined : prompt.trim() || undefined);
     setSending(false);
     if (ok) onClose();
   }
@@ -239,8 +280,29 @@ function CreateDialog({ type, onClose, onGenerate }: { type: ArtType | null; onC
               </section>
               <section className="grid gap-3">
                 <h3 className="flex items-center gap-2 text-sm font-medium"><Sparkles className="size-4" /> Modèles suggérés par l&apos;IA</h3>
-                <p className="text-xs text-text-muted">Des formats complémentaires pour transformer vos sources en livrables concrets.</p>
-                <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">{AI_REPORT_MODELS.map(modelCard)}</div>
+                <p className="text-xs text-text-muted">OpenRouter analyse les sources sélectionnées et propose des modèles adaptés à leur contenu.</p>
+                {aiModelsLoading ? (
+                  <div className="grid gap-2 sm:grid-cols-2" aria-live="polite" aria-busy="true">
+                    {[0, 1, 2, 3].map((item) => <div key={item} className="grid min-h-24 gap-2 rounded-xl border border-border bg-surface p-4"><Skeleton className="h-4 w-2/3" /><Skeleton className="h-3 w-full" /><Skeleton className="h-3 w-4/5" /></div>)}
+                  </div>
+                ) : aiModelsError ? (
+                  <Alert tone="warning" title="Suggestions IA indisponibles">
+                    Vérifiez la configuration OpenRouter. Vous pouvez toujours créer un rapport avec les modèles classiques.
+                  </Alert>
+                ) : aiModels.length ? (
+                  <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                    {aiModels.map((model) => {
+                      const selected = selectedAiModel === model.id;
+                      return <button key={model.id} type="button" aria-pressed={selected} onClick={() => { setSelectedAiModel(model.id); setOpts((current) => ({ ...current, template: "custom" })); }}
+                        className={cn("flex min-h-28 flex-col items-start gap-2 rounded-xl border p-4 text-left transition-colors hover:border-accent hover:bg-accent-soft/40", selected ? "border-accent bg-accent-soft/60 ring-1 ring-accent" : "border-border bg-surface")}>
+                        <span className="flex w-full items-center justify-between gap-2 text-sm font-semibold">{model.title}{selected ? <Check className="size-4 shrink-0 text-accent" aria-label="Sélectionné" /> : <span className="size-4 shrink-0 rounded-full border border-border" />}</span>
+                        <span className="text-xs leading-5 text-text-muted">{model.description}</span>
+                      </button>;
+                    })}
+                  </div>
+                ) : (
+                  <p className="rounded-lg border border-dashed border-border p-3 text-xs text-text-muted">Les suggestions personnalisées apparaîtront ici après l’analyse des sources.</p>
+                )}
               </section>
             </>
           )}
