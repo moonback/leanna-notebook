@@ -52,6 +52,12 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
                p_mime_type: UPLOAD_TYPES[ext][0], p_size_bytes: file.metadata?.size ?? null };
     } else if (item.type === "url") {
       args = { p_kind: "web", p_title: new URL(item.url).hostname, p_origin_url: item.url };
+    } else if (item.type === "github") {
+      const parsed = new URL(item.url);
+      const [owner, repository] = parsed.pathname.split("/").filter(Boolean);
+      const repoName = repository.replace(/\\.git$/i, "");
+      const ref = encodeURIComponent(item.branch);
+      args = { p_kind: "github", p_title: `${owner}/${repoName} · ${item.branch}`, p_origin_url: `https://github.com/${owner}/${repoName}?ref=${ref}` };
     } else {
       const path = `${prefix}${crypto.randomUUID()}/original.txt`;
       const { error } = await db.storage.from("sources").upload(path, new Blob([item.text], { type: "text/plain" }));
