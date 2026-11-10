@@ -20,7 +20,9 @@ pnpm desktop:doctor
 pnpm desktop:dev
 ```
 
-`pnpm desktop:doctor` vérifie Node.js, la présence de l'application Next.js, le workspace pnpm et le binaire Electron. En cas de binaire manquant, il indique la commande de réparation.\n\n`pnpm desktop:test` compile le processus Electron puis exécute les tests Node.js des validations de sécurité (URL d'application, liens externes et filtres de fichiers).
+`pnpm desktop:doctor` vérifie Node.js, la présence de l'application Next.js, le workspace pnpm et le binaire Electron. En cas de binaire manquant, il indique la commande de réparation.
+
+`pnpm desktop:test` compile le processus Electron puis exécute les tests Node.js des validations de sécurité (URL d'application, liens externes et filtres de fichiers).
 
 La commande compile le processus Electron, démarre Next.js sur `127.0.0.1:3000`, attend sa disponibilité puis ouvre la fenêtre desktop. Le port est explicite : si un autre service l'utilise, Next.js doit signaler le conflit au lieu de basculer silencieusement sur un autre port. Si l'URL locale ne répond pas, Electron affiche maintenant un diagnostic natif.
 
@@ -53,4 +55,6 @@ pnpm --dir apps/desktop exec electron --version
 
 ## Périmètre actuel
 
-Pour le moment, le mode local est le mode de travail attendu : aucun hébergement ni nom de domaine n'est nécessaire. `pnpm desktop:dev` démarre Next.js sur la machine puis ouvre Electron. Les services Supabase, Gemini et le worker restent distants selon la configuration existante.\n\nCette tranche améliore l'expérience native en développement. Elle ne constitue pas encore un installateur autonome : le serveur Next.js standalone ou le raccordement à l'URL SaaS de production, les callbacks OAuth/deep links, les mises à jour et les signatures seront traités dans des phases distinctes.
+Pour le moment, le mode local est le mode de travail attendu : aucun hébergement ni nom de domaine n'est nécessaire. `pnpm desktop:dev` démarre Next.js sur la machine puis ouvre Electron. Les services Supabase, Gemini et le worker restent distants selon la configuration existante.
+
+Cette tranche améliore l'expérience native en développement. Elle ne constitue pas encore un installateur autonome : le serveur Next.js standalone ou le raccordement à l'URL SaaS de production, les callbacks OAuth/deep links, les mises à jour et les signatures seront traités dans des phases distinctes.
