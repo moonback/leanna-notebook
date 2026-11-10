@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { requireUser } from "@/lib/api";
 import { createServiceClient } from "@/lib/supabase/server";
 import {
-  encryptRefreshToken, exchangeGoogleCode, fetchGoogleIdentity, GOOGLE_DRIVE_SCOPES, verifyOAuthState,
+  decryptRefreshToken, encryptRefreshToken, exchangeGoogleCode, fetchGoogleIdentity, GOOGLE_DRIVE_SCOPES, verifyOAuthState,
 } from "@/lib/google-drive";
 
 const COOKIE = "google_drive_oauth";
@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   const cookie = request.cookies.get(COOKIE)?.value;
   const clear = (url: URL) => {
     const response = NextResponse.redirect(url);
-    response.cookies.delete(COOKIE);
+    response.cookies.set(COOKIE, "", { httpOnly: true, secure: request.nextUrl.protocol === "https:", sameSite: "lax", path: "/api/v1/integrations/google-drive/callback", maxAge: 0 });
     return response;
   };
   if (!code || !state || !cookie) return clear(new URL("/settings?drive=oauth_error", request.url));
@@ -33,7 +33,6 @@ export async function GET(request: NextRequest) {
       const { data: existing } = await db.from("google_drive_connections")
         .select("refresh_token_ciphertext").eq("user_id", user.id).maybeSingle();
       if (existing?.refresh_token_ciphertext) {
-        const { decryptRefreshToken } = await import("@/lib/google-drive");
         refreshToken = decryptRefreshToken(existing.refresh_token_ciphertext);
       }
     }
