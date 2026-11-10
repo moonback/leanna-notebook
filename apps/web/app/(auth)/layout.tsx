@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { BookOpen } from "lucide-react";
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
@@ -11,6 +12,10 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           <span className="font-serif text-xl">Notebook</span>
         </div>
         <div className="rounded-xl border bg-surface-raised p-6 shadow-card sm:p-8">{children}</div>
+        <p className="mt-6 text-center text-xs text-text-muted">
+          En continuant, vous acceptez nos <Link className="underline underline-offset-4 hover:text-text" href="/terms">Conditions</Link> et
+          notre <Link className="underline underline-offset-4 hover:text-text" href="/privacy">Politique de confidentialité</Link>.
+        </p>
       </div>
     </main>
   );

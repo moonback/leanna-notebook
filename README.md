@@ -54,6 +54,8 @@ Application SaaS multi-utilisateur (Next.js + Supabase + worker Node), conçue p
 - **Partage privé** : inviter par email en lecteur ou éditeur, invitation en attente rattachée à l'inscription, changer le rôle, retirer l'accès (effet immédiat).
 - Offres Gratuit / Pro avec quotas (crédits mensuels, limites quotidiennes par type, nombre de notebooks, de sources, de membres) ; écran **Consommation** dans les réglages.
 - Préférences : nom affiché, langue des réponses, thème clair / sombre / système.
+- **Suppression définitive du compte** (Réglages › Zone dangereuse) : confirmation par saisie de l'email, puis effacement en cascade du profil, des espaces possédés (notebooks, sources, conversations, artefacts) et des fichiers du stockage. Les notebooks partagés disparaissent aussi pour leurs destinataires.
+- Pages publiques **Confidentialité** (`/privacy`) et **Conditions d'utilisation** (`/terms`), liées depuis les écrans de connexion et d'inscription.
 - Envoyer un avis ou **signaler un notebook** (stocké pour modération).
 
 ---
@@ -97,6 +99,7 @@ Principes : **une seule base**, pas de micro-services ; les clients ne font que 
 apps/
   web/                    Application Next.js
     app/                  Pages (tableau de bord, notebook, réglages, auth, /design)
+    app/(legal)/          Pages publiques /privacy et /terms
     app/api/v1/           API REST
     components/ui/        Composants réutilisables (Button, Dialog, Panel, Citation…)
     lib/                  Auth/rôles, validation (zod), clients Supabase, OpenRouter, facturation
@@ -178,6 +181,10 @@ Les fichiers `.env*` ne sont jamais versionnés. Les clés `service_role` et Ope
 | `OPENROUTER_BASE_URL` | Facultatif : autre point d'accès compatible (tests) |
 | `APP_URL` | URL publique de l'application |
 | `BILLING_MODE` | `simulated` (par défaut, aucun paiement réel) ; `stripe` à venir |
+| `NEXT_PUBLIC_LEGAL_ENTITY` | Raison sociale de l'éditeur, affichée dans `/privacy` et `/terms` |
+| `NEXT_PUBLIC_LEGAL_EMAIL` | Email de contact (droits RGPD), affiché dans `/privacy` et `/terms` |
+
+Les deux variables `NEXT_PUBLIC_LEGAL_*` sont à renseigner **avant toute mise en ligne** ; vides, les pages légales affichent des formulations génériques.
 
 ### `apps/worker/.env`
 | Variable | Rôle |
@@ -251,7 +258,7 @@ Préfixe `/api/v1`. Authentification par cookie de session ; chaque route vérif
 
 | Ressource | Routes |
 | --- | --- |
-| Profil | `GET` `PATCH` `/me` |
+| Profil | `GET` `PATCH` `DELETE` `/me` (`DELETE` : `{ "confirm": "<email>" }`, suppression définitive, `204`) |
 | Notebooks | `GET` `POST` `/notebooks` · `GET` `PATCH` `DELETE` `/notebooks/:id` |
 | Sources | `POST` `/notebooks/:id/uploads` · `GET` `POST` `/notebooks/:id/sources` · `PUT` `/notebooks/:id/selection` · `GET` `PATCH` `DELETE` `/sources/:id` |
 | Notes | `POST` `/notebooks/:id/notes` · `GET` `PATCH` `/notes/:id` · `POST` `/messages/:id/save-note` |
@@ -273,6 +280,7 @@ Codes d'erreur : `401` non connecté, `403` rôle insuffisant, `404` inexistant 
 - Fichiers dans des buckets **privés**, chemins préfixés par workspace et notebook ; extraction web protégée contre le SSRF ; archives Office protégées contre les « zip bombs ».
 - Contenu des sources traité comme une **donnée** : les prompts demandent d'ignorer toute instruction qui s'y trouverait ; les sorties JSON du modèle sont validées, le Markdown est rendu sans HTML.
 - Journaux structurés sans données personnelles (adresses et secrets masqués) ; journal d'audit pour les suppressions et le partage.
+- **RGPD** : suppression du compte en libre-service (base en cascade + purge des buckets `sources`, `artifacts`, `exports`) ; une purge de fichiers qui échoue est seulement journalisée (`storage.purge_failed`) : le type de job `purge_storage` existe mais son traitement n'est pas encore écrit, la reprise est donc manuelle. Export des données non fait.
 - Limites : taille des fichiers, nombre de mots, quotas, 20 signalements par jour.
 
 ---
@@ -285,7 +293,7 @@ Parité pondérée avec la référence fonctionnelle : **environ 67 %** ; **22/2
 | --- | --- | --- |
 | M0–M2 | Socle, ingestion, chat avec citations, notes | fait |
 | M3 | Studio texte, quotas visibles, chat avancé, résumés, avis | fait, sauf Stripe réel |
-| M4 | Partage et RGPD | en cours : partage privé fait ; liens publics, copie, export et suppression de compte à faire |
+| M4 | Partage et RGPD | en cours : partage privé, suppression de compte et pages Confidentialité / Conditions faits ; liens publics, copie et export des données à faire |
 | M5 | Résumés audio, connecteurs (Google Drive) | à faire |
 | M6 | Présentations, infographies, recherche web, équipes | à faire |
 
