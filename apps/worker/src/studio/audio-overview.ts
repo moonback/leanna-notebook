@@ -107,7 +107,7 @@ export async function renderAudioOverview(args: {
       files.push(file);
     }
     const list = join(dir, "concat.txt");
-    await writeFile(list, files.map((file) => "file '" + file.replace(/\\/g, "/") + "'").join("\n"));
+    await writeFile(list, files.map((file) => "file '" + file.replace(/\\/g, "/").replace(/'/g, "'\\''") + "'").join("\n"));
     const output = join(dir, "overview.mp3");
     await runFfmpeg(args.ffmpegPath || "ffmpeg", ["-y", "-f", "concat", "-safe", "0", "-i", list, "-vn", "-c:a", "libmp3lame", "-b:a", "128k", output]);
     const bytes = await readFile(output);
