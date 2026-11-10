@@ -64,7 +64,7 @@ Chat view (lien chat seul),sharing,could,yes,yes,"Lien chat seul : interface ré
 Lien public d'un artefact,sharing,could,yes,no,Visible sans compte,H04,P2,Partager un audio/deck/rapport seul,S,"H02, E01",Lien d'artefact consultable sans compte; meurt si supprimé,DOC
 Autoriser les copies et copier un notebook,sharing,could,yes,yes,"Fait 2026-11-10 : option réservée au propriétaire ; copie atomique en base (sources prêtes, passages, guides, artefacts prêts et citations) + fichiers Storage dupliqués, annulée si un fichier échoue ; rôle « chat » exclu ; test pgTAP `03_copy.test.sql` passé (11 assertions) — Contradiction FAQ (Q02)",H05,P2,Dupliquer sources et artefacts,M,H01,Copie sans chat ni notes; respect du flag Allow copies,DOC
 Analytics du notebook partagé,sharing,could,yes,no,>=4 utilisateurs; 7 jours,H06,P3,Utilisateurs et requêtes par jour,S,H02,Graphique 7 jours,DOC
-Notebooks publics curés (featured),sharing,could,yes,no,Fonctionnalité clonable; contenu original non,H07,P3,Galerie de notebooks éditoriaux,M,H02,Onglet galerie; notebooks en lecture,DOC
+Notebooks publics curés (featured),sharing,could,yes,yes,Fonctionnalité clonable; contenu original non,H07,P3,Galerie éditoriale avec ouverture viewer et copie conditionnelle,M,H02,Onglet galerie; notebooks en lecture,DOC
 Langue de sortie,settings,must,yes,yes,80+ langues,J01,P0,Préférence globale,S,A01,Sélecteur; appliqué au chat et au Studio,DOC
 Thème clair sombre système,settings,should,yes,yes,M0. Défaut = appareil,J02,P1,Préférence d'affichage,S,—,Bascule persistée; respect de prefers-color-scheme,DOC
 Notifications web,settings,should,yes,no,16206563,J03,P1,Notification quand un artefact est prêt,S,E02,Autorisation navigateur; notification reçue,DOC
