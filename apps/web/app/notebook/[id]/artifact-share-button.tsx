@@ -8,7 +8,6 @@ import { toast } from "@/components/ui/toast";
 /** Création à la demande : l'URL n'est montrée qu'une fois et le jeton n'est jamais stocké en clair. */
 export function ArtifactShareButton({ artifactId, disabled = false }: { artifactId: string; disabled?: boolean }) {
   const [url, setUrl] = React.useState<string | null>(null);
-  const [linkId, setLinkId] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
 
   async function createLink() {
@@ -21,7 +20,6 @@ export function ArtifactShareButton({ artifactId, disabled = false }: { artifact
         return;
       }
       setUrl(body.link.url);
-      setLinkId(body.link.id);
       try {
         await navigator.clipboard.writeText(body.link.url);
         toast({ title: "Lien créé et copié", tone: "success" });

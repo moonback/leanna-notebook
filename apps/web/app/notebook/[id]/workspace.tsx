@@ -1,6 +1,6 @@
 "use client";
 import * as React from "react";
-import { AlertTriangle, ArrowUp, AudioLines, Music, BookmarkPlus, Eraser, Settings2, ThumbsDown, ThumbsUp, FileText, Globe, Inbox, Lock, NotebookPen, Pencil, Plus, Square, Sparkles, Trash2, Type, Upload } from "lucide-react";
+import { AlertTriangle, ArrowUp, AudioLines, BookmarkPlus, Eraser, Settings2, ThumbsDown, ThumbsUp, FileText, Globe, Inbox, Lock, NotebookPen, Pencil, Plus, Square, Sparkles, Trash2, Type, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Textarea } from "@/components/ui/field";
 import { Alert, Badge, EmptyState, Progress, Skeleton } from "@/components/ui/feedback";
@@ -15,6 +15,7 @@ import { CopyButton } from "./copy-button";
 import { ShareButton } from "./share-dialog";
 import { FastResearch } from "./fast-research";
 import { VoiceAssistant } from "./voice-assistant";
+import type { NumberedVoicePassage } from "./voice-turn";
 
 export type Role = "chat" | "viewer" | "editor" | "owner";
 type Source = { id: string; kind: string; title: string; status: string; error_code: string | null; word_count: number | null };
@@ -194,7 +195,7 @@ export function Workspace({ notebookId, initialTitle, role, allowCopies }: { not
   );
 
   const titles = new Map((sources ?? []).map((s) => [s.id, s.title]));
-  const chatPanel = <Chat notebookId={notebookId} readyCount={role === "chat" ? (overview?.readySources ?? 0) : selectedCount} sourceTitle={(id) => titles.get(id)} canSaveNote={canEdit} onNoteSaved={() => void load()} onOpenCitation={(c) => setViewer({ sourceId: c.source_id, range: [c.char_start, c.char_end] })} canViewSources={role !== "chat"} draft={draft} canConfigure={canEdit} overview={overview} />;
+  const chatPanel = <Chat notebookId={notebookId} readyCount={role === "chat" ? (overview?.readySources ?? 0) : selectedCount} sourceTitle={(id) => titles.get(id)} canSaveNote={canEdit} onNoteSaved={() => void load()} onOpenCitation={(c) => setViewer({ sourceId: c.source_id, range: [c.char_start, c.char_end] })} onOpenPassage={(p) => setViewer({ sourceId: p.sourceId, range: [p.charStart, p.charEnd], timeStartMs: p.timeStartMs ?? undefined })} canViewSources={role !== "chat"} draft={draft} canConfigure={canEdit} overview={overview} />;
 
   const studioPanel = (
     <Studio notebookId={notebookId} canEdit={canEdit} sourceIds={ready.filter((s) => !deselected.has(s.id)).map((s) => s.id)} sourceTitle={(id) => titles.get(id)}
@@ -243,7 +244,7 @@ export function Workspace({ notebookId, initialTitle, role, allowCopies }: { not
 
 /* ---------------------------------------------------------------- Chat ---- */
 
-function Chat({ notebookId, readyCount, onOpenCitation, canViewSources, sourceTitle, canSaveNote, onNoteSaved, draft, canConfigure, overview }: { notebookId: string; readyCount: number; onOpenCitation: (c: Cite) => void; canViewSources: boolean; sourceTitle: (id: string) => string | undefined; canSaveNote: boolean; onNoteSaved: () => void; draft: { text: string } | null; canConfigure: boolean; overview: Overview | null }) {
+function Chat({ notebookId, readyCount, onOpenCitation, onOpenPassage, canViewSources, sourceTitle, canSaveNote, onNoteSaved, draft, canConfigure, overview }: { notebookId: string; readyCount: number; onOpenCitation: (c: Cite) => void; onOpenPassage: (p: NumberedVoicePassage) => void; canViewSources: boolean; sourceTitle: (id: string) => string | undefined; canSaveNote: boolean; onNoteSaved: () => void; draft: { text: string } | null; canConfigure: boolean; overview: Overview | null }) {
   const [saved, setSaved] = React.useState<Set<string>>(new Set());
   async function saveNote(id: string) {
     const res = await fetch(`/api/v1/messages/${id}/save-note`, { method: "POST" });
@@ -332,7 +333,7 @@ function Chat({ notebookId, readyCount, onOpenCitation, canViewSources, sourceTi
   return (
     <section aria-label="Conversation" className="flex h-full min-h-0 flex-col rounded-xl border bg-surface-raised">
       <div className="flex h-11 shrink-0 items-center justify-end gap-1 border-b px-2">
-        <VoiceAssistant notebookId={notebookId} conversationId={conversationId ?? ""} disabled={!canViewSources || readyCount === 0 || !conversationId} onOpenCitation={(passage) => setViewer({ sourceId: passage.sourceId, range: [passage.charStart, passage.charEnd], timeStartMs: passage.timeStartMs ?? undefined })} />
+        <VoiceAssistant notebookId={notebookId} conversationId={conversationId ?? ""} disabled={!canViewSources || readyCount === 0 || !conversationId} onOpenCitation={onOpenPassage} />
         {canConfigure && <Button size="sm" variant="ghost" onClick={() => setConfiguring(true)}><Settings2 aria-hidden /> Configurer</Button>}
         <Button size="sm" variant="ghost" disabled={!messages?.length || streaming} onClick={() => void clearHistory()}><Eraser aria-hidden /> Effacer l’historique</Button>
       </div>
