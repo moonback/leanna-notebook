@@ -18,7 +18,7 @@ export function ProfileForm({ initial }: { initial: Profile }) {
   const [values, setValues] = React.useState(initial);
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const [saving, setSaving] = React.useState(false);
-  React.useEffect(() => { applyTheme(initial.theme); }, [initial.theme]);
+  React.useEffect(() => { applyTheme(values.theme); }, [values.theme]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -54,7 +54,7 @@ export function ProfileForm({ initial }: { initial: Profile }) {
             {Object.entries(LANG_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
         </Field>
-        <Field id="theme" label="Apparence" error={errors.theme}>
+        <Field id="theme" label="Apparence" hint="Le changement est prévisualisé immédiatement. Enregistrez pour le conserver sur vos appareils." error={errors.theme}>
           <select className={select} value={values.theme} onChange={(e) => setValues({ ...values, theme: e.target.value as Profile["theme"] })}>
             <option value="system">Comme l’appareil</option>
             <option value="light">Clair</option>
