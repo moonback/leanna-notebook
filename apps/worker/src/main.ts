@@ -24,7 +24,7 @@ if (!embedder) console.warn("EMBEDDINGS_* non configuré : indexation en plein t
 const llm = llmFromEnv();
 const handlers: Partial<Record<JobKind, Handler>> = {
   ingest_source: ingestHandler(db, embedder, { summaries: Boolean(llm) }),
-  ...(process.env.TAVILY_API_KEY ? { research: researchHandler(db, process.env.TAVILY_API_KEY) } : {}),
+  research: researchHandler(db, process.env.TAVILY_API_KEY),
   generate_artifact: studioHandler(db, llm),
   ...(llm ? { source_guide: guideHandler(db, llm), notebook_overview: overviewHandler(db, llm) } : {}),
 };
