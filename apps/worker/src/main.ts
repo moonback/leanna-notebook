@@ -23,7 +23,8 @@ if (!embedder) console.warn("EMBEDDINGS_* non configuré : indexation en plein t
 
 // Un handler par type de job réellement implémenté ; les autres types ne sont pas réclamés.
 const llm = llmFromEnv();
-const transcriber = transcriberFromEnv();\nif (!transcriber) console.warn("DEEPGRAM_API_KEY absent : import audio désactivé (les autres sources restent disponibles).");
+const transcriber = transcriberFromEnv();
+if (!transcriber) console.warn("DEEPGRAM_API_KEY absent : import audio désactivé (les autres sources restent disponibles).");
 const handlers: Partial<Record<JobKind, Handler>> = {
   ingest_source: ingestHandler(db, embedder, { summaries: Boolean(llm), transcriber }),
   research: researchHandler(db, process.env.TAVILY_API_KEY),
