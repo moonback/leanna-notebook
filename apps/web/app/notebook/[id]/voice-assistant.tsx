@@ -67,14 +67,13 @@ function floatToPcm16(input: Float32Array) {
   return new Uint8Array(buffer);
 }
 
-export function VoiceAssistant({ notebookId, disabled = false }: { notebookId: string; disabled?: boolean }) {
+export function VoiceAssistant({ notebookId, conversationId, disabled = false }: { notebookId: string; conversationId: string; disabled?: boolean }) {
   const [open, setOpen] = React.useState(false);
   const [state, setState] = React.useState<VoiceState>("idle");
   const [status, setStatus] = React.useState("Prêt à discuter de vos sources.");
   const [transcript, setTranscript] = React.useState("");
   const [answer, setAnswer] = React.useState("");
   const [sources, setSources] = React.useState<Passage[]>([]);
-  const conversationId = React.useRef<string | null>(null);
   const userTurn = React.useRef("");
   const assistantTurn = React.useRef("");
   const turnSourceIds = React.useRef<Set<string>>(new Set());
@@ -157,24 +156,6 @@ export function VoiceAssistant({ notebookId, disabled = false }: { notebookId: s
     }
   }
 
-  async function ensureConversation() {
-    if (conversationId.current) return conversationId.current;
-    const listResponse = await fetch(`/api/v1/notebooks/${notebookId}/conversations`);
-    if (!listResponse.ok) throw new Error("Historique du notebook inaccessible.");
-    const list = await listResponse.json();
-    let id = list.conversations?.[0]?.id as string | undefined;
-    if (!id) {
-      const createResponse = await fetch(`/api/v1/notebooks/${notebookId}/conversations`, {
-        method: "POST", headers: { "content-type": "application/json" }, body: "{}"
-      });
-      if (!createResponse.ok) throw new Error("Impossible de créer la conversation.");
-      id = (await createResponse.json()).conversation?.id;
-    }
-    if (!id) throw new Error("Conversation introuvable.");
-    conversationId.current = id;
-    return id;
-  }
-
   async function persistVoiceTurn() {
     const userText = userTurn.current.trim();
     const assistantText = assistantTurn.current.trim();
@@ -183,8 +164,7 @@ export function VoiceAssistant({ notebookId, disabled = false }: { notebookId: s
     const sourceIds = [...turnSourceIds.current];
     turnSourceIds.current.clear();
     if (!userText || !assistantText) return;
-    const id = await ensureConversation();
-    const response = await fetch(`/api/v1/conversations/${id}/voice-messages`, {
+    const response = await fetch(`/api/v1/conversations/${conversationId}/voice-messages`, {
       method: "POST", headers: { "content-type": "application/json" },
       body: JSON.stringify({ userText, assistantText, sourceIds })
     });
@@ -200,7 +180,7 @@ export function VoiceAssistant({ notebookId, disabled = false }: { notebookId: s
     setAnswer("");
     setSources([]);
     try {
-      await ensureConversation();
+      if (!conversationId) throw new Error("Conversation du notebook en cours de chargement.");
       userTurn.current = "";
       assistantTurn.current = "";
       turnSourceIds.current.clear();
