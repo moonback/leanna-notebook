@@ -40,6 +40,11 @@ describe("Audio Overview", () => {
     expect(() => parseAudioOverviewScript(JSON.stringify(invalid))).toThrow("audio_script_invalid");
   });
 
+  it("rejects consecutive turns assigned to the same voice", () => {
+    const invalid = { ...validScript, segments: validScript.segments.map((s, i) => ({ ...s, speaker: i < 2 ? "host" : s.speaker })) };
+    expect(() => parseAudioOverviewScript(JSON.stringify(invalid))).toThrow("audio_script_invalid");
+  });
+
   it("rejects malformed JSON", () => {
     expect(() => parseAudioOverviewScript("not json")).toThrow("audio_script_json_absent");
   });
