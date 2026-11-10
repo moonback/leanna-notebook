@@ -476,7 +476,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
             <div className="flex min-w-0 items-center gap-3 pr-8">
               <div className="grid size-11 shrink-0 place-items-center rounded-xl border bg-accent/10 text-accent"><AudioLines className="size-5" /></div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold">Leanna + Roxane</p>
+                <p className="truncate text-sm font-semibold">{roxaneEnabled ? "Leanna + Roxane" : "Leanna · Studio vocal"}</p>
                 <p className="truncate text-xs text-text-muted">{state === "idle" || state === "error" ? "Studio vocal réduit · Prêt à démarrer" : status}</p>
               </div>
               {state === "idle" || state === "error" ? (
@@ -490,7 +490,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
           <div className="grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)] gap-4">
             <div className="flex items-center justify-between gap-3 border-b pb-3">
               <div className="min-w-0">
-                <p className="text-sm font-semibold">Studio vocal · Leanna + Roxane</p>
+                <p className="text-sm font-semibold">Studio vocal · {roxaneEnabled ? "Leanna + Roxane" : "Leanna"}</p>
                 <p className="truncate text-xs text-text-muted">{status}</p>
               </div>
               <Button size="icon" variant="ghost" aria-label="Réduire le studio vocal" title="Réduire" onClick={() => setExpanded(false)}><Minimize2 aria-hidden /></Button>
@@ -511,7 +511,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
                     </div>
                     <span className="text-[10px] font-medium uppercase tracking-[0.18em] text-text-subtle">Duo vocal</span>
                   </div>
-                  <div className={`grid size-14 place-items-center rounded-2xl border text-lg font-semibold shadow-sm transition-colors sm:size-16 ${roxaneAnswer && state !== "speaking" ? "border-accent/50 bg-accent-soft text-on-accent-soft" : "border-border bg-surface text-text"}`}>
+                  <div className={`grid size-14 place-items-center rounded-2xl border text-lg font-semibold shadow-sm transition-colors sm:size-16 ${roxaneEnabled && roxaneAnswer && state !== "speaking" ? "border-violet-500/50 bg-violet-500/10 text-violet-500" : "border-border bg-surface text-text-subtle"}`}>
                     R
                   </div>
                 </div>
