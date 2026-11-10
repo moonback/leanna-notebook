@@ -5,6 +5,7 @@ import { Badge, Progress } from "@/components/ui/feedback";
 import { Card } from "@/components/ui/surfaces";
 import { createUserClient, getUser } from "@/lib/supabase/server";
 import { ProfileForm } from "../profile-form";
+import { DeleteAccount } from "./delete-account";
 import { PlanCard } from "./plan-card";
 
 export const metadata: Metadata = { title: "Réglages · Notebook" };
@@ -45,6 +46,12 @@ export default async function SettingsPage() {
           {personal && plans ? <PlanCard workspaceId={personal.id} current={personal.plan_id} plans={plans} /> : <p role="alert" className="text-sm text-danger">Espace de travail introuvable.</p>}
         </Card>
         {limits && usage && <UsageCard limits={limits} usage={usage} dayStart={dayStart} />}
+        {user.email && (
+          <Card className="grid gap-4 border-danger/40 p-5">
+            <h2 className="text-lg text-danger">Zone dangereuse</h2>
+            <DeleteAccount email={user.email} />
+          </Card>
+        )}
       </main>
     </div>
   );
