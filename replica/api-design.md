@@ -63,6 +63,8 @@ La galerie ne liste jamais les notebooks privés. Le flag `is_featured` est rés
 | POST `/api/v1/research/:jobId/import` | Importer une sélection de 1 à 5 URLs issues du job | editor+ | `{urls[]}` | `202 {sources[], skipped}` ; chaque source passe dans `ingest_source` |
 | POST `/api/v1/jobs/:id/cancel` | Annuler la recherche (ou tout autre job) | auteur ou editor+ | — | 202 |
 
+Les fichiers audio (MP3, WAV, M4A, AAC, OGG, FLAC, WEBM) sont ingérés via Deepgram Nova-3 côté worker (`DEEPGRAM_API_KEY`, `STT_MODEL`, `STT_LANGUAGE`). Les segments sont conservés avec leurs offsets temporels en millisecondes dans `chunks.time_start_ms/time_end_ms`. Le choix final STT (D3) reste conditionné à un benchmark qualité/coût.
+
 Le fournisseur Fast Research est Tavily côté worker (`TAVILY_API_KEY`, configurée côté web et worker). Le serveur web ne télécharge jamais les résultats ; les URLs sélectionnées sont ensuite traitées par le pipeline d’ingestion existant, avec ses protections SSRF.
 
 ## F06, F07, F08, F11 : chat
