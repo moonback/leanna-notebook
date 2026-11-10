@@ -44,6 +44,16 @@ Date : 2026-11-09. Les références **Fxx** renvoient à [user-flows.md](user-fl
 | GET `/api/v1/notebooks/:id/sources` | Lister les sources, labels et sélection personnelle | viewer+ | — | `{sources[], labels[], deselected[]}` |
 | POST `/api/v1/sources/:id/retry` | Relancer une ingestion en échec | editor+ | — | `202 {jobId}` |
 
+## S04 / H07 : Découvrir des notebooks éditoriaux
+
+| méthode et chemin | rôle | qui | entrée | sortie |
+| --- | --- | --- | --- | --- |
+| GET `/discover` (page) | Lister les notebooks explicitement publiés (`is_featured=true`) | authenticated | recherche locale titre + résumé | cartes éditoriales, sans données de sources |
+| POST `/api/v1/discover/:id/open` | Ouvrir une sélection publiée | authenticated | — | `{notebookId}`, visite enregistrée, rôle `viewer` |
+| POST `/api/v1/notebooks/:id/copy` | Copier dans la bibliothèque personnelle si `allow_copies=true` | viewer+ | — | `201 {notebook}` |
+
+La galerie ne liste jamais les notebooks privés. Le flag `is_featured` est réservé à l'administration (jamais modifiable par un client). La RPC `accept_featured_notebook` ne crée une visite que si le notebook est toujours publié ; le rôle lecteur est recalculé en base et disparaît dès que le notebook n'est plus featured. Les notebooks éditoriaux sont ouverts en lecture seule ; la copie reste soumise au flag `allow_copies`.
+
 ## F04, F05 : recherche de sources (Fast / Deep Research)
 
 | méthode et chemin | rôle | qui | entrée | sortie |
