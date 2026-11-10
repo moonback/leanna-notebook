@@ -6,6 +6,10 @@ export async function ocrWithOpenRouter(file: Uint8Array, mimeType: string, env 
   if (!key) throw new PermanentError("ocr_not_configured");
   const model = env.OPENROUTER_OCR_MODEL || "google/gemini-2.5-flash";
   const base64 = Buffer.from(file).toString("base64");
+  const isPdf = mimeType === "application/pdf";
+  const mediaPart = isPdf
+    ? { type: "file", file: { filename: "source.pdf", file_data: `data:application/pdf;base64,${base64}` } }
+    : { type: "image_url", image_url: { url: `data:${mimeType};base64,${base64}` } };
   const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -20,9 +24,10 @@ export async function ocrWithOpenRouter(file: Uint8Array, mimeType: string, env 
         role: "user",
         content: [
           { type: "text", text: "Transcris fidèlement tout le texte lisible de ce document ou de cette image. Préserve les titres, paragraphes, tableaux et l'ordre de lecture. N'ajoute aucune explication. Si aucun texte n'est lisible, réponds uniquement : [AUCUN TEXTE LISIBILE]." },
-          { type: "image_url", image_url: { url: `data:${mimeType};base64,${base64}` } },
+          mediaPart,
         ],
       }],
+      ...(isPdf ? { plugins: [{ id: "file-parser", pdf: { engine: env.OPENROUTER_PDF_ENGINE || "mistral-ocr" } }] } : {}),
       temperature: 0,
       max_tokens: 8192,
     }),
