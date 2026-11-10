@@ -51,7 +51,19 @@ Adopte un ton accessible.`;
     expect(() => buildAudioOverviewFfmpegArgs([], "final.mp3")).toThrow("audio_segments_missing");
     expect(() => buildAudioOverviewFfmpegArgs(["one.mp3"], "final.mp3", 3)).toThrow("audio_pause_invalid");
   });
-  it("reports exact TTS characters and an approximate spoken duration", () => {\n    const metrics = estimateAudioOverviewMetrics({\n      title: "Metrics",\n      segments: [\n        { speaker: "host", text: "Bonjour à tous." },\n        { speaker: "guest", text: "Bienvenue ici." },\n      ],\n    });\n    expect(metrics.ttsCharacters).toBe(Array.from("Bonjour à tous.").length + Array.from("Bienvenue ici.").length);\n    expect(metrics.segmentCount).toBe(2);\n    expect(metrics.estimatedDurationSeconds).toBe(2);\n  });\n  it("accepts a valid dialogue with two speaker identities", () => {
+  it("reports exact TTS characters and an approximate spoken duration", () => {
+    const metrics = estimateAudioOverviewMetrics({
+      title: "Metrics",
+      segments: [
+        { speaker: "host", text: "Bonjour à tous." },
+        { speaker: "guest", text: "Bienvenue ici." },
+      ],
+    });
+    expect(metrics.ttsCharacters).toBe(Array.from("Bonjour à tous.").length + Array.from("Bienvenue ici.").length);
+    expect(metrics.segmentCount).toBe(2);
+    expect(metrics.estimatedDurationSeconds).toBe(2);
+  });
+  it("accepts a valid dialogue with two speaker identities", () => {
     expect(parseAudioOverviewScript(JSON.stringify(validScript)).segments).toHaveLength(8);
   });
 
