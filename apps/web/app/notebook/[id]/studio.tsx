@@ -1,6 +1,6 @@
 "use client";
 import * as React from "react";
-import { AudioLines, BookOpen, Check, ChevronDown, ChevronRight, Layers, ListChecks, Network, RotateCcw, Sparkles, Trash2, X } from "lucide-react";
+import { AudioLines, BookOpen, Check, ChevronDown, ChevronRight, Download, Layers, ListChecks, Network, RotateCcw, Sparkles, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, Textarea } from "@/components/ui/field";
 import { Alert, Badge, EmptyState, Progress, Skeleton } from "@/components/ui/feedback";
@@ -112,7 +112,7 @@ export function Studio({ notebookId, canEdit, sourceIds, sourceTitle, onOpenCita
             className="col-span-2 justify-start"
             disabled={!readyCount}
             title={readyCount ? "Créer un podcast dialogué à deux voix à partir des sources sélectionnées" : "Ajoutez d’abord une source"}
-            onClick={() => void generate("audio", {}, AUDIO_OVERVIEW_MARKER)}
+            onClick={() => setCreating("audio")}
           >
             <AudioLines aria-hidden /> Audio Overview · Podcast à deux voix
           </Button>
@@ -165,7 +165,7 @@ function CreateDialog({ type, onClose, onGenerate }: { type: ArtType | null; onC
   const [prompt, setPrompt] = React.useState("");
   const [sending, setSending] = React.useState(false);
   React.useEffect(() => {
-    setOpts(type === "report" ? { template: "briefing" } : type === "flashcards" || type === "quiz" ? { difficulty: "medium", count: "standard" } : {});
+    setOpts(type === "report" ? { template: "briefing" } : type === "flashcards" || type === "quiz" ? { difficulty: "medium", count: "standard" } : type === "audio" ? { format: "deep_dive", duration: "standard", style: "accessible" } : {});
     setPrompt("");
   }, [type]);
   if (!type) return null;
@@ -179,7 +179,7 @@ function CreateDialog({ type, onClose, onGenerate }: { type: ArtType | null; onC
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setSending(true);
-    const ok = await onGenerate(type!, opts, prompt.trim() || undefined);
+    const audioPrompt = type === "audio" ? `${AUDIO_OVERVIEW_MARKER}${prompt.trim() ? `\\n${prompt.trim()}` : ""}` : undefined;\n    const ok = await onGenerate(type!, opts, type === "audio" ? audioPrompt : prompt.trim() || undefined);
     setSending(false);
     if (ok) onClose();
   }
@@ -187,7 +187,7 @@ function CreateDialog({ type, onClose, onGenerate }: { type: ArtType | null; onC
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent title={`Générer : ${TYPES[type].label}`} description="À partir des sources sélectionnées. La génération continue en arrière-plan.">
         <form onSubmit={submit} className="grid gap-4">
-          {type === "report" && choice("template", "Format", [["briefing", "Note de synthèse"], ["study_guide", "Guide d’étude"], ["faq", "Questions fréquentes"]])}
+          {type === "report" && choice("template", "Format", [["briefing", "Note de synthèse"], ["study_guide", "Guide d’étude"], ["faq", "Questions fréquentes"]])}\n          {type === "audio" && <div className="grid gap-4 sm:grid-cols-2">{choice("format", "Format du podcast", [["deep_dive", "Deep Dive · approfondi"], ["brief", "Brief · essentiel"], ["critique", "Critique · analyse"], ["debate", "Débat · points de vue"]])}{choice("duration", "Durée cible", [["short", "Court · 5 min"], ["standard", "Standard · 10 min"], ["long", "Long · 15 min"]])}{choice("style", "Ton", [["accessible", "Accessible et pédagogique"], ["professional", "Professionnel et précis"], ["dynamic", "Dynamique et vivant"]])}</div>}
           {(type === "flashcards" || type === "quiz") && (
             <div className="grid gap-4 sm:grid-cols-2">
               {choice("difficulty", "Difficulté", [["easy", "Facile"], ["medium", "Moyenne"], ["hard", "Difficile"]])}
@@ -240,7 +240,7 @@ function ArtifactViewer({ id, canShare, onClose, sourceTitle, onOpenCitation, on
           {art?.custom_prompt && !art.custom_prompt.startsWith(AUDIO_OVERVIEW_MARKER) && <p className="mb-4 rounded-md bg-surface px-3 py-2 text-xs text-text-muted"><span className="font-medium">Consignes de génération :</span> {art.custom_prompt}</p>}
           {failed ? <Alert tone="danger" title="Contenu indisponible" />
             : !art ? <div className="grid gap-2" aria-busy="true" aria-label="Chargement"><Skeleton className="h-5 w-2/3" /><Skeleton className="h-4" /><Skeleton className="h-4 w-5/6" /></div>
-             : art.type === "report" || art.type === "audio" ? <div className="grid gap-4">{art.content.audio_path && <audio controls preload="metadata" className="w-full" src={`/api/v1/artifacts/${art.id}/audio`} />}<Markdown text={art.content.markdown ?? ""} citations={data!.citations} sourceTitle={sourceTitle} onOpen={onOpenCitation ? (c) => { onClose(); onOpenCitation(c); } : undefined} /></div>
+             : art.type === "report" || art.type === "audio" ? <div className="grid gap-4">{art.content.audio_path && <div className="grid gap-2 rounded-lg border border-border p-3"><audio ref={audioRef} controls preload="metadata" className="w-full" src={`/api/v1/artifacts/${art.id}/audio`} /><div className="flex flex-wrap items-center justify-between gap-2"><label className="flex items-center gap-2 text-xs text-text-muted">Vitesse <select aria-label="Vitesse de lecture" className="h-8 rounded-md border border-border-input bg-surface-raised px-2 text-sm text-text" value={playbackRate} onChange={(e) => setPlaybackRate(e.target.value)}>{["0.75", "1", "1.25", "1.5", "1.75", "2"].map((v) => <option key={v} value={v}>{v}×</option>)}</select></label><a className="inline-flex items-center gap-2 text-sm font-medium text-accent hover:underline" href={`/api/v1/artifacts/${art.id}/audio?download=1`}><Download aria-hidden size={16} /> Télécharger le MP3</a></div></div>}<Markdown text={art.content.markdown ?? ""} citations={data!.citations} sourceTitle={sourceTitle} onOpen={onOpenCitation ? (c) => { onClose(); onOpenCitation(c); } : undefined} /></div>
             : art.type === "flashcards" ? <Flashcards id={art.id} title={art.title || "fiches"} cards={art.content.cards ?? []} progress={data!.progress} />
             : art.type === "quiz" ? <Quiz id={art.id} questions={art.content.questions ?? []} progress={data!.progress} onExplain={onAsk} />
             : art.content.root ? <MindMap root={art.content.root} onAsk={(l) => onAsk(`Explique « ${l} » à partir de mes sources.`)} />
