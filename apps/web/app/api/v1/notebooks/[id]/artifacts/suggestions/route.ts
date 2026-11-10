@@ -15,7 +15,7 @@ const suggestionSchema = z.object({
     title: z.string().trim().min(2).max(80),
     description: z.string().trim().min(8).max(180),
     instruction: z.string().trim().min(30).max(1200),
-  })).min(3).max(6),
+  })).min(3).max(6).refine((items) => new Set(items.map((item) => item.id)).size === items.length, "duplicate_ids"),
 });
 
 /** Génère des modèles de rapport adaptés au contenu réel des sources sélectionnées. */
