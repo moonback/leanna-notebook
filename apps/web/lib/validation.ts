@@ -36,7 +36,7 @@ export const UPLOAD_TYPES = {
   pdf: ["application/pdf", "pdf"], txt: ["text/plain", "txt"], md: ["text/markdown", "md"], csv: ["text/csv", "csv"],
   docx: ["application/vnd.openxmlformats-officedocument.wordprocessingml.document", "docx"],
   pptx: ["application/vnd.openxmlformats-officedocument.presentationml.presentation", "pptx"],
-  epub: ["application/epub+zip", "epub"],
+  epub: ["application/epub+zip", "epub"],\n  mp3: ["audio/mpeg", "audio"], wav: ["audio/wav", "audio"], m4a: ["audio/mp4", "audio"],\n  aac: ["audio/aac", "audio"], ogg: ["audio/ogg", "audio"], flac: ["audio/flac", "audio"], webm: ["audio/webm", "audio"],
 } as const;
 export const MAX_UPLOAD_BYTES = 200 * 1024 * 1024;
 
