@@ -104,3 +104,16 @@ describe("modèles de rapport du Studio", () => {
     expect(buildPrompt("report", {}, null, "sources", "fr").messages[0].content).toContain("Note de synthèse");
   });
 });
+
+
+describe("nouveaux formats du Studio", () => {
+  const formats = ["infographic", "timeline", "comparison", "glossary", "faq", "diagram", "editorial", "study_plan"];
+  it.each(formats)("génère %s en Markdown sourcé et conserve les citations", (type) => {
+    const prompt = buildPrompt(type, {}, null, "<passage n=\"1\">Le DMX pilote 512 canaux.</passage>", "fr");
+    expect(prompt.json).toBe(false);
+    expect(prompt.messages[0].content).toContain("UNIQUEMENT à partir des passages");
+    const generated = toContent(type, "## Synthèse\nLe DMX pilote 512 canaux [1].", P);
+    expect((generated.content as { markdown: string }).markdown).toContain("512 canaux [1]");
+    expect(generated.citations[0].chunk_id).toBe("c1");
+  });
+});

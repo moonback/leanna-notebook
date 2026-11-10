@@ -132,6 +132,19 @@ Date : 2026-11-09.
 | Décisions | **D3** STT et TTS (qualité en français, coût à la minute), **D5** YouTube |
 | Critère de sortie | Un audio de 10 minutes généré en moins de 6 minutes, coût mesuré ; une source Drive modifiée est resynchronisée en moins de 15 minutes ; un retry d'audio ne repaie pas les segments TTS déjà produits |
 
+## Studio : extension des formats (tranche en cours)
+
+> Implémentation sur `feat/studio-expanded-artifacts`, PR #49 — à valider par typecheck, tests et exécution avec sources réelles.
+
+| Format | État |
+| --- | --- |
+| Infographie | Génération Markdown sourcée, rendu SVG dans le Studio, export SVG ; mise en page basée sur les sections et repères détectés. |
+| Chronologie | Génération chronologique en Markdown avec citations cliquables vers les passages. |
+| Comparaison | Tableau Markdown sourcé ; données manquantes explicitement signalées. |
+| Glossaire / FAQ / éditorial / plan d'étude | Génération Markdown dédiée avec citations résolues côté worker. |
+| Diagramme | Génération Mermaid ; prévisualisation SVG et éditeur local limités aux flowcharts simples ; export SVG. Les modifications locales ne sont pas persistées dans l'artefact. |
+| Suite | Persistance des éditions, moteur Mermaid complet, rendu visuel de la chronologie, version/diff, régénération ciblée, Pack d'étude, exports DOCX/PDF/PPTX, quiz adaptatif et répétition espacée. |
+
 ## M6 : P2 (3 semaines)
 
 - Fonctionnalités : G04 (deck : plan → rendu → révisions, PPTX/PDF), G05 (infographie en SVG), B16 (labels automatiques), B18 (Deep Research), C06 (multi-conversations), D05 (corbeille des notes), A06, A07 (collections), B05 (YouTube selon D5), Z01 (workspaces d'équipe + facturation par siège), Z02 (recherche multi-notebooks), B09 (Notion ou OneDrive), F04 (répétition espacée).
@@ -166,3 +179,20 @@ Date : 2026-11-09.
 3. La RLS est couverte pour lecteur, éditeur, rôle chat et étranger.
 4. Le coût IA (si la fonctionnalité en consomme) est enregistré dans `usage_ledger`.
 5. La ligne `clone` de `features.csv` passe à `yes` et `/replica-diff` est relancé.
+
+---
+
+## Electron : mises à jour automatiques
+
+> **Implémentation ajoutée sur `feat/electron-auto-updates` — validation de build et publication encore requises.**
+
+- Détection automatique au démarrage d'une version packagée, avec délai initial de 12 secondes.
+- Vérification manuelle depuis le menu natif **Leanna Notebook → Rechercher les mises à jour…**.
+- Distribution des versions Windows via les GitHub Releases du dépôt `moonback/leanna-notebook`, avec `electron-updater`.
+- Consentement explicite avant téléchargement ; progression exposée au renderer via l'API preload sécurisée ; aucune installation forcée pendant une session.
+- Une fois le téléchargement terminé, l'utilisateur choisit de redémarrer immédiatement ou de reporter l'installation.
+- Publication automatisée par le workflow `.github/workflows/desktop-release.yml` à chaque tag SemVer simple (`1.2.0`) ou préfixé (`v1.2.0`).
+
+**Mise en service :** configurer le secret GitHub Actions `LEANNA_WEB_URL` avec l'origine HTTPS de l'application web ; créer une release en poussant un tag correspondant à la version de `apps/desktop/package.json` (par exemple `1.1.1` ou `v1.1.1`). Le workflow doit publier l'installateur NSIS, `latest.yml` et les artefacts de mise à jour. La version installée doit provenir d'une release GitHub publique.
+
+**À valider avant diffusion :** installation propre, détection d'une version supérieure, téléchargement interrompu/repris, report du redémarrage, installation après fermeture, signature de code Windows (non configurée) et fonctionnement sur une installation existante.

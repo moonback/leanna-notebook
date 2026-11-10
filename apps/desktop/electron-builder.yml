@@ -6,10 +6,12 @@ directories:
 files:
   - dist/**/*
   - package.json
+  - build/icon.png
   - "!**/*.map"
 asar: true
 compression: maximum
 win:
+  icon: build/icon.ico
   target:
     - target: nsis
       arch:
@@ -22,9 +24,18 @@ nsis:
   allowToChangeInstallationDirectory: true
   createDesktopShortcut: true
   createStartMenuShortcut: true
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
+  installerHeaderIcon: build/icon.ico
   shortcutName: Leanna Notebook
   uninstallDisplayName: Leanna Notebook
   deleteAppDataOnUninstall: false
   runAfterFinish: true
   installerLanguages:
     - fr_FR
+
+publish:
+  provider: github
+  owner: moonback
+  repo: leanna-notebook
+  releaseType: release
