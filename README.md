@@ -33,7 +33,7 @@ Application SaaS multi-utilisateur (Next.js + Supabase + worker Node), conçue p
 - Traitement en arrière-plan avec progression visible ; messages d’erreur explicites. Les fichiers audio sont transcrits par Deepgram Nova-3 ; les passages gardent leurs horodatages et la visionneuse permet de lire l’original.
 - Sélection des sources interrogées, renommage, suppression.
 - **Guide de source** : résumé et thèmes clés en tête de la visionneuse (cliquer un thème pose la question au chat).
-- **Conversation vocale Gemini Live** : échange audio bidirectionnel en temps réel, interruption naturelle, transcription affichée et recherche RAG dans les sources sélectionnées avant les réponses documentaires. La clé Gemini reste côté serveur ; le navigateur reçoit un jeton éphémère à usage unique.
+- **Conversation vocale Gemini Live** : échange audio bidirectionnel en temps réel, interruption naturelle, transcription affichée et recherche RAG dans les sources sélectionnées avant les réponses documentaires. Les tours terminés sont enregistrés dans le même historique que le chat écrit, avec les identifiants des sources consultées. La clé Gemini reste côté serveur ; le navigateur reçoit un jeton éphémère à usage unique.
 
 ### Chat avec citations vérifiables
 - Réponses en flux (streaming), fondées **uniquement** sur les sources sélectionnées (recherche hybride vecteur + plein texte).
