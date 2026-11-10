@@ -5,7 +5,7 @@
   "main": "dist/main.js",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "dev": "pnpm build && concurrently -k -s first \"pnpm --dir ../web dev -- --hostname 127.0.0.1 --port 3000\" \"wait-on http://127.0.0.1:3000 && electron .\""
+    "dev": "pnpm build && concurrently -k -s first \"pnpm --dir ../web exec next dev --hostname 127.0.0.1 --port 3000\" \"wait-on http://127.0.0.1:3000 && electron .\""
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
