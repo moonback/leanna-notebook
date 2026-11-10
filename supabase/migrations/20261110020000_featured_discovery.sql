@@ -38,7 +38,7 @@ begin
   insert into public.notebook_visits (notebook_id, user_id, via_link_id, hidden)
        values (p_notebook, auth.uid(), null, false)
   on conflict (notebook_id, user_id) do update
-       set via_link_id = null, hidden = false, updated_at = now();
+       set hidden = false, updated_at = now();
   return p_notebook;
 end $$;
 
