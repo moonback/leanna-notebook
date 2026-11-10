@@ -6,6 +6,10 @@ export type RetrievedVoicePassage = {
   charStart: number;
   charEnd: number;
   timeStartMs: number | null;
+  contextBefore?: string | null;
+  contextAfter?: string | null;
+  relevanceScore?: number;
+  evidenceLevel?: "direct_source_excerpt";
 };
 export type NumberedVoicePassage = RetrievedVoicePassage & { number: number };
 
@@ -61,4 +65,17 @@ export class PendingVoiceSearches {
     if (this.pending === 0) return Promise.resolve();
     return new Promise((resolve) => this.idleWaiters.add(resolve));
   }
+}
+
+export type CitationNavigationAction = "open" | "next" | "previous";
+
+/** Resolves citation navigation without allowing an out-of-range index. */
+export function resolveCitationIndex(action: CitationNavigationAction, currentIndex: number, passageCount: number, requestedNumber?: number): number | null {
+  if (passageCount <= 0) return null;
+  if (action === "open" && Number.isInteger(requestedNumber) && requestedNumber! > 0) {
+    const requestedIndex = requestedNumber! - 1;
+    return requestedIndex >= 0 && requestedIndex < passageCount ? requestedIndex : null;
+  }
+  const next = action === "next" ? currentIndex + 1 : action === "previous" ? currentIndex - 1 : currentIndex;
+  return next >= 0 && next < passageCount ? next : null;
 }
