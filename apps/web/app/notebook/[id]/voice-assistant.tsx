@@ -80,6 +80,8 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
   const [roxaneAnswer, setRoxaneAnswer] = React.useState("");
   const [sources, setSources] = React.useState<Passage[]>([]);
   const [activePassageIndex, setActivePassageIndex] = React.useState(0);
+  const activePassageIndexRef = React.useRef(0);
+  const updateActivePassageIndex = React.useCallback((index: number) => { activePassageIndexRef.current = index; updateActivePassageIndex(index); }, []);
   const [turnHistory, setTurnHistory] = React.useState<VoiceTurn[]>([]);
   const userTurn = React.useRef("");
   const assistantTurn = React.useRef("");
@@ -169,7 +171,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
           const passages = turnPassages.current.add(retrieved);
           for (const sourceId of turnPassages.current.sourceIds()) turnSourceIds.current.add(sourceId);
           setSources(turnPassages.current.snapshot());
-          if (passages.length) setActivePassageIndex(0);
+          if (passages.length) updateActivePassageIndex(0);
           const result = passages.length ? passages.map((p) => `[Source ${p.number}] ${p.title}${p.page ? `, page ${p.page}` : p.timeStartMs != null ? `, ${Math.floor(p.timeStartMs / 60000)} min ${Math.floor((p.timeStartMs % 60000) / 1000)} s` : ""}\n${p.excerpt}`).join("\n\n") : "Aucun passage pertinent trouvé dans les sources sélectionnées.";
           socket.current?.send(JSON.stringify({ toolResponse: { functionResponses: [{ id: call.id, name: call.name, response: { result } }] } }));
           continue;
@@ -183,12 +185,12 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
         const openPassage = (index: number) => {
           if (!passages.length) return false;
           const safeIndex = Math.max(0, Math.min(passages.length - 1, index));
-          setActivePassageIndex(safeIndex);
+          updateActivePassageIndex(safeIndex);
           onOpenCitation(passages[safeIndex]);
           return true;
         };
         if (["open_current_citation", "open_document", "show_passage", "repeat_current_citation"].includes(action)) {
-          const index = resolveCitationIndex("open", activePassageIndex, passages.length, Number.isInteger(requestedNumber) ? requestedNumber : undefined) ?? -1;
+          const index = resolveCitationIndex("open", activePassageIndexRef.current, passages.length, Number.isInteger(requestedNumber) ? requestedNumber : undefined) ?? -1;
           if (index >= 0 && openPassage(index)) {
             const p = passages[index];
             result = `Passage ouvert : ${p.title}${p.page ? `, page ${p.page}` : p.timeStartMs != null ? `, horodatage ${Math.floor(p.timeStartMs / 1000)} secondes` : ""}. Extrait : ${p.excerpt}`;
@@ -657,7 +659,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
                       {transcript && <div className="ml-auto max-w-[92%] rounded-2xl rounded-br-md bg-surface-secondary px-3.5 py-2.5"><p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-text-subtle">Vous</p><p className="whitespace-pre-wrap text-sm leading-relaxed">{transcript}</p></div>}
                       {answer && <div className="max-w-[95%] rounded-2xl rounded-bl-md border bg-surface-raised px-3.5 py-2.5"><p className="mb-1 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-accent"><span className="grid size-5 place-items-center rounded-md bg-accent/10">L</span> Leanna</p><p className="whitespace-pre-wrap text-sm leading-relaxed">{answer}</p></div>}
                       {roxaneAnswer && <div className="max-w-[95%] rounded-2xl rounded-bl-md border border-violet-500/20 bg-violet-500/[0.04] px-3.5 py-2.5"><p className="mb-1 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-violet-500"><span className="grid size-5 place-items-center rounded-md bg-violet-500/10">R</span> Roxane</p><p className="whitespace-pre-wrap text-sm leading-relaxed">{roxaneAnswer}</p></div>}
-                      {sources.length > 0 && <div className="flex items-center justify-between gap-2 rounded-lg border bg-surface-raised px-3 py-2"><span className="text-xs font-medium text-text-muted">Citation {activePassageIndex + 1} / {sources.length}</span><div className="flex gap-1"><button type="button" className="rounded-md border px-2 py-1 text-xs disabled:opacity-40" disabled={activePassageIndex <= 0} onClick={() => { const index = resolveCitationIndex("previous", activePassageIndex, sources.length); if (index !== null) { setActivePassageIndex(index); onOpenCitation(sources[index]); } }}>Précédente</button><button type="button" className="rounded-md border px-2 py-1 text-xs disabled:opacity-40" disabled={activePassageIndex >= sources.length - 1} onClick={() => { const index = resolveCitationIndex("next", activePassageIndex, sources.length); if (index !== null) { setActivePassageIndex(index); onOpenCitation(sources[index]); } }}>Suivante</button></div></div>}
+                      {sources.length > 0 && <div className="flex items-center justify-between gap-2 rounded-lg border bg-surface-raised px-3 py-2"><span className="text-xs font-medium text-text-muted">Citation {activePassageIndexRef.current + 1} / {sources.length}</span><div className="flex gap-1"><button type="button" className="rounded-md border px-2 py-1 text-xs disabled:opacity-40" disabled={activePassageIndex <= 0} onClick={() => { const index = resolveCitationIndex("previous", activePassageIndex, sources.length); if (index !== null) { setActivePassageIndex(index); onOpenCitation(sources[index]); } }}>Précédente</button><button type="button" className="rounded-md border px-2 py-1 text-xs disabled:opacity-40" disabled={activePassageIndex >= sources.length - 1} onClick={() => { const index = resolveCitationIndex("next", activePassageIndex, sources.length); if (index !== null) { setActivePassageIndex(index); onOpenCitation(sources[index]); } }}>Suivante</button></div></div>}
                     {sources.length > 0 && <details className="rounded-lg border bg-surface-raised px-3 py-2"><summary className="cursor-pointer text-xs font-medium text-text-muted">{sources.length} source{sources.length > 1 ? "s" : ""} consultée{sources.length > 1 ? "s" : ""}</summary><div className="mt-2 grid gap-2">{sources.map((source) => <div key={`${source.sourceId}:${source.charStart}:${source.charEnd}`} className="rounded-lg bg-surface p-2.5"><Citation n={source.number} source={source.title} quote={source.excerpt} onOpen={() => onOpenCitation(source)} /><p className="mt-1 text-xs text-text-muted">{source.title}{source.page ? ` · page ${source.page}` : ""}</p><p className="mt-2 text-[11px] font-medium text-emerald-600">Preuve : extrait direct de la source</p>{source.contextBefore && <p className="mt-2 text-xs text-text-muted"><span className="font-semibold">Contexte avant : </span>{source.contextBefore}</p>}<p className="mt-1 text-sm leading-relaxed">{source.excerpt}</p>{source.contextAfter && <p className="mt-1 text-xs text-text-muted"><span className="font-semibold">Contexte après : </span>{source.contextAfter}</p><button type="button" className="mt-2 text-xs font-medium text-accent hover:underline" onClick={() => onOpenCitation(source)}>Ouvrir le passage</button></div>)}</div></details>}
                     </div>
                   )}
