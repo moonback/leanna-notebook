@@ -433,8 +433,8 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
           description="Échangez avec Leanna et Roxane autour des sources de votre notebook."
           size="lg"
           className={expanded
-            ? "!inset-x-0 !top-0 !left-0 !h-[100dvh] !max-h-none !w-full !max-w-none !translate-x-0 !translate-y-0 !rounded-none !p-4 sm:!p-6"
-            : "!inset-x-0 !bottom-0 !left-0 !top-auto !h-[92px] !max-h-none !w-full !max-w-none !translate-x-0 !translate-y-0 !rounded-t-2xl !rounded-b-none !p-3 sm:!px-5"}
+            ? "!inset-x-0 !top-0 !left-0 !h-[100dvh] !max-h-none !w-full !max-w-none !translate-x-0 !translate-y-0 !rounded-none !gap-0 !p-4 sm:!p-6 [&>div:first-child]:!sr-only"
+            : "!inset-x-0 !bottom-0 !left-0 !top-auto !h-[92px] !max-h-none !w-full !max-w-none !translate-x-0 !translate-y-0 !rounded-t-2xl !rounded-b-none !gap-0 !p-3 sm:!px-5 [&>div:first-child]:!sr-only"}
         >
           {!expanded ? (
             <div className="flex min-w-0 items-center gap-3 pr-8">
