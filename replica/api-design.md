@@ -53,7 +53,7 @@ Date : 2026-11-09. Les références **Fxx** renvoient à [user-flows.md](user-fl
 | POST `/api/v1/research/:jobId/import` | Importer les résultats choisis comme sources | editor+ | `{urls[], includeReport?}` | `202 {sources[], jobIds}` |
 | POST `/api/v1/jobs/:id/cancel` | Annuler la recherche (ou tout autre job) | auteur ou editor+ | — | 202 |
 
-## F06, F07, F08, F11 : chat
+## F04, F05 : recherche de sources (Fast / Deep Research)\n\n| méthode et chemin | rôle | qui | entrée | sortie |\n| --- | --- | --- | --- | --- |\n| POST `/api/v1/notebooks/:id/research` | Lancer B17 Fast Research | editor+ | `{query (3–300), mode:"fast", scope:"web"}` | `202 {jobId}` (quota `research`) |\n| GET `/api/v1/research/:jobId` | Progression et jusqu’à cinq résultats (`title`, `url`, `why`, `domain`) | editor+ | — | `{job, query, results[], searchedAt}` |\n| POST `/api/v1/research/:jobId/import` | Importer une sélection de 1 à 5 URLs issues du job | editor+ | `{urls[]}` | `202 {sources[], skipped}` ; chaque source passe dans `ingest_source` |\n\nLe fournisseur Fast Research est Tavily côté worker (`TAVILY_API_KEY`). Le serveur web ne télécharge jamais les résultats ; les URLs sélectionnées sont ensuite traitées par le pipeline d’ingestion existant, avec ses protections SSRF.\n\n## F06, F07, F08, F11 : chat
 
 | méthode et chemin | rôle | qui | entrée | sortie |
 | --- | --- | --- | --- | --- |
