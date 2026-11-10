@@ -12,7 +12,7 @@
     "db:reset": "supabase db reset",
     "db:test": "supabase test db",
     "desktop:test": "pnpm --dir apps/desktop test",
-    "desktop:doctor": "pnpm --dir apps/desktop doctor"
+    "desktop:doctor": "node apps/desktop/scripts/doctor.cjs"
   },
   "devDependencies": {
     "supabase": "^2"
