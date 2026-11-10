@@ -516,7 +516,10 @@ function Flashcards({ id, title, cards, progress }: { id: string; title: string;
     setFlipped(false); setI((x) => x + 1);
   };
   const restart = (next: Card[]) => { setDeck(next); setI(0); setMissed([]); setFlipped(false); };
-  const restartAll = async () => { await resetProgress(id); setAcquired(new Set()); restart([...cards].sort(() => Math.random() - 0.5)); };
+  const [confirm, confirmDialog] = useConfirm();
+  const restartAll = async () => {
+    if (!(await confirm({ title: "Tout reprendre à zéro ?", description: "Votre progression sur ces fiches sera effacée.", confirmLabel: "Tout reprendre" }))) return;
+    await resetProgress(id); setAcquired(new Set()); restart([...cards].sort(() => Math.random() - 0.5)); };
   const exportBtn = <Button size="sm" variant="ghost" onClick={() => downloadCsv(title, cardsToCsv(cards))}>Exporter (CSV)</Button>;
   if (!cards.length) return <Alert tone="warning" title="Aucune fiche" />;
   if (i >= deck.length) return (
@@ -527,6 +530,7 @@ function Flashcards({ id, title, cards, progress }: { id: string; title: string;
         <Button variant="secondary" onClick={() => void restartAll()}><RotateCcw aria-hidden /> Tout reprendre (mélangé)</Button>
         {exportBtn}
       </div>
+      {confirmDialog}
     </div>
   );
   const c = deck[i];
@@ -558,12 +562,16 @@ function Quiz({ id, questions, progress, onExplain }: { id: string; questions: Q
   const [picked, setPicked] = React.useState<number | null>(null);
   const [score, setScore] = React.useState(() => progress.filter((p) => p.state === "correct").length);
   const [hint, setHint] = React.useState(false);
-  const restart = async () => { await resetProgress(id); setI(0); setScore(0); setPicked(null); setHint(false); };
+  const [confirm, confirmDialog] = useConfirm();
+  const restart = async () => {
+    if (!(await confirm({ title: "Recommencer le quiz ?", description: "Votre score et vos réponses seront effacés.", confirmLabel: "Recommencer" }))) return;
+    await resetProgress(id); setI(0); setScore(0); setPicked(null); setHint(false); };
   if (!questions.length) return <Alert tone="warning" title="Aucune question" />;
   if (i >= questions.length) return (
     <div className="grid justify-items-center gap-4 py-6 text-center">
       <p className="text-2xl">Score : {score} / {questions.length}</p>
       <Button variant="secondary" onClick={() => void restart()}><RotateCcw aria-hidden /> Recommencer</Button>
+      {confirmDialog}
     </div>
   );
   const q = questions[i];
