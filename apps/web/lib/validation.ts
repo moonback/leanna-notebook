@@ -22,6 +22,7 @@ export const profilePatchSchema = z
     theme: z.enum(THEMES),
     web_notifications: z.boolean(),
     dashboard_view: z.enum(["grid", "list"]),
+    voice_system_prompt: z.string().trim().min(1, "Le prompt ne peut pas être vide.").max(20_000, "20 000 caractères maximum.").nullable(),
   })
   .partial()
   .strict()
