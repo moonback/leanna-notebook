@@ -276,8 +276,7 @@ export function Markdown({ text, citations, sourceTitle, onOpen }: { text: strin
     blocks.push(<ul key={`l${blocks.length}`} className="ml-5 list-disc space-y-1">{list.map((li, i) => <li key={i}>{inline(li)}</li>)}</ul>);
     list = [];
   };
-  text.split("
-").forEach((line, i) => {
+  text.split("\n").forEach((line, i) => {
     const t = line.trim();
     if (/^[-*]\s+/.test(t)) { list.push(t.replace(/^[-*]\s+/, "")); return; }
     flush();
@@ -294,8 +293,7 @@ type Card = { key: string; front: string; back: string };
 /** Export CSV (recto ; verso), lisible par Excel et les applis de révision. Exporté pour les tests. */
 export function cardsToCsv(cards: Card[]) {
   const cell = (s: string) => `"${s.replace(/"/g, '""')}"`;
-  return "﻿" + ["Recto,Verso", ...cards.map((c) => `${cell(c.front)},${cell(c.back)}`)].join("\r
-");
+  return "﻿" + ["Recto,Verso", ...cards.map((c) => `${cell(c.front)},${cell(c.back)}`)].join("\r\n");
 }
 function downloadCsv(name: string, csv: string) {
   const a = document.createElement("a");
