@@ -14,6 +14,7 @@ import { Studio } from "./studio";
 import { CopyButton } from "./copy-button";
 import { ShareButton } from "./share-dialog";
 import { FastResearch } from "./fast-research";
+import { VoiceAssistant } from "./voice-assistant";
 
 export type Role = "chat" | "viewer" | "editor" | "owner";
 type Source = { id: string; kind: string; title: string; status: string; error_code: string | null; word_count: number | null };
