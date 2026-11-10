@@ -5,7 +5,7 @@ import { AudioLines, Mic, MicOff, PhoneOff, Maximize2, Minimize2 } from "lucide-
 import { Button } from "@/components/ui/button";
 import { Citation } from "@/components/ui/citation";
 import { Dialog, DialogContent } from "@/components/ui/overlay";
-import { PendingVoiceSearches, VoiceTurnCitationStore, type NumberedVoicePassage } from "./voice-turn";
+import { PendingVoiceSearches, shouldInviteRoxane, VoiceTurnCitationStore, type NumberedVoicePassage } from "./voice-turn";
 
 type VoiceState = "idle" | "connecting" | "listening" | "speaking" | "error";
 type Passage = NumberedVoicePassage;
@@ -93,6 +93,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
   const roxaneTurnText = React.useRef("");
   const roxaneTurnResolver = React.useRef<(() => void) | null>(null);
   const roxaneAskedForTurn = React.useRef(false);
+  const completedTurnCount = React.useRef(0);
   const roxaneSpeaking = React.useRef(false);
   const audioContext = React.useRef<AudioContext | null>(null);
   const mediaStream = React.useRef<MediaStream | null>(null);
@@ -211,6 +212,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
       turnCompletePending.current = false;
       turnFinalizing.current = false;
       roxaneAskedForTurn.current = false;
+      completedTurnCount.current = 0;
       roxaneTurnText.current = "";
       const ctx = new AudioContext();
       audioContext.current = ctx;
@@ -286,16 +288,19 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
       setStatus("Je vous écoute. Parlez naturellement.");
       ws.onclose = () => { if (mounted.current && !intentionalClose.current) { stop(); setStatus("Session vocale terminée."); } };
       ws.onerror = () => { if (mounted.current) setStatus("Connexion vocale instable…"); };
-      const askRoxane = async () => {
-        if (roxaneAskedForTurn.current || !assistantTurn.current.trim()) return;
+      const askRoxane = async (turnNumber: number) => {
+        if (roxaneAskedForTurn.current || !assistantTurn.current.trim() || !shouldInviteRoxane(turnNumber)) return;
         roxaneAskedForTurn.current = true;
         const groundedSources = turnPassages.current.snapshot().map((passage) => `[Source ${passage.number}] ${passage.title}${passage.page ? `, page ${passage.page}` : ""}: ${passage.excerpt}`).join("\n");
         const prompt = [
-          "Voici le tour qui vient d'avoir lieu. Interviens maintenant comme Roxane, la co-animatrice critique.",
+          "Voici le tour qui vient d'avoir lieu. Interviens comme Roxane uniquement si tu peux apporter une valeur ajoutée réelle et précise.",
           `Question de l'utilisateur : ${userTurn.current.trim()}`,
           `Réponse de Leanna : ${assistantTurn.current.trim()}`,
           `Extraits vérifiés consultés : ${groundedSources || "Aucun extrait transmis"}`,
-          "Fais une intervention courte et utile. Ne répète pas Leanna. Si la réponse est solide, apporte une nuance ou une question d'approfondissement. N'ajoute aucun fait absent des extraits."
+          "Parle uniquement si tu identifies au moins un élément concret : contradiction, hypothèse fragile, limite importante, information manquante qui change la conclusion, conséquence pratique ou question réellement nécessaire.",
+          "Ne répète pas Leanna, ne la félicite pas par réflexe, ne reformule pas sa réponse et ne pose jamais une question générique pour meubler.",
+          "Si tu n'as rien de pertinent à ajouter, termine immédiatement le tour sans produire de texte ni audio. Le silence est la réponse attendue dans ce cas.",
+          "Si tu interviens, limite-toi à une remarque concise et directement utile. N'ajoute aucun fait absent des extraits."
         ].join("\n\n");
         const connection = roxaneSocket.current;
         if (!connection || connection.readyState !== WebSocket.OPEN) {
@@ -344,7 +349,12 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
         turnFinalizing.current = true;
         try {
           const leannaAnswer = assistantTurn.current.trim();
-          await askRoxane();
+          const completedTurnNumber = ++completedTurnCount.current;
+          if (shouldInviteRoxane(completedTurnNumber)) {
+            await askRoxane(completedTurnNumber);
+          } else {
+            setStatus(`Échange ${completedTurnNumber}/2 · Roxane reste en écoute.`);
+          }
           const completedTurn = { user: userTurn.current.trim(), assistant: leannaAnswer, roxane: roxaneTurnText.current.trim(), sources: turnPassages.current.snapshot() };
           await persistVoiceTurn();
           if (completedTurn.user && completedTurn.assistant) setTurnHistory((history) => [...history, completedTurn]);
@@ -521,7 +531,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
                     </>
                   )}
                 </div>
-                <p className="text-[11px] text-text-subtle">Deux sessions Gemini Live · Microphone requis · Les voix interviennent l’une après l’autre</p>
+                <p className="text-[11px] text-text-subtle">Roxane reste silencieuse pendant les deux premiers échanges, puis intervient uniquement si elle apporte un éclairage pertinent.</p>
               </div>
             </section>
 
@@ -583,7 +593,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
               <div className="rounded-xl border border-dashed px-4 py-5 text-center">
                 <div className="mx-auto grid size-9 place-items-center rounded-xl bg-accent/10 text-accent"><AudioLines className="size-4" /></div>
                 <p className="mt-2 text-sm font-medium">Votre espace de conversation</p>
-                <p className="mt-1 text-xs text-text-muted">Lancez le duo : Leanna répond à partir des documents, puis Roxane apporte un second regard.</p>
+                <p className="mt-1 text-xs text-text-muted">Leanna répond à partir des documents. Roxane écoute les deux premiers échanges, puis ne prend la parole que si elle a une remarque réellement utile.</p>
               </div>
             )}
 
