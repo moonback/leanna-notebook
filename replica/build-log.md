@@ -1,0 +1,21 @@
+# Journal de construction
+
+| date | lot / écran | statut | ce qui manque | plus dur que prévu |
+| --- | --- | --- | --- | --- |
+| 2026-11-09 | M0 · S02 connexion / inscription | fait | Google OAuth (client Google requis) | Ports Supabase locaux déjà pris par 3 autres projets → plage 583xx |
+| 2026-11-09 | M0 · accueil provisoire (compte, workspace, préférences) | fait | Remplacé par S03 au M2 | — |
+| 2026-11-09 | M0 · worker | fait (sans handler métier) | Handlers à partir de M1 | Node « strip-only » refuse les parameter properties → `erasableSyntaxOnly` |
+| 2026-11-09 | M0 · CI | écrite, non vérifiée | Exécution GitHub non contrôlée (demande utilisateur) | Build Next cassé quand le serveur de dev tourne en parallèle |
+| 2026-11-09 | S03 tableau de bord (liste/grille, onglets, recherche, créer, renommer, supprimer) | fait | Collections, notebooks publics | Bouton `asChild` du design system cassé (deux enfants dans `Slot`) → corrigé |
+| 2026-11-09 | S08 espace notebook + S05 ajout de sources + S10 visionneuse | fait | Renommer une source, labels, Studio (affiché « bientôt ») | Deux dispositions montées en même temps → deux chats ; une seule montée désormais |
+| 2026-11-09 | S11 chat en flux + citations cliquables | fait (testé avec un faux OpenRouter) | Vraie clé OpenRouter ; Markdown riche | Effets React qui renvoyaient une valeur (`destroy is not a function`) |
+| 2026-11-09 | S28 réglages (préférences + offre simulée) | fait | Stripe réel | — |
+| 2026-11-09 | S24 notes (créer, modifier, verrou des citations, enregistrer une réponse) | fait | Éditeur riche (Tiptap prévu) : texte simple pour l instant ; export | Rechargement à chaud pendant le test (état UI perdu, serveur correct) |
+| 2026-11-09 | Import PPTX / EPUB + renommer une source | fait | — | Test anti « zip bomb » trop lent avec 160 Mo réels → plafond paramétrable |
+| 2026-11-09 | M3 Studio texte (rapports, fiches, quiz, cartes mentales) + K01 consommation | fait (testé avec un faux OpenRouter) | Notification navigateur ; suivi persistant fiches/quiz ; prompt visible après coup ; Stripe réel | `create_artifact` sans liste de sources prenait tout le notebook → le Studio envoie la sélection ; Vitest web sans alias `@` → `vitest.config.ts` |
+| 2026-11-09 | Chat avancé : configurer (C08), effacer (C05), avis (C09), stop avec citations (C07) | fait (sans appel au modèle) | Reprendre une réponse arrêtée ; effet réel de la longueur non mesuré avec un vrai modèle | Le texte partiel d un Stop gardait des [n] bruts → citations résolues aussi à l arrêt |
+| 2026-11-09 | B14 guide de source + C03 résumé du notebook et questions suggérées | fait (testé avec un faux OpenRouter) | Guides des sources importées avant ce lot non générés (pas de rattrapage) ; jobs restés en file si le worker redémarre sans clé | Course entre fin d ingestion et suivi du résumé côté UI → relecture différée |
+| 2026-11-09 | Finitions Studio : progression fiches/quiz (F02, F03), export CSV, Expliquer, consignes visibles (E03), notification (E02) | fait (notification non testée) | Push hors onglet (J03) ; répétition espacée (F04) | Le contenu de la visionneuse arrive plus tard que prévu au premier chargement (compilation dev) : tests à attente conditionnelle |
+| 2026-11-09 | J04 avis et signalement + rattrapage des jobs au bail expiré (worker, chaque minute) | fait (route testée par script ; formulaire non vu dans le navigateur) | Écran de modération ; pg_cron en production | Les tests worker prenaient de vrais jobs de la base de dev (claim global) → jobs de test en priorité 0 ; un rapport du notebook Dmx a été rétabli |
+| 2026-11-09 | M4 / H01 partage privé (inviter, rôles, retirer) | fait (routes testées par script + pgTAP ; dialogue non vu dans le navigateur) | Email d invitation (pas de fournisseur) ; bouton « Quitter » côté membre dans l UI | Test pgTAP existant dépendant des données de dev (compte global d artefacts) → restreint au notebook du test |
+| 2026-11-10 | M4 / H02 lien de partage + H03 chat seul | fait (routes testées par script ; dialogue non vu dans le navigateur) | Visite sans compte (connexion requise) ; un seul lien actif suivi par visiteur (la dernière visite remplace la précédente) | Le rôle chat voyait un panneau Sources vide et un Studio en erreur → interface réduite au chat, compte de sources prêtes fourni par le serveur |

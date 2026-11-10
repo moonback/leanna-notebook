@@ -1,0 +1,16 @@
+{
+  "name": "notebook",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --dir apps/web dev",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "lint": "pnpm -r lint",
+    "db:start": "supabase start",
+    "db:reset": "supabase db reset",
+    "db:test": "supabase test db"
+  },
+  "devDependencies": {
+    "supabase": "^2"
+  }
+}

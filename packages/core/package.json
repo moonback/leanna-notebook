@@ -1,0 +1,16 @@
+{
+  "name": "@notebook/core",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./citations": "./src/citations.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.7"
+  }
+}
