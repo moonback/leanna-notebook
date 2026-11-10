@@ -54,7 +54,7 @@ describe("GitHub Markdown codebase document", () => {
     expect(markdown).toContain("https://github.com/moonback/demo");
     expect(markdown).toContain("**Commit immuable :** `abc123`");
     expect(markdown).toContain("`src/app.ts`");
-    expect(markdown).toContain("## FILE: src/app.ts");
+    expect(markdown).toContain("## FILE: `src/app.ts`");
     expect(markdown).toContain("```typescript");
     expect(markdown).toContain("00001 | export const answer = 42;");
     expect(markdown).toContain("00002 | ");
@@ -80,7 +80,7 @@ describe("GitHub Markdown codebase document", () => {
       commitSha: "deadbeef",
       files: [{ path: "apps/web/page.tsx", content: "first\nsecond" }],
     });
-    expect(markdown).toContain("## FILE: apps/web/page.tsx");
+    expect(markdown).toContain("## FILE: `apps/web/page.tsx`");
     expect(markdown).toContain("00001 | first");
     expect(markdown).toContain("00002 | second");
   });
