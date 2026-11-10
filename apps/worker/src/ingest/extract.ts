@@ -32,7 +32,7 @@ async function fromPdf(buf: Uint8Array): Promise<Extracted> {
   let acc = "";
   for (const p of pages) { pageStarts.push(acc.length); acc += p.trim() + "\n\n"; }
   // PDF scanné (pas de couche texte) : OCR non disponible à ce jalon → erreur explicite, pas de faux succès
-  if (acc.replace(/\s/g, "").length < 20 * Math.max(1, pages.length) / 10) throw new PermanentError("needs_ocr", "PDF sans texte (scan) : l'OCR n'est pas encore disponible.");
+  if (acc.replace(/\s/g, "").length < 20 * Math.max(1, pages.length) / 10) { const text = await ocrWithGemini(buf, "application/pdf"); return { text, pageStarts: [0], pageCount: pages.length }; }
   return { text: acc, pageStarts, pageCount: pages.length };
 }
 
