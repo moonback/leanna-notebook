@@ -101,7 +101,7 @@ Date : 2026-11-09.
 > | Export RGPD (`GET /me/export`) | fait, synchrone et en JSON (au lieu du ZIP via job `export_account` prévu) ; à passer en job si les volumes grossissent |
 > | Suppression du compte (`DELETE /me`) | fait, synchrone (au lieu du job `delete_account`) avec confirmation par e-mail, au lieu de la double confirmation + ré-authentification prévue ; purge Storage ratée seulement journalisée, le job `purge_storage` n'est pas écrit |
 > | Z04 pages `/privacy` et `/terms` | faites ; restent DPA, registre des sous-traitants, rétention chez les fournisseurs d'IA, mentions légales, relecture juridique |
-> | H04 lien public d'un artefact, B17 Fast Research, onglet Découvrir (S04), `PATCH /notebooks/:id/visit`, pg_cron `cleanup_invitations` | à faire |
+> | B17 Fast Research, onglet Découvrir (S04), pg_cron `cleanup_invitations` | à faire ; H04 et `PATCH /notebooks/:id/visit` sont implémentés sur la branche dédiée, en attente de tests et validation runtime |
 >
 > Critère de sortie M4 : le critère « suppression sans objet restant dans Storage » n'est garanti qu'en l'absence d'erreur de purge ; aucun test E2E de la suppression ni de l'export n'existe encore. Annulation Stripe à brancher avec le paiement réel.
 
