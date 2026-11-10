@@ -47,6 +47,7 @@ Application SaaS multi-utilisateur (Next.js + Supabase + worker Node), conçue p
 - **Fiches de révision** : retourner, « Je savais » / « À revoir », reprise là où on s'est arrêté, export **CSV**.
 - **Quiz** (QCM) : indice, explication, score enregistré, reprise, « Expliquer dans le chat ».
 - **Carte mentale** dépliable ; cliquer un thème l'explore dans le chat.
+- **Audio Overview (G01)** : script de podcast dialogué, deux voix ElevenLabs, assemblage MP3 par ffmpeg, stockage privé et lecteur intégré au Studio. Nécessite deux identifiants de voix et ffmpeg côté worker.
 - **Fast Research (B17)** : recherche web asynchrone, cinq résultats maximum avec extrait explicatif, sélection multiple et import direct comme sources indexées.
 - **Découvrir (S04)** : galerie de notebooks éditoriaux publiés, ouverture en lecture seule et copie dans sa bibliothèque si autorisée.
 - **Invitations** : les invitations en attente expirent après 30 jours et sont nettoyées quotidiennement par pg_cron.
@@ -203,6 +204,10 @@ Les deux variables `NEXT_PUBLIC_LEGAL_*` sont à renseigner **avant toute mise e
 | `EMBEDDINGS_MODEL`, `EMBEDDINGS_API_KEY` | Modèle et clé d'embeddings (1024 dimensions) |
 | `OPENROUTER_API_KEY`, `OPENROUTER_CHAT_MODEL` | Génération du Studio, guides et résumés |
 | `DEEPGRAM_API_KEY` | Transcription des sources audio B06 (facultatif pour les autres sources) |
+| `ELEVENLABS_API_KEY` | Synthèse vocale Audio Overview (G01) |
+| `AUDIO_OVERVIEW_HOST_VOICE_ID`, `AUDIO_OVERVIEW_GUEST_VOICE_ID` | Deux identifiants de voix ElevenLabs distincts |
+| `AUDIO_OVERVIEW_TTS_MODEL` | Modèle TTS (défaut `eleven_multilingual_v2`) |
+| `FFMPEG_PATH` | Chemin vers ffmpeg (défaut `ffmpeg`, à installer sur la machine du worker) |
 | `STT_MODEL`, `STT_LANGUAGE` | Modèle STT (`nova-3`) et langue (`multi`) |
 | `OPENROUTER_BASE_URL` | Facultatif, comme côté web |
 
@@ -304,7 +309,7 @@ Parité pondérée avec la référence fonctionnelle : **environ 67 %** ; **22/2
 | M0–M2 | Socle, ingestion, chat avec citations, notes | fait |
 | M3 | Studio texte, quotas visibles, chat avancé, résumés, avis | fait, sauf Stripe réel |
 | M4 | Partage et RGPD | en cours : partage privé, liens de partage (lecture + chat, chat seul), copie de notebook, export des données, suppression de compte et pages Confidentialité / Conditions faits ; lien public d'un artefact, recherche web et onglet Découvrir à faire |
-| M5 | Résumés audio, connecteurs (Google Drive) | à faire |
+| M5 | Import/transcription audio, lecteur temporel et Audio Overview deux voix ; connecteurs Google Drive | Audio Overview implémenté sur branche dédiée, validation locale et benchmark TTS à faire ; Google Drive à faire |
 | M6 | Présentations, infographies, recherche web, équipes | à faire |
 
 Limites actuelles : paiement simulé ; pas d'envoi d'emails applicatifs (invitations, notifications) ; pas de notification hors de l'onglet ; pas d'écran de modération ; pas de reconnaissance de texte pour les PDF scannés ; pas encore de déploiement de production.
