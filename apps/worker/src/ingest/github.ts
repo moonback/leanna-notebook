@@ -40,7 +40,10 @@ export async function extractGitHubCodebase(rawUrl: string): Promise<string> {
     return response.json() as Promise<any>;
   };
 
-  const tree = await request(\`/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/git/trees/${encodeURIComponent(ref)}?recursive=1\`);
+  const branchData = await request(\`/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/branches/${encodeURIComponent(ref)}\`);
+  const commitSha = branchData.commit?.sha;
+  if (typeof commitSha !== "string") throw new PermanentError("github_invalid_ref");
+  const tree = await request(\`/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/git/trees/${commitSha}?recursive=1\`);
   if (tree.truncated) throw new PermanentError("github_repo_too_large");
   const files = (tree.tree ?? []).filter((entry: any) => entry.type === "blob" && typeof entry.path === "string" && shouldIndexGitHubPath(entry.path));
   if (!files.length) throw new PermanentError("github_no_indexable_files");
