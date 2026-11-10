@@ -9,7 +9,8 @@ type Params = { params: Promise<{ id: string }> };
 const createSchema = z.object({
   type: z.enum(["report", "flashcards", "quiz", "mind_map", "audio"]),
   options: z.object({
-    template: z.enum(["briefing", "study_guide", "faq"]).optional(),
+    template: z.enum(["briefing", "study_guide", "faq", "blog_post", "specification", "action_plan", "practical_sheet", "detailed_guide"]).optional(),
+    reportFormat: z.enum(["document", "interactive"]).optional(),
     difficulty: z.enum(["easy", "medium", "hard"]).optional(),
     count: z.enum(["fewer", "standard", "more"]).optional(),
     format: z.enum(["deep_dive", "brief", "critique", "debate"]).optional(),
