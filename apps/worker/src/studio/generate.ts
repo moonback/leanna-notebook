@@ -131,6 +131,8 @@ export function studioHandler(db: SupabaseClient, llm: Llm | null, speech: Speec
       const language = (art.options as { language?: string })?.language ?? profile?.output_language ?? "fr";
       const audioOverview = art.type === "audio" || (art.type === "report" && isAudioOverviewPrompt(art.custom_prompt));
       const customPrompt = audioOverview ? audioOverviewInstructions(art.custom_prompt) : art.custom_prompt;
+      if (audioOverview && !speech) throw new PermanentError("audio_tts_not_configured", "Configurez ELEVENLABS_API_KEY et les deux identifiants de voix.");
+      if (audioOverview && (!audioEnv.AUDIO_OVERVIEW_HOST_VOICE_ID || !audioEnv.AUDIO_OVERVIEW_GUEST_VOICE_ID || audioEnv.AUDIO_OVERVIEW_HOST_VOICE_ID === audioEnv.AUDIO_OVERVIEW_GUEST_VOICE_ID)) throw new PermanentError("audio_voices_invalid");
       const prompt = audioOverview
         ? { messages: buildAudioOverviewMessages(formatPassages(passages), language, customPrompt), json: true }
         : buildPrompt(art.type, art.options ?? {}, customPrompt, formatPassages(passages), language);
