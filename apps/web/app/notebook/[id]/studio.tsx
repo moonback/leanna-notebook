@@ -30,6 +30,7 @@ const ERRORS: Record<string, string> = {
   audio_tts_not_configured: "La synthèse vocale n’est pas configurée côté worker.",
   audio_tts_config: "La configuration du fournisseur de voix est invalide.",
   audio_voices_invalid: "Configurez deux identifiants de voix différents.",
+  audio_ffmpeg_not_installed: "ffmpeg est absent du PATH du worker. Installez-le puis redémarrez le worker.",
 };
 const busy = (s: string) => s === "queued" || s === "scheduled" || s === "generating";
 const AUDIO_OVERVIEW_MARKER = "[[NOTEBOOK_AUDIO_OVERVIEW_V1]]";
