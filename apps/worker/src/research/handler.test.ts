@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { PermanentError } from "../worker.ts";
 import { normalizeResearchResults, researchHandler } from "./handler.ts";
 
 const job = { id: "j", kind: "research" as const, workspace_id: "w", notebook_id: "n", target_id: null,
