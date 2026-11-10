@@ -44,6 +44,7 @@ function fromHtml(html: string): Extracted {
 
 /** Texte brut d'une source, selon son type. Les erreurs attendues sont des PermanentError (code stable). */
 export async function extract(kind: string, data: { file?: Uint8Array; url?: string; noteText?: string; mimeType?: string }, transcriber?: Transcriber | null): Promise<Extracted> {
+  console.log(`[extract] kind=${JSON.stringify(kind)} url=${data.url ?? "-"}`);
   switch (kind) {
     case "github":
       return finalize({ text: await extractGitHubCodebase(data.url ?? ""), pageStarts: [], pageCount: null });

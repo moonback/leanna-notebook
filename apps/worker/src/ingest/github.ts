@@ -31,6 +31,7 @@ export async function extractGitHubCodebase(rawUrl: string): Promise<string> {
   const ref = url.searchParams.get("ref") || "HEAD";
   if (ref.length > 200 || ref.startsWith("-")) throw new PermanentError("github_invalid_ref");
 
+  console.log(`[github] owner=${owner} repo=${repo} ref=${ref}`);
   const headers = { Accept: "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28", "User-Agent": "Leanna-Notebook" };
   const request = async (path: string) => {
     const response = await fetch(`${API}${path}`, { headers, signal: AbortSignal.timeout(20_000) });

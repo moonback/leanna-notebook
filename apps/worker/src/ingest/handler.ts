@@ -30,6 +30,7 @@ export function ingestHandler(db: SupabaseClient, embedder: Embedder | null, opt
     // le job et la source doivent appartenir au même tenant (défense en profondeur)
     if (src.workspace_id !== job.workspace_id || src.notebook_id !== job.notebook_id) throw new PermanentError("tenant_mismatch");
 
+    console.log(`[ingest] job=${job.id} source=${src.id} kind=${JSON.stringify(src.kind)} origin_url=${src.origin_url ?? "-"} storage_path=${src.storage_path ?? "-"} mime=${src.mime_type ?? "-"}`);
     await db.from("sources").update({ status: "processing", error_code: null }).eq("id", src.id);
     try {
       await ctx.progress(10, "lecture");
@@ -41,6 +42,7 @@ export function ingestHandler(db: SupabaseClient, embedder: Embedder | null, opt
       }
       await ctx.progress(25, src.kind === "audio" ? "transcription" : "extraction");
       const ex = await extract(src.kind, { file, url: src.origin_url ?? undefined, noteText: (src.note_body as { text?: string } | null)?.text, mimeType: src.mime_type ?? undefined }, opts.transcriber);
+      console.log(`[ingest] source=${src.id} kind=${src.kind} extraction OK (${ex.text.length} caractères)`);
       const text = normalize(ex.text);
       const lang = detectLanguage(text);
       const chunks = chunk(text, { pageStarts: ex.pageStarts, timeRanges: ex.timeRanges });
@@ -64,6 +66,7 @@ export function ingestHandler(db: SupabaseClient, embedder: Embedder | null, opt
     } catch (e) {
       // statut persistant lisible par l'interface ; la décision de réessayer reste au worker
       const code = e instanceof PermanentError ? e.code : "temporary_error";
+      console.error(`[ingest] ÉCHEC source=${src.id} kind=${src.kind} code=${code} permanent=${e instanceof PermanentError}`, e);
       await db.from("sources").update({ status: e instanceof PermanentError ? "failed" : "pending", error_code: code }).eq("id", src.id);
       throw e;
     }
