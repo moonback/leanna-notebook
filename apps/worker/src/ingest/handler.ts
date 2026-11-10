@@ -3,7 +3,7 @@ import { PermanentError, type Handler } from "../worker.ts";
 import type { Embedder } from "../ai/embeddings.ts";
 import { chunk, normalize } from "./chunker.ts";
 import { extract } from "./extract.ts";
-import { enqueueSummaries } from "../studio/summaries.ts";
+import { enqueueSummaries } from "../studio/summaries.ts";\nimport type { Transcriber } from "../ai/transcription.ts";
 
 const FTS_CONFIG: Record<string, string> = { fr: "french", en: "english", es: "spanish", de: "german", it: "italian", pt: "portuguese", nl: "dutch" };
 
@@ -21,9 +21,9 @@ export function detectLanguage(text: string): string {
  * puis remplace les chunks en UNE transaction (replace_chunks). Statuts persistants à chaque étape.
  */
 /** summaries : programme guide de source + résumé du notebook (seulement si un modèle est configuré). */
-export function ingestHandler(db: SupabaseClient, embedder: Embedder | null, opts: { summaries?: boolean } = {}): Handler {
+export function ingestHandler(db: SupabaseClient, embedder: Embedder | null, opts: { summaries?: boolean; transcriber?: Transcriber | null } = {}): Handler {
   return async (job, ctx) => {
-    const { data: src, error } = await db.from("sources").select("id, kind, storage_path, origin_url, notebook_id, workspace_id, note_body")
+    const { data: src, error } = await db.from("sources").select("id, kind, storage_path, origin_url, notebook_id, workspace_id, note_body, mime_type")
       .eq("id", job.target_id!).single();
     if (error || !src) throw new PermanentError("source_not_found");
     // le job et la source doivent appartenir au même tenant (défense en profondeur)
@@ -39,10 +39,10 @@ export function ingestHandler(db: SupabaseClient, embedder: Embedder | null, opt
         file = new Uint8Array(await blob.arrayBuffer());
       }
       await ctx.progress(25, "extraction");
-      const ex = await extract(src.kind, { file, url: src.origin_url ?? undefined, noteText: (src.note_body as { text?: string } | null)?.text });
+      const ex = await extract(src.kind, { file, url: src.origin_url ?? undefined, noteText: (src.note_body as { text?: string } | null)?.text, mimeType: src.mime_type ?? undefined }, opts.transcriber);
       const text = normalize(ex.text);
       const lang = detectLanguage(text);
-      const chunks = chunk(text, { pageStarts: ex.pageStarts });
+      const chunks = chunk(text, { pageStarts: ex.pageStarts, timeRanges: ex.timeRanges });
       if (await ctx.cancelled()) return { cancelled: true };
 
       await ctx.progress(55, embedder ? "vectorisation" : "indexation");
