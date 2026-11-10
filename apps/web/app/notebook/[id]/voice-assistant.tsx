@@ -148,7 +148,7 @@ export function VoiceAssistant({ notebookId, disabled = false }: { notebookId: s
       await new Promise<void>((resolve, reject) => {
         ws.onopen = () => resolve();
         ws.onerror = () => reject(new Error("Connexion Gemini Live impossible."));
-        ws.onclose = () => { if (mounted.current && state !== "idle") setStatus("Session vocale terminée."); };
+        ws.onclose = () => reject(new Error("La session Gemini Live a été fermée avant son initialisation."));
       });
       ws.send(JSON.stringify({ setup: {
         model: `models/${tokenPayload.model}`,
@@ -189,6 +189,7 @@ export function VoiceAssistant({ notebookId, disabled = false }: { notebookId: s
       setState("listening");
       setStatus("Je vous écoute. Parlez naturellement.");
       ws.onclose = () => { if (mounted.current) { stop(); setStatus("Session vocale terminée."); } };
+      ws.onerror = () => { if (mounted.current) setStatus("Connexion vocale instable…"); };
       ws.onmessage = async (event) => {
         try {
           const msg = JSON.parse(typeof event.data === "string" ? event.data : "");
