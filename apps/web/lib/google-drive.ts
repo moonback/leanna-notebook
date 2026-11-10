@@ -16,7 +16,9 @@ function encryptionKey() {
   return key;
 }
 function sign(value: string) {
-  return createHmac("sha256", required("DRIVE_OAUTH_STATE_SECRET")).update(value).digest("base64url");
+  const secret = required("DRIVE_OAUTH_STATE_SECRET");
+  if (Buffer.byteLength(secret, "utf8") < 32) throw new Error("DRIVE_OAUTH_STATE_SECRET_must_be_at_least_32_bytes");
+  return createHmac("sha256", secret).update(value).digest("base64url");
 }
 export function createOAuthState(userId: string) {
   const nonce = randomBytes(24).toString("base64url");
