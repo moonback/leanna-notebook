@@ -37,7 +37,7 @@ export async function ocrWithOpenRouter(file: Uint8Array, mimeType: string, env 
   if (!response.ok) throw new Error(`openrouter_ocr_http_${response.status}`);
   const payload = await response.json() as { choices?: Array<{ message?: { content?: string | Array<{ type?: string; text?: string }> } }> };
   const content = payload.choices?.[0]?.message?.content;
-  const text = (typeof content === "string" ? content : content?.map((part) => part.text ?? "").join("\\n") ?? "").trim();
+  const text = (typeof content === "string" ? content : content?.map((part) => part.text ?? "").join("\n") ?? "").trim();
   if (!text || text.includes("[AUCUN TEXTE LISIBILE]")) throw new PermanentError("empty_content");
   return text;
 }
