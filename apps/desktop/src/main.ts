@@ -179,7 +179,39 @@ function createMainWindow(): void {
     return;
   }
 
-  void mainWindow.loadURL(WEB_URL);
+  void mainWindow.loadURL(WEB_URL).catch(async (error: unknown) => {
+    const detail = error instanceof Error ? error.message : String(error);
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+
+    await dialog.showMessageBox(mainWindow, {
+      type: "error",
+      title: "Notebook ne démarre pas",
+      message: "Impossible de charger l'application web locale.",
+      detail: `Vérifiez que Next.js est disponible sur ${WEB_URL}.\\n\\nDétail : ${detail}`,
+      buttons: ["Quitter"],
+    });
+    app.quit();
+  });
+
+  mainWindow.webContents.on("render-process-gone", (_event, details) => {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    void dialog.showMessageBox(mainWindow, {
+      type: "error",
+      title: "Fenêtre Notebook interrompue",
+      message: "Le processus d'affichage de Notebook s'est arrêté.",
+      detail: `Raison : ${details.reason} (code ${details.exitCode}). Relancez pnpm desktop:dev.`,
+    });
+  });
+
+  mainWindow.on("unresponsive", () => {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    void dialog.showMessageBox(mainWindow, {
+      type: "warning",
+      title: "Notebook ne répond plus",
+      message: "La fenêtre ne répond plus.",
+      detail: "Vous pouvez attendre quelques instants ou fermer puis relancer l'application.",
+    });
+  });
 }
 
 app.whenReady().then(() => {
