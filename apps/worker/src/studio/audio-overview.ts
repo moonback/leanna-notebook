@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { createHash } from "node:crypto";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -85,7 +86,8 @@ export async function renderAudioOverview(args: {
 }): Promise<{ storagePath: string; transcript: string }> {
   const { db, artifactId, workspaceId, notebookId, script, synthesize, hostVoiceId, guestVoiceId } = args;
   if (!hostVoiceId || !guestVoiceId || hostVoiceId === guestVoiceId) throw new PermanentError("audio_voices_invalid");
-  const storagePath = `audio-overviews/${workspaceId}/${notebookId}/${artifactId}.mp3`;
+  const scriptHash = createHash("sha256").update(JSON.stringify(script)).digest("hex").slice(0, 16);
+  const storagePath = `audio-overviews/${workspaceId}/${notebookId}/${artifactId}-${scriptHash}.mp3`;
   const { data: existing } = await db.storage.from("artifacts").createSignedUrl(storagePath, 60);
   if (existing?.signedUrl) {
     return { storagePath, transcript: script.segments.map((s) => `**${s.speaker === "host" ? "Animatrice" : "Co-animateur"} :** ${s.text}`).join("\n\n") };
@@ -96,7 +98,7 @@ export async function renderAudioOverview(args: {
     const files: string[] = [];
     for (let i = 0; i < script.segments.length; i++) {
       const segment = script.segments[i];
-      await args.onProgress?.(20 + Math.round((i / script.segments.length) * 55), `voix ${i + 1}/${script.segments.length}`);
+      await args.onProgress?.(35 + Math.round((i / script.segments.length) * 45), `voix ${i + 1}/${script.segments.length}`);
       const voice = segment.speaker === "host" ? hostVoiceId : guestVoiceId;
       const audio = await synthesize(segment.text, voice);
       const file = join(dir, `segment-${String(i).padStart(2, "0")}.mp3`);
