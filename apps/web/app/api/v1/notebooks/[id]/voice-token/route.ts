@@ -12,7 +12,7 @@ const voiceSchema = z.object({ voice: z.enum(["Aoede", "Charon", "Fenrir", "Kore
 
 /** Fournit un jeton Gemini Live à usage unique : la clé longue durée ne quitte jamais le serveur. */
 export const POST = handle(async (req: NextRequest, { params }: Params) => {
-  await requireUser();
+  const user = await requireUser();
   const { id } = await params;
   await requireRole(id, "viewer");
   const { voice, persona } = await parseBody(req, voiceSchema);
@@ -23,7 +23,7 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
   const expiresAt = new Date(now + 30 * 60_000).toISOString();
   const newSessionExpiresAt = new Date(now + 60_000).toISOString();
   const { data: promptOverride } = await createServiceClient().from("ai_prompt_overrides")
-    .select("content").eq("user_id", (await requireUser()).id).eq("prompt_key", `voice.${persona}`).maybeSingle();
+    .select("content").eq("user_id", user.id).eq("prompt_key", `voice.${persona}`).maybeSingle();
 
   const config = {
     responseModalities: ["AUDIO"],
