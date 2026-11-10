@@ -293,7 +293,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
           `Réponse de Leanna : ${assistantTurn.current.trim()}`,
           `Extraits vérifiés consultés : ${groundedSources || "Aucun extrait transmis"}`,
           "Fais une intervention courte et utile. Ne répète pas Leanna. Si la réponse est solide, apporte une nuance ou une question d'approfondissement. N'ajoute aucun fait absent des extraits."
-        ].join("\\n\\n");
+        ].join("\n\n");
         const connection = roxaneSocket.current;
         if (!connection || connection.readyState !== WebSocket.OPEN) {
           setStatus("Roxane est indisponible ; la réponse de Leanna est conservée.");
@@ -338,8 +338,9 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
         if (turnFinalizing.current || pendingSearches.current.count > 0) return;
         turnFinalizing.current = true;
         try {
+          const leannaAnswer = assistantTurn.current.trim();
           await askRoxane();
-          const completedTurn = { user: userTurn.current.trim(), assistant: answer.trim(), roxane: roxaneTurnText.current.trim(), sources: turnPassages.current.snapshot() };
+          const completedTurn = { user: userTurn.current.trim(), assistant: leannaAnswer, roxane: roxaneTurnText.current.trim(), sources: turnPassages.current.snapshot() };
           await persistVoiceTurn();
           if (completedTurn.user && completedTurn.assistant) setTurnHistory((history) => [...history, completedTurn]);
           setTranscript("");
