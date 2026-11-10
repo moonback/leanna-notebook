@@ -22,7 +22,15 @@ export const GET = handle(async (_req: NextRequest, { params }: Params) => {
   const { data, error } = await supabase.from("sources")
     .select("id, kind, title, status, error_code, origin_url, word_count, page_count, extracted_text, guide, created_at").eq("id", id).single();
   if (error) throw error;
-  return NextResponse.json({ source: data });
+  const audioSegments = data.kind === "audio"
+    ? await supabase.from("chunks")
+        .select("ordinal, content, time_start_ms, time_end_ms")
+        .eq("source_id", id)
+        .not("time_start_ms", "is", null)
+        .order("ordinal")
+    : null;
+  if (audioSegments?.error) throw audioSegments.error;
+  return NextResponse.json({ source: data, audioSegments: audioSegments?.data ?? [] });
 });
 
 const renameSchema = z.object({ title: z.string().trim().min(1, "Titre requis.").max(300, "300 caractères maximum.") }).strict();
