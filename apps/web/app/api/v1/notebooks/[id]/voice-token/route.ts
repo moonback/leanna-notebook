@@ -45,7 +45,7 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
       "Sois concise : apporte une vraie valeur ajoutée, sans répéter la réponse de Leanna ni intervenir si aucun point pertinent ne mérite d'être challengé.",
       "Adresse-toi directement à l'utilisateur. Ne dis pas que tu es un modèle ou un outil."
     ]).join("\n") }] },
-    tools: persona === "leanna" ? [{ functionDeclarations: [{
+    ...(persona === "leanna" ? { tools: [{ functionDeclarations: [{
       name: "search_notebook_sources",
       description: "Recherche des passages pertinents dans les sources prêtes et sélectionnées du notebook courant. À appeler avant toute réponse documentaire.",
       parameters: {
@@ -53,7 +53,7 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
         properties: { query: { type: "STRING", description: "Question ou concepts à rechercher dans les documents." } },
         required: ["query"]
       }
-    }] }] : []
+    }] }] } : {})
   };
 
   // L'API REST attend `bidiGenerateContentSetup` (le SDK le nomme `liveConnectConstraints`), uniquement en v1alpha.
