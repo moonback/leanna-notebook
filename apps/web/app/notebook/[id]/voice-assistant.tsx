@@ -273,6 +273,9 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
           setAnswer("");
           setSources([]);
           turnPassages.current.clear();
+          turnSourceIds.current.clear();
+          userTurn.current = "";
+          assistantTurn.current = "";
           turnCompletePending.current = false;
           setState("listening");
           setStatus("À vous de parler.");
