@@ -26,7 +26,6 @@ export function transcriberFromEnv(env = process.env, request: typeof fetch = fe
         language,
         utterances: "true",
         smart_format: "true",
-        diarize_model: "latest",
       });
       const response = await request(`https://api.deepgram.com/v1/listen?${params}`, {
         method: "POST",
