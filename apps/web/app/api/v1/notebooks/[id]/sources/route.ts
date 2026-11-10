@@ -55,7 +55,7 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
     } else if (item.type === "github") {
       const parsed = new URL(item.url);
       const [owner, repository] = parsed.pathname.split("/").filter(Boolean);
-      const repoName = repository.replace(/\\.git$/i, "");
+      const repoName = repository.replace(/\.git$/i, "");
       const ref = encodeURIComponent(item.branch);
       args = { p_kind: "github", p_title: `${owner}/${repoName} · ${item.branch}`, p_origin_url: `https://github.com/${owner}/${repoName}?ref=${ref}` };
     } else {
