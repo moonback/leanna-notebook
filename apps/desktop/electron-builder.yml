@@ -28,3 +28,9 @@ nsis:
   runAfterFinish: true
   installerLanguages:
     - fr_FR
+
+publish:
+  provider: github
+  owner: moonback
+  repo: leanna-notebook
+  releaseType: release
