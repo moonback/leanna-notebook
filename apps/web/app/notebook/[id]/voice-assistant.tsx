@@ -3,10 +3,11 @@
 import * as React from "react";
 import { AudioLines, Mic, MicOff, PhoneOff, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Citation } from "@/components/ui/citation";
 import { Dialog, DialogContent } from "@/components/ui/overlay";
 
 type VoiceState = "idle" | "connecting" | "listening" | "speaking" | "error";
-type Passage = { number: number; title: string; page: number | null; excerpt: string };
+type Passage = { number: number; sourceId: string; title: string; page: number | null; excerpt: string; charStart: number; charEnd: number; timeStartMs: number | null };
 type LiveFunctionCall = { id: string; name: string; args?: Record<string, unknown> };
 type LiveMessage = {
   toolCall?: { functionCalls?: LiveFunctionCall[] };
@@ -67,7 +68,7 @@ function floatToPcm16(input: Float32Array) {
   return new Uint8Array(buffer);
 }
 
-export function VoiceAssistant({ notebookId, conversationId, disabled = false }: { notebookId: string; conversationId: string; disabled?: boolean }) {
+export function VoiceAssistant({ notebookId, conversationId, disabled = false, onOpenCitation }: { notebookId: string; conversationId: string; disabled?: boolean; onOpenCitation: (passage: Passage) => void }) {
   const [open, setOpen] = React.useState(false);
   const [state, setState] = React.useState<VoiceState>("idle");
   const [status, setStatus] = React.useState("Prêt à discuter de vos sources.");
@@ -77,6 +78,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false }:
   const userTurn = React.useRef("");
   const assistantTurn = React.useRef("");
   const turnSourceIds = React.useRef<Set<string>>(new Set());
+  const turnPassages = React.useRef<Map<string, Passage>>(new Map());
   const [muted, setMuted] = React.useState(false);
   const socket = React.useRef<WebSocket | null>(null);
   const audioContext = React.useRef<AudioContext | null>(null);
@@ -145,9 +147,17 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false }:
         });
         const payload = await response.json();
         if (!response.ok) throw new Error(payload.error ?? "Recherche documentaire impossible");
-        const passages = (payload.passages ?? []) as Passage[];
-        setSources(passages);
-        passages.forEach((passage) => turnSourceIds.current.add(passage.sourceId));
+        const retrieved = (payload.passages ?? []) as Array<Omit<Passage, "number">>;
+        const passages = retrieved.map((passage) => {
+          const key = `${passage.sourceId}:${passage.charStart}:${passage.charEnd}`;
+          const existing = turnPassages.current.get(key);
+          if (existing) return existing;
+          const numbered = { ...passage, number: turnPassages.current.size + 1 };
+          turnPassages.current.set(key, numbered);
+          turnSourceIds.current.add(passage.sourceId);
+          return numbered;
+        });
+        setSources([...turnPassages.current.values()]);
         const result = passages.length ? passages.map((p) => `[Source ${p.number}] ${p.title}${p.page ? `, page ${p.page}` : ""}\n${p.excerpt}`).join("\n\n") : "Aucun passage pertinent trouvé dans les sources sélectionnées.";
         socket.current?.send(JSON.stringify({ toolResponse: { functionResponses: [{ id: call.id, name: call.name, response: { result } }] } }));
       } catch {
@@ -184,6 +194,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false }:
       userTurn.current = "";
       assistantTurn.current = "";
       turnSourceIds.current.clear();
+      turnPassages.current.clear();
       const ctx = new AudioContext();
       audioContext.current = ctx;
       await ctx.resume();
@@ -321,7 +332,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false }:
               </div>
             </div>
             {(transcript || answer) && <div className="grid gap-2 text-sm"><p className="font-medium">Conversation</p>{transcript && <p className="rounded-lg bg-surface-secondary p-3"><span className="text-xs text-text-muted">Vous</span><br />{transcript}</p>}{answer && <p className="rounded-lg bg-surface-secondary p-3"><span className="text-xs text-text-muted">Leanna</span><br />{answer}</p>}</div>}
-            {sources.length > 0 && <div className="grid gap-2"><p className="text-sm font-medium">Sources consultées</p>{sources.map((s) => <div key={s.number} className="rounded-lg border p-3 text-sm"><p className="font-medium">{s.title}{s.page ? ` · page ${s.page}` : ""}</p><p className="mt-1 line-clamp-3 text-text-muted">{s.excerpt}</p></div>)}</div>}
+            {sources.length > 0 && <div className="grid gap-2"><p className="text-sm font-medium">Sources consultées</p>{sources.map((s) => <div key={`${s.sourceId}:${s.charStart}:${s.charEnd}`} className="flex items-start gap-3 rounded-lg border p-3 text-sm"><Citation n={s.number} source={s.title} quote={s.excerpt} onOpen={() => onOpenCitation(s)} /><div className="min-w-0"><p className="font-medium">{s.title}{s.page ? ` · page ${s.page}` : ""}</p><p className="mt-1 line-clamp-3 text-text-muted">{s.excerpt}</p><button type="button" className="mt-2 text-xs font-medium text-accent underline-offset-4 hover:underline" onClick={() => onOpenCitation(s)}>Ouvrir le passage</button></div></div>)}</div>}
             <p className="text-xs text-text-subtle">Les réponses vocales s'appuient sur une recherche dans les sources sélectionnées. Une connexion Internet et l'autorisation du microphone sont nécessaires.</p>
           </div>
         </DialogContent>
