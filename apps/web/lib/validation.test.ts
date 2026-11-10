@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { credentialsSchema, fieldErrors, profilePatchSchema, safeNext } from "./validation";
+import { credentialsSchema, fieldErrors, profilePatchSchema, safeNext, uploadTypeOf, UPLOAD_TYPES } from "./validation";
 
 describe("credentialsSchema", () => {
   it("normalise l'email", () => {
@@ -32,5 +32,18 @@ describe("safeNext", () => {
     expect(safeNext("/\\evil.example")).toBe("/");
     expect(safeNext("https://evil.example")).toBe("/");
     expect(safeNext(null)).toBe("/");
+  });
+});
+
+describe("uploadTypeOf", () => {
+  it("reconnaît tous les formats documentés, image, audio et vidéo", () => {
+    const extensions = "pdf txt md docx csv pptx epub 3g2 3gp aac aif aifc aiff amr au avi m4a mp3 mp4 mpeg ogg opus ra snd wav wma avif bmp gif ico jp2 png webp tif tiff heic heif jpeg jpg jpe odt rtf hwp hwpx".split(" ");
+    for (const ext of extensions) expect(uploadTypeOf("document." + ext)).toBe(ext);
+    expect(Object.keys(UPLOAD_TYPES)).toHaveLength(extensions.length);
+  });
+  it("ignore la casse et refuse les extensions inconnues ou trompeuses", () => {
+    expect(uploadTypeOf("PHOTO.JpG")).toBe("jpg");
+    expect(uploadTypeOf("malware.exe")).toBeNull();
+    expect(uploadTypeOf("document.toString")).toBeNull();
   });
 });
