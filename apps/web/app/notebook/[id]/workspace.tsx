@@ -607,12 +607,19 @@ function AddSourcesDialog({ open, onOpenChange, notebookId, onAdded }: { open: b
 
 function SourceViewer({ state, onClose, onAsk }: { state: { sourceId: string; range?: [number, number] } | null; onClose: () => void; onAsk: (text: string) => void }) {
   const [source, setSource] = React.useState<{ title: string; kind: string; extracted_text: string | null; guide: { summary: string; topics: string[] } | null } | null>(null);
+  const [audioSegments, setAudioSegments] = React.useState<Array<{ ordinal: number; content: string; time_start_ms: number; time_end_ms: number }>>([]);
   const [failed, setFailed] = React.useState(false);
   const mark = React.useRef<HTMLElement>(null);
+  const audioRef = React.useRef<HTMLAudioElement>(null);
   React.useEffect(() => {
     if (!state) return;
     setSource(null); setFailed(false);
-    fetch(`/api/v1/sources/${state.sourceId}`).then(async (r) => { if (!r.ok) throw new Error(); setSource((await r.json()).source); }).catch(() => setFailed(true));
+    fetch(`/api/v1/sources/${state.sourceId}`).then(async (r) => {
+      if (!r.ok) throw new Error();
+      const payload = await r.json();
+      setSource(payload.source);
+      setAudioSegments(payload.audioSegments ?? []);
+    }).catch(() => setFailed(true));
   }, [state]);
   React.useEffect(() => { mark.current?.scrollIntoView({ block: "center" }); }, [source]);
 
@@ -626,7 +633,9 @@ function SourceViewer({ state, onClose, onAsk }: { state: { sourceId: string; ra
             <div className="grid gap-2" aria-busy="true"><Skeleton className="h-4" /><Skeleton className="h-4 w-5/6" /><Skeleton className="h-4 w-4/6" /></div>
           ) : (
             <>
-            {source.kind === "audio" && <audio controls preload="metadata" className="mb-5 w-full" src={`/api/v1/sources/${state?.sourceId}/file`} />}
+            {source.kind === "audio" && (
+              <audio ref={audioRef} controls preload="metadata" className="mb-5 w-full" src={`/api/v1/sources/${state?.sourceId}/file`} />
+            )}
             {source.guide && (
               <section aria-label="Guide de la source" className="mb-5 grid gap-3 rounded-lg border bg-surface-raised p-4">
                 <h3 className="text-sm font-medium text-text-muted">Guide de la source</h3>
@@ -640,9 +649,34 @@ function SourceViewer({ state, onClose, onAsk }: { state: { sourceId: string; ra
                 )}
               </section>
             )}
-            <p className={cn("whitespace-pre-wrap font-serif text-reading")}>
-              {state?.range ? <>{text.slice(0, a)}<mark ref={mark} className="rounded-xs bg-highlight px-0.5 text-on-highlight">{text.slice(a, b)}</mark>{text.slice(b)}</> : text}
-            </p>
+            {source.kind === "audio" && audioSegments.length > 0 ? (
+              <section aria-label="Transcription horodatée" className="grid gap-2">
+                <h3 className="text-sm font-medium text-text-muted">Transcription — cliquer pour écouter à cet instant</h3>
+                {audioSegments.map((segment) => (
+                  <button
+                    key={segment.ordinal}
+                    type="button"
+                    className="flex w-full items-start gap-3 rounded-lg border border-border p-3 text-left transition-colors hover:bg-surface-raised focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                    onClick={() => {
+                      const player = audioRef.current;
+                      if (!player) return;
+                      player.currentTime = Math.max(0, segment.time_start_ms / 1000);
+                      void player.play().catch(() => undefined);
+                    }}
+                    aria-label={`Écouter à ${Math.floor(segment.time_start_ms / 1000)} secondes`}
+                  >
+                    <span className="shrink-0 rounded bg-surface-raised px-2 py-1 font-mono text-xs text-text-muted">
+                      {Math.floor(segment.time_start_ms / 60000).toString().padStart(2, "0")}:{Math.floor((segment.time_start_ms % 60000) / 1000).toString().padStart(2, "0")}
+                    </span>
+                    <span className="text-sm leading-6">{segment.content}</span>
+                  </button>
+                ))}
+              </section>
+            ) : (
+              <p className={cn("whitespace-pre-wrap font-serif text-reading")}>
+                {state?.range ? <>{text.slice(0, a)}<mark ref={mark} className="rounded-xs bg-highlight px-0.5 text-on-highlight">{text.slice(a, b)}</mark>{text.slice(b)}</> : text}
+              </p>
+            )}
             </>
           )}
         </div>
