@@ -28,6 +28,7 @@ export function normalizeResearchResults(input: TavilyResponse["results"]): Rese
 
 /** B17 : recherche web rapide. Le worker ne télécharge pas les pages ; leur ingestion reste dans ingest_source. */
 export function researchHandler(db: SupabaseClient, apiKey: string | undefined, fetcher: typeof fetch = fetch): Handler {
+  void db; // conserve la même signature factory que les autres handlers du worker
   return async (job, ctx) => {
     const query = typeof job.payload.query === "string" ? job.payload.query.trim() : "";
     if (query.length < 3 || query.length > 300) throw new PermanentError("invalid_research_query");
