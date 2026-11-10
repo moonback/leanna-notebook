@@ -12,7 +12,7 @@ const schema = z.object({ query: z.string().trim().min(2).max(2000) }).strict();
 export const POST = handle(async (req: NextRequest, { params }: Params) => {
   const user = await requireUser();
   const { id } = await params;
-  await requireRole(id, "chat");
+  await requireRole(id, "viewer");
   const { query } = await parseBody(req, schema);
   const db = createServiceClient();
   const [{ data: ready }, { data: deselected }, { data: notebook }] = await Promise.all([
