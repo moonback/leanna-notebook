@@ -26,7 +26,9 @@ type Message = { id: string; role: "user" | "assistant"; content: string; status
 
 const ERRORS: Record<string, string> = {
   protected_pdf: "PDF protégé : retirez la protection puis réimportez-le.",
-  needs_ocr: "PDF scanné sans texte : la reconnaissance de texte n’est pas encore disponible.",
+  needs_ocr: "Aucun texte détecté. Vérifiez la qualité du scan ou la configuration OCR (GEMINI_API_KEY).",
+  ocr_not_configured: "La reconnaissance de texte des images nécessite GEMINI_API_KEY côté worker.",
+  video_transcode_unavailable: "Extraction audio vidéo impossible : FFmpeg doit être installé sur le worker.",
   unreadable_file: "Fichier illisible ou corrompu.",
   empty_content: "Aucun texte exploitable dans cette source.",
   too_many_words: "Source trop longue (plus de 500 000 mots).",
@@ -719,7 +721,7 @@ function AddSourcesDialog({ open, onOpenChange, notebookId, onAdded }: { open: b
         for (const f of files) {
           const r = await fetch(`/api/v1/notebooks/${notebookId}/uploads`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ filename: f.name, size: f.size }) });
           const j = await r.json().catch(() => ({}));
-          if (r.status === 415) throw new Error(`« ${f.name} » : format non pris en charge (PDF, DOCX, PPTX, EPUB, TXT, MD, CSV, MP3, WAV, M4A, AAC, OGG, FLAC, WEBM).`);
+          if (r.status === 415) throw new Error(`« ${f.name} » : format non pris en charge (documents, images, audio et vidéo pris en charge).`);
           if (r.status === 422) throw new Error(`« ${f.name} » : fichier trop volumineux (200 Mo maximum).`);
           if (!r.ok) throw new Error("Préparation de l’envoi impossible.");
           const up = await fetch(j.uploadUrl, { method: "PUT", headers: { "content-type": j.contentType }, body: f });
@@ -753,8 +755,8 @@ function AddSourcesDialog({ open, onOpenChange, notebookId, onAdded }: { open: b
               <TabsTrigger value="text"><Type className="mr-1.5 inline size-3.5" aria-hidden />Texte</TabsTrigger>
             </TabsList>
             <TabsContent value="file" className="pt-4">
-              <Field id="files" label="Fichiers" hint="PDF, DOCX, PPTX, EPUB, TXT, MD, CSV, MP3, WAV, M4A, AAC, OGG, FLAC ou WEBM — 200 Mo maximum par fichier.">
-                <input ref={fileRef} type="file" multiple accept=".pdf,.docx,.pptx,.epub,.txt,.md,.csv,.mp3,.wav,.m4a,.aac,.ogg,.flac,.webm" className="block w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-accent-soft file:px-3 file:py-2 file:text-sm file:font-medium file:text-on-accent-soft" />
+              <Field id="files" label="Fichiers" hint="PDF, TXT, MD, DOCX, CSV, PPTX, EPUB, ODT, RTF, HWP/HWPX, images (PNG, JPG, TIFF, HEIC…), audio et vidéo (MP3, WAV, MP4, AVI, 3GP…) — 200 Mo maximum par fichier.">
+                <input ref={fileRef} type="file" multiple accept=".pdf,.txt,.md,.docx,.csv,.pptx,.epub,.3g2,.3gp,.aac,.aif,.aifc,.aiff,.amr,.au,.avi,.m4a,.mp3,.mp4,.mpeg,.ogg,.opus,.ra,.snd,.wav,.wma,.avif,.bmp,.gif,.ico,.jp2,.png,.webp,.tif,.tiff,.heic,.heif,.jpeg,.jpg,.jpe,.odt,.rtf,.hwp,.hwpx" className="block w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-accent-soft file:px-3 file:py-2 file:text-sm file:font-medium file:text-on-accent-soft" />
               </Field>
             </TabsContent>
             <TabsContent value="url" className="pt-4">
