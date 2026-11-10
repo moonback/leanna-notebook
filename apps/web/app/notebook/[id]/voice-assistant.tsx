@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { AudioLines, Mic, MicOff, PhoneOff } from "lucide-react";
+import { AudioLines, Mic, MicOff, PhoneOff, Maximize2, Minimize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Citation } from "@/components/ui/citation";
 import { Dialog, DialogContent } from "@/components/ui/overlay";
@@ -72,6 +72,7 @@ function floatToPcm16(input: Float32Array) {
 
 export function VoiceAssistant({ notebookId, conversationId, disabled = false, onOpenCitation }: { notebookId: string; conversationId: string; disabled?: boolean; onOpenCitation: (passage: Passage) => void }) {
   const [open, setOpen] = React.useState(false);
+  const [expanded, setExpanded] = React.useState(false);
   const [state, setState] = React.useState<VoiceState>("idle");
   const [status, setStatus] = React.useState("Prêt à discuter de vos sources.");
   const [transcript, setTranscript] = React.useState("");
@@ -423,16 +424,42 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
 
   return (
     <>
-      <Button size="sm" variant="soft" disabled={disabled} onClick={() => setOpen(true)}>
+      <Button size="sm" variant="soft" disabled={disabled} onClick={() => { setExpanded(false); setOpen(true); }}>
         <AudioLines aria-hidden /> Mode vocal
       </Button>
-      <Dialog open={open} onOpenChange={(value) => { setOpen(value); if (!value) stop(); }}>
+      <Dialog open={open} onOpenChange={(value) => { setOpen(value); if (!value) { setExpanded(false); stop(); } }}>
         <DialogContent
           title="Studio vocal"
           description="Échangez avec Leanna et Roxane autour des sources de votre notebook."
           size="lg"
+          className={expanded
+            ? "!inset-x-0 !top-0 !left-0 !h-[100dvh] !max-h-none !w-full !max-w-none !translate-x-0 !translate-y-0 !rounded-none !p-4 sm:!p-6"
+            : "!inset-x-0 !bottom-0 !left-0 !top-auto !h-[92px] !max-h-none !w-full !max-w-none !translate-x-0 !translate-y-0 !rounded-t-2xl !rounded-b-none !p-3 sm:!px-5"}
         >
-          <div className="grid max-h-[78vh] gap-4 overflow-y-auto pr-1">
+          {!expanded ? (
+            <div className="flex min-w-0 items-center gap-3 pr-8">
+              <div className="grid size-11 shrink-0 place-items-center rounded-xl border bg-accent/10 text-accent"><AudioLines className="size-5" /></div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold">Leanna + Roxane</p>
+                <p className="truncate text-xs text-text-muted">{state === "idle" || state === "error" ? "Studio vocal réduit · Prêt à démarrer" : status}</p>
+              </div>
+              {state === "idle" || state === "error" ? (
+                <Button size="sm" onClick={() => void start()} disabled={disabled}><Mic aria-hidden /> Démarrer</Button>
+              ) : (
+                <Button size="sm" variant="secondary" onClick={stop}><PhoneOff aria-hidden /> Terminer</Button>
+              )}
+              <Button size="icon" variant="ghost" aria-label="Déployer le studio vocal en plein écran" title="Déployer" onClick={() => setExpanded(true)}><Maximize2 aria-hidden /></Button>
+            </div>
+          ) : (
+          <div className="grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)] gap-4">
+            <div className="flex items-center justify-between gap-3 border-b pb-3">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold">Studio vocal · Leanna + Roxane</p>
+                <p className="truncate text-xs text-text-muted">{status}</p>
+              </div>
+              <Button size="icon" variant="ghost" aria-label="Réduire le studio vocal" title="Réduire" onClick={() => setExpanded(false)}><Minimize2 aria-hidden /></Button>
+            </div>
+            <div className="grid min-h-0 gap-4 overflow-y-auto pr-1">
             <section className="relative overflow-hidden rounded-2xl border bg-surface-raised p-4 sm:p-5">
               <div className="pointer-events-none absolute -right-12 -top-16 size-44 rounded-full bg-accent/10 blur-3xl" />
               <div className="relative flex flex-col items-center gap-4 text-center">
@@ -561,7 +588,9 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
             )}
 
             <p className="text-[11px] leading-relaxed text-text-subtle">Leanna s’appuie sur les sources sélectionnées. Roxane reçoit la réponse et les extraits consultés pour apporter un regard critique. Les deux sessions utilisent des connexions Gemini Live distinctes.</p>
+            </div>
           </div>
+          )}
         </DialogContent>
       </Dialog>
     </>
