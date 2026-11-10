@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PendingVoiceSearches, VoiceTurnCitationStore, type RetrievedVoicePassage } from "./voice-turn";
+import { PendingVoiceSearches, shouldInviteRoxane, VoiceTurnCitationStore, type RetrievedVoicePassage } from "./voice-turn";
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -86,5 +86,21 @@ describe("PendingVoiceSearches", () => {
     await expect(failed).rejects.toThrow("RAG indisponible");
     await expect(pending.waitForIdle()).resolves.toBeUndefined();
     expect(pending.count).toBe(0);
+  });
+});
+
+
+describe("shouldInviteRoxane", () => {
+  it("keeps Roxane silent for the first two exchanges and invites her from the third", () => {
+    expect(shouldInviteRoxane(1)).toBe(false);
+    expect(shouldInviteRoxane(2)).toBe(false);
+    expect(shouldInviteRoxane(3)).toBe(true);
+    expect(shouldInviteRoxane(4)).toBe(true);
+  });
+
+  it("rejects invalid turn numbers", () => {
+    expect(shouldInviteRoxane(0)).toBe(false);
+    expect(shouldInviteRoxane(-1)).toBe(false);
+    expect(shouldInviteRoxane(2.5)).toBe(false);
   });
 });

@@ -2,6 +2,7 @@ import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from "electron";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { isAllowedWebUrl, isSafeExternalUrl, normalizeFilters } from "./shared/validation";
+import { checkForUpdates, initializeAutoUpdater } from "./updater";
 
 function resolveWebUrl(): string {
   let configuredUrl = process.env.LEANNA_WEB_URL;
@@ -51,6 +52,8 @@ function registerApplicationMenu(): void {
         { role: "about", label: "À propos de Leanna Notebook" },
         { type: "separator" },
         { role: "quit", label: "Quitter" },
+        { type: "separator" },
+        { label: "Rechercher les mises à jour…", click: () => { void checkForUpdates(mainWindow, true); } },
       ],
     },
     {
@@ -120,6 +123,11 @@ function registerNativeDownloadHandler(): void {
 
 function registerIpcHandlers(): void {
   ipcMain.handle("desktop:app-version", () => app.getVersion());
+  ipcMain.handle("desktop:check-for-updates", async (event) => {
+    if (!mainWindow || event.sender !== mainWindow.webContents) return { started: false };
+    await checkForUpdates(mainWindow, true);
+    return { started: true };
+  });
 
   ipcMain.handle("desktop:open-files", async (event, filters: unknown) => {
     if (!mainWindow || event.sender !== mainWindow.webContents) {
@@ -165,6 +173,7 @@ function createMainWindow(): void {
     show: false,
     backgroundColor: "#0b0d12",
     title: "Leanna Notebook",
+    icon: join(__dirname, "..", "build", "icon.png"),
     webPreferences: {
       preload: join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -230,6 +239,7 @@ app.whenReady().then(() => {
   registerIpcHandlers();
   createMainWindow();
   registerNativeDownloadHandler();
+  initializeAutoUpdater(() => mainWindow);
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
   });
