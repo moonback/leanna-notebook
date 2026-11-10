@@ -108,7 +108,7 @@ Le fournisseur Fast Research est Tavily côté worker (`TAVILY_API_KEY`, configu
 
 | méthode et chemin | rôle | qui | entrée | sortie |
 | --- | --- | --- | --- | --- |
-| POST `/api/v1/notebooks/:id/artifacts` | Générer un artefact (E01–E06, F01–F03, G01, G04, G05) | editor+ | `{type, options (schéma par type), customPrompt?, sourceIds?, reviewOutline?, generateLater?}` | `202 {artifact{id,status}, jobId, creditCost}`. 429 avec `canScheduleLater:true` |
+| POST `/api/v1/notebooks/:id/artifacts` | Générer un artefact (E01–E06, F01–F03, G01, G04, G05) | editor+ | `{type: report|flashcards|quiz|mind_map|audio, options (schéma par type), customPrompt?, sourceIds?, reviewOutline?, generateLater?}` | `202 {artifact{id,status}, jobId, creditCost}`. 429 avec `canScheduleLater:true` |
 | GET `/api/v1/notebooks/:id/artifacts` | Liste du Studio avec indicateur non lu | viewer+ | — | `{artifacts[{…, unread}]}` |
 | GET `/api/v1/artifacts/:id` | Contenu, plan, citations, prompt | viewer+ | — | `{artifact, citations[]}` |
 | PATCH `/api/v1/artifacts/:id` | Renommer | editor+ | `{title}` | `{artifact}` |
