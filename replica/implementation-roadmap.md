@@ -84,7 +84,7 @@ Date : 2026-11-09.
 | | |
 | --- | --- |
 | Écrans | S25 (Partager), S26 (copie), S32 (vue chat seul), S33 (artefact public), S04 (onglet Découvrir) |
-| Fonctionnalités | H01, H02, H03, H04, H05, B17 (Fast Research via le server tool `web_search`), Z04 (posture UE : DPA, registre, page confidentialité) |
+| Fonctionnalités | H01, H02, H03, H04, H05, B17 (Fast Research, fournisseur Tavily via worker), Z04 (posture UE : DPA, registre, page confidentialité) |
 | Tables | `notebook_members`, `share_links`, `notebook_visits`, `audit_log` |
 | Routes | members (CRUD), links (créer, révoquer), `PATCH /sharing`, `POST /share/:token/accept`, `GET /a/:token`, `POST /notebooks/:id/copy`, `POST /notebooks/:id/research` + `/research/:jobId` + `/import`, `PATCH /notebooks/:id/visit`, `POST /me/export`, `DELETE /me` |
 | Jobs | `copy_notebook`, `research` (mode rapide), `export_account`, `delete_account` ; pg_cron `cleanup_invitations` |
