@@ -34,7 +34,7 @@ function supportsModalities(model: OpenRouterModel, required: readonly string[],
   return required.every((item) => actual === item || actual?.split("+").includes(item));
 }
 
-function compatibleFeatures(model: OpenRouterModel) {
+function compatibleFeatures(model: OpenRouterModel): string[] {
   return AI_FEATURES.filter((feature) =>
     supportsModalities(model, feature.inputModalities, "input") &&
     supportsModalities(model, feature.outputModalities, "output")
