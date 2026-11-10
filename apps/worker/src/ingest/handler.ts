@@ -38,7 +38,7 @@ export function ingestHandler(db: SupabaseClient, embedder: Embedder | null, opt
         if (e || !blob) throw new PermanentError("file_missing");
         file = new Uint8Array(await blob.arrayBuffer());
       }
-      await ctx.progress(25, "extraction");
+      await ctx.progress(25, src.kind === "audio" ? "transcription" : "extraction");
       const ex = await extract(src.kind, { file, url: src.origin_url ?? undefined, noteText: (src.note_body as { text?: string } | null)?.text, mimeType: src.mime_type ?? undefined }, opts.transcriber);
       const text = normalize(ex.text);
       const lang = detectLanguage(text);
