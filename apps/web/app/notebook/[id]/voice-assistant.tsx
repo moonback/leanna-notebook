@@ -87,7 +87,10 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
   const pendingSearches = React.useRef(new PendingVoiceSearches());
   const turnCompletePending = React.useRef(false);
   const turnFinalizing = React.useRef(false);
-  const [muted, setMuted] = React.useState(false);\n  const [roxaneEnabled, setRoxaneEnabled] = React.useState(false);\n  const [copied, setCopied] = React.useState(false);\n  const roxaneEnabledRef = React.useRef(false);
+  const [muted, setMuted] = React.useState(false);
+  const [roxaneEnabled, setRoxaneEnabled] = React.useState(false);
+  const [copied, setCopied] = React.useState(false);
+  const roxaneEnabledRef = React.useRef(false);
   const socket = React.useRef<WebSocket | null>(null);
   const roxaneSocket = React.useRef<WebSocket | null>(null);
   const roxaneTurnText = React.useRef("");
@@ -445,7 +448,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
       `Vous : ${turn.user}`,
       `Leanna : ${turn.assistant}`,
       turn.roxane ? `Roxane : ${turn.roxane}` : ""
-    ].filter(Boolean).join("\\n")).join("\\n\\n");
+    ].filter(Boolean).join("\n")).join("\n\n");
     if (!content.trim()) return;
     await navigator.clipboard.writeText(content);
     setCopied(true);
