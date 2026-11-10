@@ -103,7 +103,7 @@ export function buildAudioOverviewFfmpegArgs(files: string[], output: string, pa
   return args;
 }
 
-function audioMetrics(script: AudioOverviewScript) {
+export function estimateAudioOverviewMetrics(script: AudioOverviewScript) {
   const texts = script.segments.map((segment) => segment.text);
   const words = texts.reduce((total, value) => total + value.trim().split(/\s+/).filter(Boolean).length, 0);
   return { ttsCharacters: texts.reduce((total, value) => total + Array.from(value).length, 0), segmentCount: script.segments.length, estimatedDurationSeconds: Math.round((words / 150) * 60) };
@@ -133,7 +133,7 @@ export async function renderAudioOverview(args: {
   onProgress?: (value: number, stage: string) => Promise<void>;
 }): Promise<{ storagePath: string; transcript: string; ttsCharacters: number; segmentCount: number; estimatedDurationSeconds: number; audioBytes: number | null }> {
   const { db, artifactId, workspaceId, notebookId, script, synthesize, hostVoiceId, guestVoiceId } = args;
-  const metrics = audioMetrics(script);
+  const metrics = estimateAudioOverviewMetrics(script);
   if (!hostVoiceId || !guestVoiceId || hostVoiceId === guestVoiceId) throw new PermanentError("audio_voices_invalid");
   const scriptHash = createHash("sha256").update(JSON.stringify(script)).digest("hex").slice(0, 16);
   const storagePath = `audio-overviews/${workspaceId}/${notebookId}/${artifactId}-${scriptHash}.mp3`;
