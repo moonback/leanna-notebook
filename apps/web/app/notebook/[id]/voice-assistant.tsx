@@ -67,13 +67,16 @@ function floatToPcm16(input: Float32Array) {
   return new Uint8Array(buffer);
 }
 
-export function VoiceAssistant({ notebookId, disabled = false }: { notebookId: string; disabled?: boolean }) {
+export function VoiceAssistant({ notebookId, conversationId, disabled = false }: { notebookId: string; conversationId: string; disabled?: boolean }) {
   const [open, setOpen] = React.useState(false);
   const [state, setState] = React.useState<VoiceState>("idle");
   const [status, setStatus] = React.useState("Prêt à discuter de vos sources.");
   const [transcript, setTranscript] = React.useState("");
   const [answer, setAnswer] = React.useState("");
   const [sources, setSources] = React.useState<Passage[]>([]);
+  const userTurn = React.useRef("");
+  const assistantTurn = React.useRef("");
+  const turnSourceIds = React.useRef<Set<string>>(new Set());
   const [muted, setMuted] = React.useState(false);
   const socket = React.useRef<WebSocket | null>(null);
   const audioContext = React.useRef<AudioContext | null>(null);
@@ -144,12 +147,28 @@ export function VoiceAssistant({ notebookId, disabled = false }: { notebookId: s
         if (!response.ok) throw new Error(payload.error ?? "Recherche documentaire impossible");
         const passages = (payload.passages ?? []) as Passage[];
         setSources(passages);
+        passages.forEach((passage) => turnSourceIds.current.add(passage.sourceId));
         const result = passages.length ? passages.map((p) => `[Source ${p.number}] ${p.title}${p.page ? `, page ${p.page}` : ""}\n${p.excerpt}`).join("\n\n") : "Aucun passage pertinent trouvé dans les sources sélectionnées.";
         socket.current?.send(JSON.stringify({ toolResponse: { functionResponses: [{ id: call.id, name: call.name, response: { result } }] } }));
       } catch {
         socket.current?.send(JSON.stringify({ toolResponse: { functionResponses: [{ id: call.id, name: call.name, response: { error: "La recherche dans les sources a échoué. Indique à l'utilisateur que tu ne peux pas vérifier cette information." } }] } }));
       }
     }
+  }
+
+  async function persistVoiceTurn() {
+    const userText = userTurn.current.trim();
+    const assistantText = assistantTurn.current.trim();
+    userTurn.current = "";
+    assistantTurn.current = "";
+    const sourceIds = [...turnSourceIds.current];
+    turnSourceIds.current.clear();
+    if (!userText || !assistantText) return;
+    const response = await fetch(`/api/v1/conversations/${conversationId}/voice-messages`, {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ userText, assistantText, sourceIds })
+    });
+    if (!response.ok) throw new Error("Le tour vocal n’a pas pu être enregistré dans l’historique.");
   }
 
   async function start() {
@@ -161,6 +180,10 @@ export function VoiceAssistant({ notebookId, disabled = false }: { notebookId: s
     setAnswer("");
     setSources([]);
     try {
+      if (!conversationId) throw new Error("Conversation du notebook en cours de chargement.");
+      userTurn.current = "";
+      assistantTurn.current = "";
+      turnSourceIds.current.clear();
       const ctx = new AudioContext();
       audioContext.current = ctx;
       await ctx.resume();
@@ -234,8 +257,9 @@ export function VoiceAssistant({ notebookId, disabled = false }: { notebookId: s
           }
           const heard = content?.inputTranscription?.text;
           const spoken = content?.outputTranscription?.text;
-          if (heard) setTranscript((v) => v + heard);
+          if (heard) { userTurn.current += heard; setTranscript((v) => v + heard); }
           if (spoken) {
+            assistantTurn.current += spoken;
             setAnswer((v) => v + spoken);
             setState("speaking");
             setStatus("Leanna vous répond…");
@@ -248,8 +272,14 @@ export function VoiceAssistant({ notebookId, disabled = false }: { notebookId: s
             }
           }
           if (content?.turnComplete) {
-            setState("listening");
-            setStatus("À vous de parler.");
+            try {
+              await persistVoiceTurn();
+              setState("listening");
+              setStatus("À vous de parler.");
+            } catch (error) {
+              setState("listening");
+              setStatus(error instanceof Error ? error.message : "Enregistrement de l’historique impossible.");
+            }
           }
         } catch { /* ignore malformed provider frames */ }
       };
