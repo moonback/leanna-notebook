@@ -91,6 +91,10 @@ function registerNativeDownloadHandler(): void {
       return;
     }
 
+    // Suspendre immédiatement le téléchargement : le dialogue natif est asynchrone.
+    // Sans pause, Electron peut commencer à écrire dans son emplacement par défaut.
+    item.pause();
+
     void dialog.showSaveDialog(parent, {
       title: "Enregistrer le fichier",
       defaultPath: item.getFilename(),
@@ -100,13 +104,16 @@ function registerNativeDownloadHandler(): void {
         return;
       }
       item.setSavePath(result.filePath);
+      item.resume();
     }).catch(() => {
       item.cancel();
-      void dialog.showMessageBox(parent, {
-        type: "error",
-        title: "Téléchargement impossible",
-        message: "Le fichier n'a pas pu être enregistré.",
-      });
+      if (!parent.isDestroyed()) {
+        void dialog.showMessageBox(parent, {
+          type: "error",
+          title: "Téléchargement impossible",
+          message: "Le fichier n'a pas pu être enregistré.",
+        });
+      }
     });
   });
 }
