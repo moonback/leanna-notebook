@@ -91,6 +91,10 @@ export function SystemPromptsSettings() {
           </div>
           <Badge tone={saved ? "success" : "neutral"}>{saved ? "Personnalisé" : "Par défaut"}</Badge>
         </div>
+        <details className="rounded-md border border-border-subtle bg-surface-sunken p-3 text-xs">
+          <summary className="cursor-pointer font-medium text-text">Afficher le prompt système de référence</summary>
+          <pre className="mt-3 max-h-64 overflow-auto whitespace-pre-wrap font-mono leading-5 text-text-muted">{active.defaultPrompt}</pre>
+        </details>
         <div className="rounded-md border border-border-subtle bg-surface-sunken p-3 text-xs text-text-muted">
           <div className="flex items-center gap-2 font-medium text-text"><ShieldCheck className="size-4" /> Instructions de référence</div>
           <p className="mt-1">Le prompt de référence est conservé dans le code. Votre texte personnalisé est ajouté à ces instructions et ne peut pas désactiver les règles de sécurité, les contrôles de sources ou le format technique requis.</p>
