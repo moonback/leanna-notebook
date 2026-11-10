@@ -1,13 +1,34 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from "electron";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { isAllowedWebUrl, isSafeExternalUrl, normalizeFilters } from "./shared/validation";
 
-const WEB_URL = process.env.LEANNA_WEB_URL ?? "http://127.0.0.1:3000";
-if (!isAllowedWebUrl(WEB_URL, !app.isPackaged)) {
-  throw new Error(
-    "LEANNA_WEB_URL must use HTTPS (or localhost HTTP in development).",
-  );
+function resolveWebUrl(): string {
+  let configuredUrl = process.env.LEANNA_WEB_URL;
+
+  if (app.isPackaged && !configuredUrl) {
+    try {
+      const config = JSON.parse(
+        readFileSync(join(__dirname, "build-config.json"), "utf8"),
+      ) as { webUrl?: unknown };
+      configuredUrl = typeof config.webUrl === "string" ? config.webUrl : undefined;
+    } catch {
+      throw new Error(
+        "Configuration de production absente. Recréez l'installateur avec LEANNA_WEB_URL.",
+      );
+    }
+  }
+
+  configuredUrl ??= "http://127.0.0.1:3000";
+  if (!isAllowedWebUrl(configuredUrl, !app.isPackaged)) {
+    throw new Error(
+      "LEANNA_WEB_URL must use HTTPS in production (localhost HTTP is development-only).",
+    );
+  }
+  return configuredUrl;
 }
+
+const WEB_URL = resolveWebUrl();
 const allowedOrigin = new URL(WEB_URL).origin;
 let mainWindow: BrowserWindow | null = null;
 
@@ -168,16 +189,6 @@ function createMainWindow(): void {
   mainWindow.on("closed", () => {
     mainWindow = null;
   });
-
-  if (app.isPackaged) {
-    void dialog.showMessageBox({
-      type: "info",
-      title: "Leanna Notebook",
-      message: "Le build desktop de production n'est pas encore configuré.",
-      detail: "Lancez la version de développement avec pnpm desktop:dev.",
-    }).then(() => app.quit());
-    return;
-  }
 
   void mainWindow.loadURL(WEB_URL).catch(async (error: unknown) => {
     const detail = error instanceof Error ? error.message : String(error);
