@@ -102,6 +102,19 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
   const mounted = React.useRef(true);
   const intentionalClose = React.useRef(false);
 
+  React.useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem("leanna-voice-preference");
+      if (saved && (VOICE_OPTIONS as readonly string[]).includes(saved)) setSelectedVoice(saved as VoiceName);
+    } catch { /* préférence locale facultative */ }
+    setVoicePreferenceLoaded(true);
+  }, []);
+
+  React.useEffect(() => {
+    if (!voicePreferenceLoaded) return;
+    try { window.localStorage.setItem("leanna-voice-preference", selectedVoice); } catch { /* stockage local facultatif */ }
+  }, [selectedVoice, voicePreferenceLoaded]);
+
   const stop = React.useCallback(() => {
     intentionalClose.current = true;
     socket.current?.close();
@@ -346,6 +359,15 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
       <Dialog open={open} onOpenChange={(value) => { setOpen(value); if (!value) stop(); }}>
         <DialogContent title="Conversation vocale" description="Discutez en direct avec Leanna à partir des sources sélectionnées." size="lg">
           <div className="grid gap-5">
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
+              <div className="grid gap-0.5">
+                <label htmlFor="voice-profile" className="text-sm font-medium">Voix de Leanna</label>
+                <p className="text-xs text-text-muted">Votre choix est conservé sur cet appareil.</p>
+              </div>
+              <select id="voice-profile" value={selectedVoice} disabled={state === "connecting" || state === "listening" || state === "speaking"} onChange={(event) => setSelectedVoice(event.target.value as VoiceName)} className="min-w-44 rounded-md border bg-surface px-3 py-2 text-sm focus-visible:outline-2 focus-visible:outline-accent">
+                {VOICE_OPTIONS.map((voice) => <option key={voice} value={voice}>{VOICE_LABELS[voice]}</option>)}
+              </select>
+            </div>
             <div className="flex flex-col items-center gap-3 rounded-xl border bg-surface-raised px-4 py-8 text-center">
               <div className={`grid size-20 place-items-center rounded-full ${state === "speaking" ? "bg-accent text-on-accent" : "bg-accent-soft text-on-accent-soft"}`}>
                 {state === "speaking" ? <Volume2 className="size-9" /> : <AudioLines className="size-9" />}
