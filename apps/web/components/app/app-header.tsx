@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { Compass, LogOut, Settings } from "lucide-react";
+import { Compass, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FeedbackButton } from "./feedback-button";
+import { SignOutButton } from "./signout-button";
 
 /** En-tête commun de l'application (56 px). `children` : titre ou actions propres à la page. */
 /** `notebookId` : active le signalement de ce notebook dans le formulaire d'avis. */
@@ -23,9 +24,7 @@ export function AppHeader({ children, notebookId }: { children?: React.ReactNode
         <Button asChild variant="ghost" size="icon" aria-label="Réglages">
           <Link href="/settings"><Settings aria-hidden /></Link>
         </Button>
-        <form action="/auth/signout" method="post">
-          <Button type="submit" variant="ghost" size="icon" aria-label="Se déconnecter"><LogOut aria-hidden /></Button>
-        </form>
+        <SignOutButton />
       </nav>
     </header>
   );

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Field, Textarea } from "@/components/ui/field";
 import { Alert, Badge, EmptyState, Progress, Skeleton } from "@/components/ui/feedback";
 import { Dialog, DialogClose, DialogContent } from "@/components/ui/overlay";
+import { useConfirm } from "@/components/ui/confirm";
 import { ListRow, Panel } from "@/components/ui/surfaces";
 import { Citation } from "@/components/ui/citation";
 import { toast } from "@/components/ui/toast";
@@ -53,6 +54,7 @@ export function Studio({ notebookId, canEdit, sourceIds, sourceTitle, onOpenCita
   const [failedLoad, setFailedLoad] = React.useState(false);
   const [creating, setCreating] = React.useState<ArtType | null>(null);
   const [open, setOpen] = React.useState<string | null>(null);
+  const [confirm, confirmDialog] = useConfirm();
   const readyCount = sourceIds.length;
 
   const seen = React.useRef(new Map<string, string>());
@@ -96,7 +98,7 @@ export function Studio({ notebookId, canEdit, sourceIds, sourceTitle, onOpenCita
   }
 
   async function remove(a: Art) {
-    if (!confirm(`Supprimer « ${label(a)} » ?`)) return;
+    if (!(await confirm({ title: `Supprimer « ${label(a)} » ?`, description: "Ce contenu généré sera supprimé définitivement.", confirmLabel: "Supprimer" }))) return;
     const r = await fetch(`/api/v1/artifacts/${a.id}`, { method: "DELETE" });
     if (r.ok) setArts((xs) => xs?.filter((x) => x.id !== a.id) ?? null); else toast({ title: "Suppression impossible", tone: "error" });
   }
@@ -108,6 +110,7 @@ export function Studio({ notebookId, canEdit, sourceIds, sourceTitle, onOpenCita
 
   return (
     <Panel id="studio" title="Studio" className="h-full">
+      {confirmDialog}
       {canEdit && (
         <div className="grid grid-cols-2 gap-2 border-b p-3">
           {(["report", "flashcards", "quiz", "mind_map", "infographic", "timeline", "comparison", "glossary", "faq", "diagram", "editorial", "study_plan"] as ArtType[]).map((t) => (
