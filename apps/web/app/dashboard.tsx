@@ -3,6 +3,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BookOpen, LayoutGrid, List, MoreVertical, Pencil, Plus, SearchX, Trash2 } from "lucide-react";
+import { AppHeader } from "@/components/app/app-header";
 import { Button } from "@/components/ui/button";
 import { Field, Input, SearchInput } from "@/components/ui/field";
 import { Alert, Badge, EmptyState } from "@/components/ui/feedback";
@@ -67,6 +68,10 @@ export function Dashboard({ initial, loadError, initialView, name }: { initial: 
   );
 
   return (
+    <>
+    <AppHeader>
+      <SearchInput aria-label="Rechercher un notebook" placeholder="Rechercher" value={query} onChange={(e) => setQuery(e.target.value)} className="mx-auto w-full max-w-md" />
+    </AppHeader>
     <main className="mx-auto grid max-w-[var(--page-max-w)] gap-6 px-4 py-8 sm:px-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
@@ -88,7 +93,6 @@ export function Dashboard({ initial, loadError, initialView, name }: { initial: 
           </TabsList>
         </Tabs>
         <div className="flex w-full items-center gap-2 sm:w-auto">
-          <SearchInput aria-label="Rechercher un notebook" placeholder="Rechercher" value={query} onChange={(e) => setQuery(e.target.value)} className="flex-1 sm:w-64" />
           <div role="group" aria-label="Affichage" className="flex shrink-0 rounded-md border p-0.5">
             <Button size="icon-sm" variant={view === "grid" ? "soft" : "ghost"} aria-label="Grille" aria-pressed={view === "grid"} onClick={() => changeView("grid")}><LayoutGrid aria-hidden /></Button>
             <Button size="icon-sm" variant={view === "list" ? "soft" : "ghost"} aria-label="Liste" aria-pressed={view === "list"} onClick={() => changeView("list")}><List aria-hidden /></Button>
@@ -148,6 +152,7 @@ export function Dashboard({ initial, loadError, initialView, name }: { initial: 
       <RenameDialog notebook={renaming} onClose={() => setRenaming(null)} onDone={(id, title) => setItems((xs) => xs.map((x) => (x.id === id ? { ...x, title } : x)))} />
       <DeleteDialog notebook={deleting} onClose={() => setDeleting(null)} onDone={(id) => setItems((xs) => xs.filter((x) => x.id !== id))} />
     </main>
+    </>
   );
 }
 

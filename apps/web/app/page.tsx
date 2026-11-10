@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import { AppHeader } from "@/components/app/app-header";
 import { createUserClient, getUser } from "@/lib/supabase/server";
 import { Dashboard, type NotebookRow } from "./dashboard";
 
@@ -23,7 +22,6 @@ export default async function HomePage() {
 
   return (
     <div className="min-h-dvh">
-      <AppHeader />
       <Dashboard initial={rows} loadError={Boolean(error)} initialView={(profile?.dashboard_view as "grid" | "list") ?? "list"} name={profile?.display_name ?? null} />
     </div>
   );
