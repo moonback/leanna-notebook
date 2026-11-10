@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { AudioLines, Mic, MicOff, PhoneOff, Volume2 } from "lucide-react";
+import { AudioLines, Mic, MicOff, PhoneOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Citation } from "@/components/ui/citation";
 import { Dialog, DialogContent } from "@/components/ui/overlay";
