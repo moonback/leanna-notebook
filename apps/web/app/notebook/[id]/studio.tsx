@@ -84,7 +84,7 @@ export function Studio({ notebookId, canEdit, sourceIds, sourceTitle, onOpenCita
   async function generate(type: ArtType, options: Record<string, string>, customPrompt?: string) {
     const r = await fetch(`/api/v1/notebooks/${notebookId}/artifacts`, {
       method: "POST", headers: { "content-type": "application/json", "idempotency-key": crypto.randomUUID() },
-      body: JSON.stringify({ type, options, sourceIds, ...(customPrompt ? { customPrompt } : {}) }),
+      body: JSON.stringify({ type, options, sourceIds: type === "infographic" && options.sourceScope === "all" ? [] : sourceIds, ...(customPrompt ? { customPrompt } : {}) }),
     });
     const j = await r.json().catch(() => ({}));
     if (r.status === 429) { toast({ title: "Quota atteint", description: "Changez d’offre dans les réglages ou réessayez plus tard.", tone: "error" }); return false; }
@@ -225,7 +225,7 @@ function CreateDialog({ type, notebookId, sourceIds, onClose, onGenerate }: { ty
     return () => { active = false; };
   }, [type, notebookId, sourceKey]);
   React.useEffect(() => {
-    setOpts(type === "report" ? { template: "briefing", reportFormat: "document" } : type === "flashcards" || type === "quiz" ? { difficulty: "medium", count: "standard" } : type === "audio" ? { format: "deep_dive", duration: "standard", style: "accessible" } : {});
+    setOpts(type === "report" ? { template: "briefing", reportFormat: "document" } : type === "flashcards" || type === "quiz" ? { difficulty: "medium", count: "standard" } : type === "audio" ? { format: "deep_dive", duration: "standard", style: "accessible" } : type === "infographic" ? { language: "fr", orientation: "portrait", visualStyle: "auto", detailLevel: "standard", sourceScope: "selected" } : {});
     setPrompt("");
   }, [type]);
   if (!type) return null;
@@ -265,7 +265,7 @@ function CreateDialog({ type, notebookId, sourceIds, onClose, onGenerate }: { ty
   }
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent size="lg" title={type === "report" ? "Créer un rapport" : `Générer : ${TYPES[type].label}`} description={type === "report" ? "Choisissez un format et un modèle pour composer un rapport à partir de vos sources." : "À partir des sources sélectionnées. La génération continue en arrière-plan."}>
+      <DialogContent size="lg" title={type === "infographic" ? "Personnaliser l’infographie" : type === "report" ? "Créer un rapport" : `Générer : ${TYPES[type].label}`} description={type === "infographic" ? "Configurez la langue, le format, le style et les sources avant de lancer la création." : type === "report" ? "Choisissez un format et un modèle pour composer un rapport à partir de vos sources." : "À partir des sources sélectionnées. La génération continue en arrière-plan."}>
         <form onSubmit={submit} className="grid gap-5">
           {type === "report" && (
             <>
@@ -317,14 +317,61 @@ function CreateDialog({ type, notebookId, sourceIds, onClose, onGenerate }: { ty
               </section>
             </>
           )}
+          {type === "infographic" && (
+            <div className="grid gap-5">
+              <section className="grid gap-2">
+                <h3 className="text-sm font-semibold">Sélectionnez une langue</h3>
+                {choice("language", "Langue", [["fr", "Français"], ["en", "Anglais"], ["es", "Espagnol"], ["de", "Allemand"], ["it", "Italien"], ["pt", "Portugais"], ["nl", "Néerlandais"]])}
+              </section>
+              <section className="grid gap-2">
+                <h3 className="text-sm font-semibold">Choisissez une orientation</h3>
+                <div className="grid grid-cols-3 gap-2">
+                  {([["portrait", "Portrait"], ["landscape", "Paysage"], ["square", "Carré"]] as const).map(([value, title]) => (
+                    <button key={value} type="button" aria-pressed={(opts.orientation ?? "portrait") === value} onClick={() => setOpts((current) => ({ ...current, orientation: value }))} className={cn("grid min-h-20 place-items-center gap-2 rounded-xl border p-3 text-sm transition-colors", (opts.orientation ?? "portrait") === value ? "border-accent bg-accent-soft ring-1 ring-accent" : "border-border bg-surface hover:bg-surface-raised")}>
+                      <span className={cn("rounded border-2 border-current", value === "portrait" ? "h-9 w-6" : value === "landscape" ? "h-6 w-10" : "size-8")} />
+                      <span>{title}</span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+              <section className="grid gap-3">
+                <h3 className="text-sm font-semibold">Choisissez un style visuel</h3>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {([
+                    ["auto", "Sélection automatique", "autoselect.png"], ["kawaii", "Kawaii", "kawaii.jpeg"],
+                    ["claymation", "Pâte à modeler", "claymation.jpeg"], ["sketchnote", "Croquis", "sketchnote.jpeg"],
+                    ["anime", "Anime", "anime.jpeg"], ["editorial", "Éditorial", "editorial.jpeg"],
+                    ["storyboard", "Éducatif", "storyboard.jpeg"], ["bentogrid", "Grille Bento", "bentogrid.jpeg"],
+                    ["bricks", "Briques", "bricks.jpeg"], ["scientific", "Scientifique", "scientific.jpeg"],
+                    ["professional", "Professionnel", "professional.jpeg"],
+                  ] as const).map(([value, title, image]) => {
+                    const selected = (opts.visualStyle ?? "auto") === value;
+                    return <button key={value} type="button" aria-pressed={selected} onClick={() => setOpts((current) => ({ ...current, visualStyle: value }))} className={cn("overflow-hidden rounded-xl border text-left transition-colors", selected ? "border-accent bg-accent-soft ring-1 ring-accent" : "border-border bg-surface hover:border-accent")}>
+                      <span role="img" aria-label={title} className="block aspect-[5/3] bg-cover bg-center bg-muted" style={{ backgroundImage: "url(https://www.gstatic.com/tailwind/_/static/infographic/" + image + ")" }} />
+                      <span className="flex min-h-10 items-center justify-between gap-1 px-2 py-2 text-xs font-medium">{title}{selected && <Check className="size-4 shrink-0 text-accent" aria-label="Sélectionné" />}</span>
+                    </button>;
+                  })}
+                </div>
+              </section>
+              <section className="grid gap-2">
+                <h3 className="text-sm font-semibold">Niveau de détail</h3>
+                {choice("detailLevel", "Détail", [["concise", "Concis · essentiel"], ["standard", "Standard · équilibré"], ["detailed", "Détaillé · approfondi"], ["very_detailed", "Très détaillé · exhaustif"]])}
+              </section>
+              <section className="grid gap-2">
+                <h3 className="text-sm font-semibold">Sources</h3>
+                {choice("sourceScope", "Périmètre des sources", [["selected", "Sources sélectionnées (" + sourceIds.length + ")"], ["all", "Toutes les sources prêtes du notebook"]])}
+                <p className="text-xs text-text-muted">Les citations seront vérifiées et reliées aux passages des sources utilisées.</p>
+              </section>
+            </div>
+          )}
           {type === "audio" && <div className="grid gap-4 sm:grid-cols-2">{choice("format", "Format du podcast", [["deep_dive", "Deep Dive · approfondi"], ["brief", "Brief · essentiel"], ["critique", "Critique · analyse"], ["debate", "Débat · points de vue"]])}{choice("duration", "Durée cible", [["short", "Court · 5 min"], ["standard", "Standard · 10 min"], ["long", "Long · 15 min"]])}{choice("style", "Ton", [["accessible", "Accessible et pédagogique"], ["professional", "Professionnel et précis"], ["dynamic", "Dynamique et vivant"]])}</div>}
           {(type === "flashcards" || type === "quiz") && <div className="grid gap-4 sm:grid-cols-2">{choice("difficulty", "Difficulté", [["easy", "Facile"], ["medium", "Moyenne"], ["hard", "Difficile"]])}{choice("count", "Quantité", [["fewer", "Moins"], ["standard", "Standard"], ["more", "Plus"]])}</div>}
-          <Field id="opt-prompt" label={type === "report" ? "Personnaliser le modèle (facultatif)" : "Consignes (facultatif)"} hint={type === "report" ? "Public visé, ton, plan souhaité, longueur ou éléments à mettre en avant…" : "Public visé, angle, thèmes à privilégier…"}>
-            <Textarea value={prompt} maxLength={4000} onChange={(e) => setPrompt(e.target.value)} placeholder={type === "report" ? "Ex. : rédiger pour une direction, avec une synthèse exécutive et des recommandations concrètes." : "Ex. : pour un public débutant, insister sur la sécurité."} />
+          <Field id="opt-prompt" label={type === "infographic" ? "Décrivez l’infographie que vous souhaitez créer" : type === "report" ? "Personnaliser le modèle (facultatif)" : "Consignes (facultatif)"} hint={type === "infographic" ? "Sujet à mettre en avant, public visé, chiffres ou comparaisons à privilégier…" : type === "report" ? "Public visé, ton, plan souhaité, longueur ou éléments à mettre en avant…" : "Public visé, angle, thèmes à privilégier…"}>
+            <Textarea value={prompt} maxLength={4000} onChange={(e) => setPrompt(e.target.value)} placeholder={type === "infographic" ? "Ex. : créer une infographie pédagogique qui explique les étapes clés, met en évidence les chiffres importants et compare les différentes approches." : type === "report" ? "Ex. : rédiger pour une direction, avec une synthèse exécutive et des recommandations concrètes." : "Ex. : pour un public débutant, insister sur la sécurité."} />
           </Field>
           <div className="flex justify-end gap-2 border-t pt-4">
             <DialogClose asChild><Button type="button" variant="secondary">Annuler</Button></DialogClose>
-            <Button type="submit" loading={sending}><Sparkles aria-hidden /> {type === "report" ? "Générer le rapport" : "Générer"}</Button>
+            <Button type="submit" loading={sending}><Sparkles aria-hidden /> {type === "infographic" ? "Générer l’infographie" : type === "report" ? "Générer le rapport" : "Générer"}</Button>
           </div>
         </form>
       </DialogContent>
