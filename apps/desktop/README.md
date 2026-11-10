@@ -22,7 +22,7 @@ pnpm desktop:dev
 
 `pnpm desktop:doctor` vérifie Node.js, la présence de l'application Next.js, le workspace pnpm et le binaire Electron. En cas de binaire manquant, il indique la commande de réparation.\n\n`pnpm desktop:test` compile le processus Electron puis exécute les tests Node.js des validations de sécurité (URL d'application, liens externes et filtres de fichiers).
 
-La commande compile le processus Electron, démarre Next.js sur `127.0.0.1:3000`, attend sa disponibilité puis ouvre la fenêtre desktop.
+La commande compile le processus Electron, démarre Next.js sur `127.0.0.1:3000`, attend sa disponibilité puis ouvre la fenêtre desktop. Le port est explicite : si un autre service l'utilise, Next.js doit signaler le conflit au lieu de basculer silencieusement sur un autre port. Si l'URL locale ne répond pas, Electron affiche maintenant un diagnostic natif.
 
 Si le package npm Electron est présent mais que son binaire natif manque, relancer l'installation du workspace après récupération de la configuration :
 
