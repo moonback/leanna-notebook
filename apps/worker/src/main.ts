@@ -6,6 +6,7 @@ import { ingestHandler } from "./ingest/handler.ts";
 import { llmFromEnv } from "./ai/llm.ts";
 import { studioHandler } from "./studio/generate.ts";
 import { guideHandler, overviewHandler } from "./studio/summaries.ts";
+import { researchHandler } from "./research/handler.ts";
 
 const url = process.env.SUPABASE_URL;
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -23,6 +24,7 @@ if (!embedder) console.warn("EMBEDDINGS_* non configuré : indexation en plein t
 const llm = llmFromEnv();
 const handlers: Partial<Record<JobKind, Handler>> = {
   ingest_source: ingestHandler(db, embedder, { summaries: Boolean(llm) }),
+  ...(process.env.TAVILY_API_KEY ? { research: researchHandler(db, process.env.TAVILY_API_KEY) } : {}),
   generate_artifact: studioHandler(db, llm),
   ...(llm ? { source_guide: guideHandler(db, llm), notebook_overview: overviewHandler(db, llm) } : {}),
 };
