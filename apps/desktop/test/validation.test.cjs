@@ -12,7 +12,7 @@ test("external URL validation rejects non-HTTPS and malformed values", () => {
     "file:///C:/secret.txt",
     "javascript:alert(1)",
     "https://user:password@example.com/path",
-    "https:///missing-host",
+    "https://",
     "//example.com",
     "",
     null,
