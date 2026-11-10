@@ -59,7 +59,7 @@ export function Workspace({ notebookId, initialTitle, role, allowCopies }: { not
   const [deselected, setDeselected] = React.useState<Set<string>>(new Set());
   const [loadError, setLoadError] = React.useState(false);
   const [adding, setAdding] = React.useState(false);
-  const [viewer, setViewer] = React.useState<{ sourceId: string; range?: [number, number] } | null>(null);
+  const [viewer, setViewer] = React.useState<{ sourceId: string; range?: [number, number]; timeStartMs?: number } | null>(null);
   const [noteEditor, setNoteEditor] = React.useState<{ id?: string } | null>(null);
   const [renaming, setRenaming] = React.useState<Source | null>(null);
   const [mobileTab, setMobileTab] = React.useState("chat");
@@ -332,7 +332,7 @@ function Chat({ notebookId, readyCount, onOpenCitation, canViewSources, sourceTi
   return (
     <section aria-label="Conversation" className="flex h-full min-h-0 flex-col rounded-xl border bg-surface-raised">
       <div className="flex h-11 shrink-0 items-center justify-end gap-1 border-b px-2">
-        <VoiceAssistant notebookId={notebookId} conversationId={conversationId ?? ""} disabled={!canViewSources || readyCount === 0 || !conversationId} />
+        <VoiceAssistant notebookId={notebookId} conversationId={conversationId ?? ""} disabled={!canViewSources || readyCount === 0 || !conversationId} onOpenCitation={(passage) => setViewer({ sourceId: passage.sourceId, range: [passage.charStart, passage.charEnd], timeStartMs: passage.timeStartMs ?? undefined })} />
         {canConfigure && <Button size="sm" variant="ghost" onClick={() => setConfiguring(true)}><Settings2 aria-hidden /> Configurer</Button>}
         <Button size="sm" variant="ghost" disabled={!messages?.length || streaming} onClick={() => void clearHistory()}><Eraser aria-hidden /> Effacer l’historique</Button>
       </div>
@@ -607,7 +607,7 @@ function AddSourcesDialog({ open, onOpenChange, notebookId, onAdded }: { open: b
 
 /* --------------------------------------------------------- Visionneuse ---- */
 
-function SourceViewer({ state, onClose, onAsk }: { state: { sourceId: string; range?: [number, number] } | null; onClose: () => void; onAsk: (text: string) => void }) {
+function SourceViewer({ state, onClose, onAsk }: { state: { sourceId: string; range?: [number, number]; timeStartMs?: number } | null; onClose: () => void; onAsk: (text: string) => void }) {
   const [source, setSource] = React.useState<{ title: string; kind: string; extracted_text: string | null; guide: { summary: string; topics: string[] } | null } | null>(null);
   const [audioSegments, setAudioSegments] = React.useState<Array<{ ordinal: number; content: string; time_start_ms: number; time_end_ms: number }>>([]);
   const [failed, setFailed] = React.useState(false);
@@ -624,6 +624,14 @@ function SourceViewer({ state, onClose, onAsk }: { state: { sourceId: string; ra
     }).catch(() => setFailed(true));
   }, [state]);
   React.useEffect(() => { mark.current?.scrollIntoView({ block: "center" }); }, [source]);
+  React.useEffect(() => {
+    const player = audioRef.current;
+    if (!player || source?.kind !== "audio" || state?.timeStartMs == null) return;
+    const seek = () => { player.currentTime = Math.max(0, state.timeStartMs! / 1000); };
+    if (player.readyState >= 1) seek();
+    else player.addEventListener("loadedmetadata", seek, { once: true });
+    return () => player.removeEventListener("loadedmetadata", seek);
+  }, [source, state]);
 
   const text = source?.extracted_text ?? "";
   const [a, b] = state?.range ?? [0, 0];
