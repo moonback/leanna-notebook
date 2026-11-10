@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { AppHeader } from "@/components/app/app-header";
 import { createUserClient, getUser } from "@/lib/supabase/server";
 import { Discover, type FeaturedNotebook } from "./discover";
 
@@ -19,5 +18,5 @@ export default async function DiscoverPage() {
     id: n.id, title: n.title, emoji: n.emoji, overview: n.overview,
     allowCopies: n.allow_copies, createdAt: n.created_at,
   }));
-  return <div className="min-h-dvh"><AppHeader /><Discover initial={items} loadError={Boolean(error)} /></div>;
+  return <div className="min-h-dvh"><Discover initial={items} loadError={Boolean(error)} /></div>;
 }

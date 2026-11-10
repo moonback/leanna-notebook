@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BookOpen, LogOut, Settings } from "lucide-react";
+import { BookOpen, Compass, LogOut, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FeedbackButton } from "./feedback-button";
 
@@ -10,10 +10,13 @@ export function AppHeader({ children, notebookId }: { children?: React.ReactNode
     <header className="sticky top-0 z-[var(--z-sticky)] flex h-[var(--header-h)] items-center gap-3 border-b bg-surface-raised px-3 sm:px-5">
       <Link href="/" className="flex shrink-0 items-center gap-2 rounded-md" aria-label="Notebook, accueil">
         <span aria-hidden className="grid size-8 place-items-center rounded-lg bg-accent text-on-accent"><BookOpen className="size-4" /></span>
-        <span className="hidden font-serif text-lg sm:inline">Notebook</span>
+        <span className="hidden font-serif text-lg sm:inline">Leanna</span>
       </Link>
       <div className="flex min-w-0 flex-1 items-center gap-2">{children}</div>
       <nav aria-label="Compte" className="flex shrink-0 items-center gap-1">
+        <Button asChild variant="ghost" size="sm" className="gap-1.5">
+          <Link href="/discover" aria-label="Découvrir des notebooks"><Compass aria-hidden /><span className="hidden md:inline">Découvrir</span></Link>
+        </Button>
         <FeedbackButton notebookId={notebookId} />
         <Button asChild variant="ghost" size="icon" aria-label="Réglages">
           <Link href="/settings"><Settings aria-hidden /></Link>

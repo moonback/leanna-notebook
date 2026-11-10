@@ -8,7 +8,7 @@ export default function LegalLayout({ children }: { children: React.ReactNode })
         <div className="mx-auto flex h-14 max-w-3xl items-center justify-between px-4 sm:px-6">
           <Link href="/" className="flex items-center gap-2.5">
             <span aria-hidden className="grid size-8 place-items-center rounded-lg bg-accent text-on-accent"><BookOpen className="size-4" /></span>
-            <span className="font-serif text-lg">Notebook</span>
+            <span className="font-serif text-lg">Leanna</span>
           </Link>
           <nav aria-label="Documents légaux" className="flex gap-4 text-sm text-text-muted">
             <Link className="hover:text-text hover:underline" href="/privacy">Confidentialité</Link>

@@ -5,9 +5,10 @@ import { AudioLines, Mic, MicOff, PhoneOff, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Citation } from "@/components/ui/citation";
 import { Dialog, DialogContent } from "@/components/ui/overlay";
+import { PendingVoiceSearches, VoiceTurnCitationStore, type NumberedVoicePassage } from "./voice-turn";
 
 type VoiceState = "idle" | "connecting" | "listening" | "speaking" | "error";
-type Passage = { number: number; sourceId: string; title: string; page: number | null; excerpt: string; charStart: number; charEnd: number; timeStartMs: number | null };
+type Passage = NumberedVoicePassage;
 type VoiceTurn = { user: string; assistant: string; sources: Passage[] };
 type LiveFunctionCall = { id: string; name: string; args?: Record<string, unknown> };
 type LiveMessage = {
@@ -80,8 +81,8 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
   const userTurn = React.useRef("");
   const assistantTurn = React.useRef("");
   const turnSourceIds = React.useRef<Set<string>>(new Set());
-  const turnPassages = React.useRef<Map<string, Passage>>(new Map());
-  const pendingToolCalls = React.useRef(0);
+  const turnPassages = React.useRef(new VoiceTurnCitationStore());
+  const pendingSearches = React.useRef(new PendingVoiceSearches());
   const turnCompletePending = React.useRef(false);
   const turnFinalizing = React.useRef(false);
   const [muted, setMuted] = React.useState(false);
@@ -153,16 +154,9 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
         const payload = await response.json();
         if (!response.ok) throw new Error(payload.error ?? "Recherche documentaire impossible");
         const retrieved = (payload.passages ?? []) as Array<Omit<Passage, "number">>;
-        const passages = retrieved.map((passage) => {
-          const key = `${passage.sourceId}:${passage.charStart}:${passage.charEnd}`;
-          const existing = turnPassages.current.get(key);
-          if (existing) return existing;
-          const numbered = { ...passage, number: turnPassages.current.size + 1 };
-          turnPassages.current.set(key, numbered);
-          turnSourceIds.current.add(passage.sourceId);
-          return numbered;
-        });
-        setSources([...turnPassages.current.values()]);
+        const passages = turnPassages.current.add(retrieved);
+        for (const sourceId of turnPassages.current.sourceIds()) turnSourceIds.current.add(sourceId);
+        setSources(turnPassages.current.snapshot());
         const result = passages.length ? passages.map((p) => `[Source ${p.number}] ${p.title}${p.page ? `, page ${p.page}` : ""}\n${p.excerpt}`).join("\n\n") : "Aucun passage pertinent trouvé dans les sources sélectionnées.";
         socket.current?.send(JSON.stringify({ toolResponse: { functionResponses: [{ id: call.id, name: call.name, response: { result } }] } }));
       } catch {
@@ -201,7 +195,6 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
       assistantTurn.current = "";
       turnSourceIds.current.clear();
       turnPassages.current.clear();
-      pendingToolCalls.current = 0;
       turnCompletePending.current = false;
       turnFinalizing.current = false;
       const ctx = new AudioContext();
@@ -263,10 +256,10 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
       ws.onclose = () => { if (mounted.current && !intentionalClose.current) { stop(); setStatus("Session vocale terminée."); } };
       ws.onerror = () => { if (mounted.current) setStatus("Connexion vocale instable…"); };
       const finalizeVoiceTurn = async () => {
-        if (turnFinalizing.current || pendingToolCalls.current > 0) return;
+        if (turnFinalizing.current || pendingSearches.current.count > 0) return;
         turnFinalizing.current = true;
         try {
-          const completedTurn = { user: userTurn.current.trim(), assistant: assistantTurn.current.trim(), sources: [...turnPassages.current.values()] };
+          const completedTurn = { user: userTurn.current.trim(), assistant: assistantTurn.current.trim(), sources: turnPassages.current.snapshot() };
           await persistVoiceTurn();
           if (completedTurn.user && completedTurn.assistant) setTurnHistory((history) => [...history, completedTurn]);
           setTranscript("");
@@ -292,13 +285,8 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
           const msg = parseFrame(event.data);
           if (!msg) return;
           if (msg.toolCall) {
-            pendingToolCalls.current += 1;
-            try {
-              await handleToolCall(msg);
-            } finally {
-              pendingToolCalls.current = Math.max(0, pendingToolCalls.current - 1);
-              if (pendingToolCalls.current === 0 && turnCompletePending.current) await finalizeVoiceTurn();
-            }
+            await pendingSearches.current.track(handleToolCall(msg));
+            if (pendingSearches.current.count === 0 && turnCompletePending.current) await finalizeVoiceTurn();
             return;
           }
           const content = msg.serverContent;
@@ -326,11 +314,9 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
             }
           }
           if (content?.turnComplete) {
-            if (pendingToolCalls.current > 0) {
-              turnCompletePending.current = true;
-            } else {
-              await finalizeVoiceTurn();
-            }
+            turnCompletePending.current = true;
+            await pendingSearches.current.waitForIdle();
+            await finalizeVoiceTurn();
           }
         } catch { /* ignore malformed provider frames */ }
       };
