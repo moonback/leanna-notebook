@@ -41,6 +41,11 @@ const ERRORS: Record<string, string> = {
   temporary_error: "Erreur temporaire : nouvelle tentative en cours.",
   lease_expired: "Le traitement a été interrompu. Supprimez puis réimportez la source.",
   archive_too_large: "Fichier compressé trop volumineux une fois décompressé.",
+  github_invalid_url: "URL GitHub invalide. Indiquez un dépôt public sous la forme https://github.com/owner/repo.",
+  github_invalid_ref: "Nom de branche GitHub invalide.",
+  github_not_found: "Dépôt ou branche GitHub introuvable, ou dépôt privé inaccessible.",
+  github_repo_too_large: "Ce dépôt est trop volumineux pour être importé en une seule source.",
+  github_no_indexable_files: "Aucun fichier texte exploitable trouvé dans ce dépôt.",
 };
 const KIND_ICON: Record<string, React.ReactNode> = { web: <Globe />, github: <Github />, text: <Type />, note: <NotebookPen />, audio: <AudioLines /> };
 const busyStatus = (s: string) => s === "pending" || s === "processing";
