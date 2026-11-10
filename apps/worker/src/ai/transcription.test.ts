@@ -3,7 +3,7 @@ import { transcriberFromEnv } from "./transcription.ts";
 
 describe("Deepgram transcription adapter", () => {
   it("requests utterances and converts provider seconds to millisecond segments", async () => {
-    const request = vi.fn(async () => new Response(JSON.stringify({
+    const request = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response(JSON.stringify({
       results: { utterances: [
         { start: 0.42, end: 1.8, transcript: "Bonjour." },
         { start: 2, end: 3.25, transcript: "Bienvenue." },
@@ -30,13 +30,13 @@ describe("Deepgram transcription adapter", () => {
   });
 
   it("classifies invalid credentials or unsupported requests as permanent configuration errors", async () => {
-    const request = vi.fn(async () => new Response("unauthorized", { status: 401 }));
+    const request = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response("unauthorized", { status: 401 }));
     const adapter = transcriberFromEnv({ DEEPGRAM_API_KEY: "bad" }, request as typeof fetch)!;
     await expect(adapter.transcribe(new Uint8Array([1]), "audio/wav")).rejects.toMatchObject({ code: "transcription_config" });
   });
 
   it("rejects an empty speech result", async () => {
-    const request = vi.fn(async () => new Response(JSON.stringify({ results: { utterances: [] } }), { status: 200 }));
+    const request = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response(JSON.stringify({ results: { utterances: [] } }), { status: 200 }));
     const adapter = transcriberFromEnv({ DEEPGRAM_API_KEY: "test" }, request as typeof fetch)!;
     await expect(adapter.transcribe(new Uint8Array([1]), "audio/wav")).rejects.toMatchObject({ code: "no_speech" });
   });
