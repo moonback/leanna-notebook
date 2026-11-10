@@ -44,7 +44,8 @@ export function chunk(text: string, { maxChars = 1600, overlapChars = 240, pageS
       let page: number | null = null;
       for (let p = 0; p < pageStarts.length; p++) if (pageStarts[p] <= s) page = p + 1;
       const overlapping = timeRanges.filter((r) => r.char_end > s && r.char_start < e);
-      out.push({ ordinal: out.length, content, char_start: s, char_end: e, page_start: page, token_count: estimateTokens(content),\n        ...(overlapping.length ? { time_start_ms: Math.min(...overlapping.map((r) => r.start_ms)), time_end_ms: Math.max(...overlapping.map((r) => r.end_ms)) } : {}) });
+      out.push({ ordinal: out.length, content, char_start: s, char_end: e, page_start: page, token_count: estimateTokens(content),
+        ...(overlapping.length ? { time_start_ms: Math.min(...overlapping.map((r) => r.start_ms)), time_end_ms: Math.max(...overlapping.map((r) => r.end_ms)) } : {}) });
     }
     if (end >= text.length) break;
     // chevauchement : on repart sur une borne de phrase située ~overlapChars avant la fin
