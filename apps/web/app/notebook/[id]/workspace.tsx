@@ -773,7 +773,7 @@ function AddSourcesDialog({ open, onOpenChange, notebookId, onAdded }: { open: b
                 <Textarea value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://…" />
               </Field>
             </TabsContent>
-            <TabsContent value="github" className="grid gap-3 pt-4">\n              <Field id="github-url" label="Dépôt GitHub" hint="Dépôts publics uniquement pour cette première version. Les secrets et fichiers binaires sont ignorés.">\n                <Input value={githubUrl} onChange={(e) => setGithubUrl(e.target.value)} placeholder="https://github.com/organisation/projet" />\n              </Field>\n              <Field id="github-branch" label="Branche" hint="La branche à capturer (par défaut : main).">\n                <Input value={githubBranch} maxLength={200} onChange={(e) => setGithubBranch(e.target.value)} placeholder="main" />\n              </Field>\n              <p className="text-xs text-text-muted">Le code sera indexé comme une source unique. Les fichiers sont présentés avec leur chemin et leurs numéros de ligne pour faciliter les citations.</p>\n            </TabsContent>\n            <TabsContent value="github" className="grid gap-3 pt-4">
+            <TabsContent value="github" className="grid gap-3 pt-4">
               <Field id="github-url" label="Dépôt GitHub" hint="Dépôts publics uniquement. Les fichiers secrets, binaires et dépendances sont ignorés.">
                 <Input value={githubUrl} onChange={(e) => setGithubUrl(e.target.value)} placeholder="https://github.com/organisation/projet" />
               </Field>
