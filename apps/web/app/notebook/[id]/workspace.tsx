@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import { createPortal } from "react-dom";
-import { AlertTriangle, ArrowUp, AudioLines, BookmarkPlus, Eraser, Settings2, ThumbsDown, ThumbsUp, FileText, Globe, Inbox, Lock, NotebookPen, Pencil, Plus, Square, Sparkles, Trash2, Type, Upload } from "lucide-react";
+import { AlertTriangle, ArrowUp, AudioLines, Music, BookmarkPlus, Eraser, Settings2, ThumbsDown, ThumbsUp, FileText, Globe, Inbox, Lock, NotebookPen, Pencil, Plus, Square, Sparkles, Trash2, Type, Upload, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Textarea } from "@/components/ui/field";
 import { Alert, Badge, EmptyState, Progress, Skeleton } from "@/components/ui/feedback";
@@ -67,6 +67,9 @@ export function Workspace({ notebookId, initialTitle, role, allowCopies }: { not
   const [mobileTab, setMobileTab] = React.useState("chat");
   const [draft, setDraft] = React.useState<{ text: string } | null>(null); // question pré-remplie depuis le Studio
   const desktop = useMediaQuery("(min-width: 1024px)");
+  const wideDesktop = useMediaQuery("(min-width: 1280px)");
+  const [sourcesCollapsed, setSourcesCollapsed] = React.useState(false);
+  const [studioCollapsed, setStudioCollapsed] = React.useState(false);
   const [overview, setOverview] = React.useState<Overview | null>(null);
   const loadOverview = React.useCallback(async () => {
     try {
@@ -216,23 +219,85 @@ export function Workspace({ notebookId, initialTitle, role, allowCopies }: { not
         {role === "owner" && <ShareButton notebookId={notebookId} allowCopies={allowCopies} />}
       </div>
 
-      {/* ≥ lg : 3 panneaux ; < lg : un onglet à la fois. Une SEULE disposition montée (un seul chat). */}
-      {/* Lien « chat seul » : ni sources ni Studio, le serveur refuse de toute façon leur lecture. */}
+      {/* Bureau : Sources et Studio se replient indépendamment. Mobile : navigation par onglets. */}
       {role === "chat" ? <div className="min-h-0 flex-1 p-2 sm:p-3">{chatPanel}</div> : desktop ? (
-      <div className="grid min-h-0 flex-1 grid-cols-[var(--panel-sources-w)_1fr] gap-3 p-3 xl:grid-cols-[var(--panel-sources-w)_1fr_var(--panel-studio-w)]">
-        {sourcesPanel}{chatPanel}<div className="hidden xl:block">{studioPanel}</div>
-      </div>
-      ) : (
-      <Tabs value={mobileTab} onValueChange={setMobileTab} className="flex min-h-0 flex-1 flex-col">
-        <div className="min-h-0 flex-1 p-2">
-          <TabsContent value="sources" className="h-full">{sourcesPanel}</TabsContent>
-          <TabsContent value="chat" className="h-full">{chatPanel}</TabsContent>
-          <TabsContent value="studio" className="h-full">{studioPanel}</TabsContent>
+        <div
+          className="grid min-h-0 min-w-0 flex-1 gap-3 p-3"
+          style={{
+            gridTemplateColumns: `${sourcesCollapsed ? "2.75rem" : "var(--panel-sources-w)"} minmax(0, 1fr) ${wideDesktop ? (studioCollapsed ? "2.75rem" : "var(--panel-studio-w)") : "0px"}`,
+          }}
+        >
+          {sourcesCollapsed ? (
+            <Button
+              type="button"
+              variant="secondary"
+              className="h-full min-h-0 w-full flex-col gap-3 px-1 py-3"
+              aria-label="Afficher le panneau Sources"
+              title="Afficher les sources"
+              onClick={() => setSourcesCollapsed(false)}
+            >
+              <PanelLeftOpen aria-hidden />
+              <span className="[writing-mode:vertical-rl] text-xs">Sources</span>
+            </Button>
+          ) : (
+            <div className="relative min-h-0 min-w-0">
+              {sourcesPanel}
+              <Button
+                type="button"
+                size="icon-sm"
+                variant="secondary"
+                className="absolute -right-2.5 top-1/2 z-20 -translate-y-1/2 rounded-full shadow-md"
+                aria-label="Rétracter le panneau Sources"
+                title="Rétracter les sources"
+                onClick={() => setSourcesCollapsed(true)}
+              >
+                <PanelLeftClose aria-hidden />
+              </Button>
+            </div>
+          )}
+
+          {chatPanel}
+
+          {wideDesktop && (studioCollapsed ? (
+            <Button
+              type="button"
+              variant="secondary"
+              className="h-full min-h-0 w-full flex-col gap-3 px-1 py-3"
+              aria-label="Afficher le panneau Studio"
+              title="Afficher le Studio"
+              onClick={() => setStudioCollapsed(false)}
+            >
+              <PanelRightOpen aria-hidden />
+              <span className="[writing-mode:vertical-rl] text-xs">Studio</span>
+            </Button>
+          ) : (
+            <div className="relative min-h-0 min-w-0">
+              {studioPanel}
+              <Button
+                type="button"
+                size="icon-sm"
+                variant="secondary"
+                className="absolute -left-2.5 top-1/2 z-20 -translate-y-1/2 rounded-full shadow-md"
+                aria-label="Rétracter le panneau Studio"
+                title="Rétracter le Studio"
+                onClick={() => setStudioCollapsed(true)}
+              >
+                <PanelRightClose aria-hidden />
+              </Button>
+            </div>
+          ))}
         </div>
-        <TabsList aria-label="Panneaux" className="grid h-14 shrink-0 grid-cols-3 border-t bg-surface-raised px-2">
-          <TabsTrigger value="sources">Sources</TabsTrigger><TabsTrigger value="chat">Chat</TabsTrigger><TabsTrigger value="studio">Studio</TabsTrigger>
-        </TabsList>
-      </Tabs>
+      ) : (
+        <Tabs value={mobileTab} onValueChange={setMobileTab} className="flex min-h-0 flex-1 flex-col">
+          <div className="min-h-0 flex-1 p-2">
+            <TabsContent value="sources" className="h-full">{sourcesPanel}</TabsContent>
+            <TabsContent value="chat" className="h-full">{chatPanel}</TabsContent>
+            <TabsContent value="studio" className="h-full">{studioPanel}</TabsContent>
+          </div>
+          <TabsList aria-label="Panneaux" className="grid h-14 shrink-0 grid-cols-3 border-t bg-surface-raised px-2">
+            <TabsTrigger value="sources">Sources</TabsTrigger><TabsTrigger value="chat">Chat</TabsTrigger><TabsTrigger value="studio">Studio</TabsTrigger>
+          </TabsList>
+        </Tabs>
       )}
 
       <AddSourcesDialog open={adding} onOpenChange={setAdding} notebookId={notebookId} onAdded={() => void load()} />
