@@ -463,8 +463,8 @@ function InfographicView({ markdown, options, citations, sourceTitle, onOpen }: 
   };
   return <div className="grid gap-3">
     <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-xs text-text-muted">{orientation === "portrait" ? "Portrait" : orientation === "square" ? "Carré" : "Paysage"} · {styleLabels[options.visualStyle ?? "auto"] ?? "Automatique"} · {detailLabels[options.detailLevel ?? "standard"] ?? "Standard"}</p><Button size="sm" variant="secondary" onClick={downloadSvg}><Download aria-hidden size={15} /> Exporter en SVG</Button></div>
-    <div className="mx-auto overflow-hidden rounded-xl border border-border bg-surface" style={{ width: "100%", maxWidth: orientation === "portrait" ? "420px" : "100%" }}>
-      <svg id="studio-infographic-preview" width={canvasSize.width} height={canvasSize.height} viewBox="0 0 960 620" preserveAspectRatio="xMidYMid meet" role="img" aria-label={title} className="h-auto w-full" style={{ "--infographic-accent": palette.accent, "--infographic-soft": palette.soft } as React.CSSProperties}>
+    <div className="mx-auto overflow-hidden rounded-xl border border-border bg-surface" style={{ width: "100%", maxWidth: orientation === "portrait" ? "420px" : "100%", aspectRatio: canvasSize.width + " / " + canvasSize.height }}>
+      <svg id="studio-infographic-preview" width={canvasSize.width} height={canvasSize.height} viewBox="0 0 960 620" preserveAspectRatio="xMidYMid meet" role="img" aria-label={title} className="h-full w-full" style={{ "--infographic-accent": palette.accent, "--infographic-soft": palette.soft } as React.CSSProperties}>
         <defs><linearGradient id="studioInfographicBg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="var(--infographic-accent)" stopOpacity=".16" /><stop offset="100%" stopColor="var(--color-surface, #f3f1ec)" /></linearGradient></defs>
         <rect width="960" height="620" rx="22" fill="var(--infographic-soft)" />
         <text x="48" y="64" fontSize="29" fontWeight="700" fill="currentColor">{title.slice(0, 58)}</text>
