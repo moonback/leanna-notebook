@@ -82,8 +82,12 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
   if (selected.length === 0) throw new ApiError(422, "no_sources");
 
   // Configuration IA vérifiée AVANT de consommer du quota
+  const [{ data: chatPreference }, { data: embeddingPreference }] = await Promise.all([
+    db.from("ai_model_preferences").select("model_id").eq("user_id", user.id).eq("feature_key", "chat").maybeSingle(),
+    db.from("ai_model_preferences").select("model_id").eq("user_id", user.id).eq("feature_key", "embeddings").maybeSingle(),
+  ]);
   let query: Awaited<ReturnType<typeof embedQuery>>;
-  try { query = await embedQuery(text); } catch (e) {
+  try { query = await embedQuery(text, { model: embeddingPreference?.model_id ?? undefined }); } catch (e) {
     if (e instanceof AiNotConfigured) throw new ApiError(503, "ai_not_configured");
     throw e;
   }
@@ -125,7 +129,7 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
       send("meta", { messageId: answerId, passages: passages.length, vector: Boolean(query) });
       let raw = "", usage: unknown = null, model: string | null = null;
       try {
-        for await (const evt of streamChat(messages, { signal: req.signal })) {
+        for await (const evt of streamChat(messages, { signal: req.signal, model: chatPreference?.model_id ?? undefined })) {
           if (evt.type === "delta") { raw += evt.text; send("delta", { text: evt.text }); }
           else { usage = evt.usage; model = evt.model; }
         }
