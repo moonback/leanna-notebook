@@ -7,7 +7,7 @@ import { FetchRefused, safeFetch } from "./ssrf.ts";
 import { fromEpub, fromPptx, readZip } from "./office.ts";
 import type { Transcriber } from "../ai/transcription.ts";
 import { normalize, type ChunkTimeRange } from "./chunker.ts";
-import { ocrWithGemini } from "../ai/ocr.ts";
+import { ocrWithOpenRouter } from "../ai/ocr.ts";
 import { spawn } from "node:child_process";
 
 export type Extracted = { text: string; pageStarts: number[]; pageCount: number | null; title?: string; timeRanges?: ChunkTimeRange[] };
@@ -31,8 +31,8 @@ async function fromPdf(buf: Uint8Array): Promise<Extracted> {
   const pageStarts: number[] = [];
   let acc = "";
   for (const p of pages) { pageStarts.push(acc.length); acc += p.trim() + "\n\n"; }
-  // PDF scanné (pas de couche texte) : OCR non disponible à ce jalon → erreur explicite, pas de faux succès
-  if (acc.replace(/\s/g, "").length < 20 * Math.max(1, pages.length) / 10) { const text = await ocrWithGemini(buf, "application/pdf"); return { text, pageStarts: [0], pageCount: pages.length }; }
+  // PDF scanné (pas de couche texte) : OCR multimodal via OpenRouter.
+  if (acc.replace(/\s/g, "").length < 20 * Math.max(1, pages.length) / 10) { const text = await ocrWithOpenRouter(buf, "application/pdf"); return { text, pageStarts: [0], pageCount: pages.length }; }
   return { text: acc, pageStarts, pageCount: pages.length };
 }
 
@@ -85,7 +85,7 @@ export async function extract(kind: string, data: { file?: Uint8Array; url?: str
     }
     case "image": {
       if (!data.file) throw new PermanentError("file_missing");
-      return finalize({ text: await ocrWithGemini(data.file, data.mimeType ?? "application/octet-stream"), pageStarts: [], pageCount: null });
+      return finalize({ text: await ocrWithOpenRouter(data.file, data.mimeType ?? "application/octet-stream"), pageStarts: [], pageCount: null });
     }
     case "note":
       return finalize({ text: data.noteText ?? "", pageStarts: [], pageCount: null });
