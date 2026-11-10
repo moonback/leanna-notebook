@@ -81,7 +81,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
   const [sources, setSources] = React.useState<Passage[]>([]);
   const [activePassageIndex, setActivePassageIndex] = React.useState(0);
   const activePassageIndexRef = React.useRef(0);
-  const updateActivePassageIndex = React.useCallback((index: number) => { activePassageIndexRef.current = index; updateActivePassageIndex(index); }, []);
+  const updateActivePassageIndex = React.useCallback((index: number) => { activePassageIndexRef.current = index; setActivePassageIndex(index); }, []);
   const [turnHistory, setTurnHistory] = React.useState<VoiceTurn[]>([]);
   const userTurn = React.useRef("");
   const assistantTurn = React.useRef("");
