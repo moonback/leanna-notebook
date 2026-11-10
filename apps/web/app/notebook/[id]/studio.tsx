@@ -101,7 +101,7 @@ export function Studio({ notebookId, canEdit, sourceIds, sourceTitle, onOpenCita
     <Panel id="studio" title="Studio" className="h-full">
       {canEdit && (
         <div className="grid grid-cols-2 gap-2 border-b p-3">
-          {(Object.keys(TYPES) as ArtType[]).map((t) => (
+          {(["report", "flashcards", "quiz", "mind_map"] as ArtType[]).map((t) => (
             <Button key={t} variant="secondary" className="justify-start" disabled={!readyCount} title={readyCount ? TYPES[t].hint : "Ajoutez d’abord une source"} onClick={() => setCreating(t)}>
               {TYPES[t].icon} {TYPES[t].label}
             </Button>
@@ -236,7 +236,7 @@ function ArtifactViewer({ id, canShare, onClose, sourceTitle, onOpenCitation, on
       <DialogContent size="lg" title={art ? (art.title || TYPES[art.type].label) : "Contenu du Studio"}>
         {id && canShare && <ArtifactShareButton artifactId={id} disabled={!art} />}
         <div className="max-h-[70dvh] overflow-y-auto pr-1">
-          {art?.custom_prompt && <p className="mb-4 rounded-md bg-surface px-3 py-2 text-xs text-text-muted"><span className="font-medium">Consignes de génération :</span> {art.custom_prompt}</p>}
+          {art?.custom_prompt && !art.custom_prompt.startsWith(AUDIO_OVERVIEW_MARKER) && <p className="mb-4 rounded-md bg-surface px-3 py-2 text-xs text-text-muted"><span className="font-medium">Consignes de génération :</span> {art.custom_prompt}</p>}
           {failed ? <Alert tone="danger" title="Contenu indisponible" />
             : !art ? <div className="grid gap-2" aria-busy="true" aria-label="Chargement"><Skeleton className="h-5 w-2/3" /><Skeleton className="h-4" /><Skeleton className="h-4 w-5/6" /></div>
              : art.type === "report" || art.type === "audio" ? <div className="grid gap-4">{art.content.audio_path && <audio controls preload="metadata" className="w-full" src={`/api/v1/artifacts/${art.id}/audio`} />}<Markdown text={art.content.markdown ?? ""} citations={data!.citations} sourceTitle={sourceTitle} onOpen={onOpenCitation ? (c) => { onClose(); onOpenCitation(c); } : undefined} /></div>
