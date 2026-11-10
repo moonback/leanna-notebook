@@ -6,7 +6,9 @@ import { AppHeader } from "@/components/app/app-header";
 import { Card } from "@/components/ui/surfaces";
 import { createServiceClient } from "@/lib/supabase/server";
 
-export const dynamic = "force-dynamic"; // revocation et suppression vérifiées à chaque ouverture\n\nexport const metadata: Metadata = {
+export const dynamic = "force-dynamic"; // revocation et suppression vérifiées à chaque ouverture
+
+export const metadata: Metadata = {
   title: "Contenu partagé · Notebook",
   robots: { index: false, follow: false },
 };
