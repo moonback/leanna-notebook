@@ -1,454 +1,433 @@
-# Vision produit — Leanna Notebook
+# Vision et feuille de route — Mode vocal de Leanna Notebook
 
-> Document de vision produit fondé sur l'inspection du code applicatif du dépôt, et non sur les fichiers Markdown de conception ou de présentation.
+> Analyse du mode vocal à partir du code applicatif du dépôt. Les fichiers Markdown existants n'ont pas servi de source pour les recommandations.
 
 - **Produit :** Leanna Notebook
-- **Dépôt :** `moonback/leanna-notebook`
-- **Date de l'analyse :** 10 novembre 2026
-- **Branche documentaire :** `docs/product-vision-and-feature-opportunities`
+- **Périmètre :** Mode vocal documentaire, conversation temps réel et commandes vocales
+- **Date :** 10 novembre 2026
+- **Branche :** `docs/voice-mode-feature-roadmap`
 
 ---
 
-## 1. Résumé exécutif
+## 1. Vision
 
-Leanna Notebook doit devenir un **espace de travail intelligent qui transforme les documents et les connaissances dispersées en compréhension, décisions et livrables fiables**.
+Le mode vocal de Leanna ne doit pas être une simple interface qui remplace le clavier par un microphone. Il doit devenir **un véritable compagnon de travail oral**, capable d'écouter, de comprendre le contexte d'un notebook, de consulter les documents, d'expliquer ses réponses, de prendre des notes et d'aider à produire des livrables.
 
-L'utilisateur ne devrait pas avoir à lire intégralement dix fichiers, retrouver manuellement une information ou reformuler sans cesse le même contexte. Il rassemble ses sources dans un notebook, interroge l'ensemble en langage naturel, vérifie les réponses dans les documents originaux, puis transforme les résultats en productions concrètes : rapports, synthèses, plans, supports d'apprentissage, présentations et contenus audio.
+L'utilisateur doit pouvoir travailler avec ses sources comme avec un collègue présent à ses côtés : poser une question spontanée, interrompre une explication, demander une précision, faire comparer deux documents, dicter une note ou demander un compte rendu oral.
 
-La différence essentielle ne doit pas être « un chatbot qui accepte des fichiers ». Le produit doit relier trois expériences dans un même espace :
+La promesse :
 
-1. **Comprendre** : retrouver, croiser et expliquer l'information provenant des sources.
-2. **Construire** : transformer cette information en documents et supports structurés.
-3. **Exploiter** : réutiliser, partager, actualiser et suivre les connaissances dans la durée.
+**« Parlez naturellement à vos documents. Leanna les consulte, vous répond avec des preuves et vous aide à passer à l'action. »**
 
-La confiance est une propriété centrale du produit : une réponse doit pouvoir être vérifiée, les limites doivent être explicites et les données d'un espace ne doivent jamais fuiter vers un autre.
-
-## 2. Ce que le code actuel démontre
-
-Cette section décrit uniquement les comportements repérés dans les composants, routes API, validations et traitements du dépôt.
-
-### Fondations déjà présentes
-
-- **Espace notebook** avec panneaux Sources, Chat et Studio ; les panneaux latéraux peuvent être repliés et redimensionnés, et leurs largeurs sont conservées localement.
-- **Gestion des sources** : import de fichiers, ajout d'URL, ajout de texte et notes ; traitement asynchrone par worker avec états persistants.
-- **Formats actuellement déclarés à l'import** : PDF, TXT, Markdown, CSV, DOCX, PPTX, EPUB et plusieurs formats audio (MP3, WAV, M4A, AAC, OGG, FLAC, WEBM). La limite d'upload déclarée est de 200 Mo.
-- **Extraction et indexation** : normalisation, découpage en passages, indexation plein texte et embeddings lorsque le fournisseur est configuré ; conservation des positions de page et des repères temporels audio.
-- **Chat documentaire** avec recherche hybride, réponses en flux et citations vérifiables reliées aux passages.
-- **Sélection des sources** pour délimiter le corpus utilisé dans les échanges.
-- **Assistant vocal Gemini Live** : conversation bidirectionnelle, transcription des tours, recherche documentaire via outil et rattachement des passages retrouvés aux réponses vocales.
-- **Studio** avec génération de rapports, fiches de révision, quiz, cartes mentales et Audio Overview.
-- **Recherche web rapide** avec sélection des résultats avant import comme sources.
-- **Modèles OpenRouter configurables par fonctionnalité**, avec filtrage de compatibilité, informations de modalité, contexte et coût/gratuité.
-- **Collaboration et contrôle d'accès** : rôles, invitations, liens de partage et séparation des accès côté serveur.
-- **Application Electron Windows** et mécanisme de mise à jour automatique intégré au processus desktop.
-
-### Limites techniques visibles dans le code inspecté
-
-- Les PDF scannés sans couche texte remontent encore une erreur `needs_ocr` : la reconnaissance OCR n'est pas opérationnelle dans le parcours d'ingestion inspecté.
-- Le catalogue d'import ne déclare pas encore certains formats souhaités comme XLSX, DOC, PPT, RTF, images ou vidéo.
-- Le connecteur Google Drive n'est pas présent dans les parcours d'import et d'ingestion inspectés.
-- Les formats de sortie du Studio sont aujourd'hui centrés sur le contenu Markdown et les artefacts existants ; une chaîne complète de création et d'export de documents bureautiques riches reste à construire.
-- Le paiement est encore simulé dans le code de configuration inspecté ; il ne constitue donc pas encore une chaîne d'abonnement commerciale finalisée.
-- Le traitement des sources est asynchrone et robuste dans son principe, mais le produit gagnerait à rendre davantage visibles la provenance, les versions, les actualisations et la qualité de l'indexation.
-
-Ces constats sont une photographie du code consulté, pas une affirmation que chaque fonction a été validée en production. L'analyse n'a pas exécuté l'application ni ses tests.
+Le mode vocal doit conserver les qualités fondamentales de Leanna Notebook :
+- réponses ancrées dans les sources du notebook ;
+- citations vérifiables et navigation vers les passages ;
+- respect des sources sélectionnées et des permissions ;
+- transparence sur les informations introuvables ou contradictoires ;
+- contrôle utilisateur sur le microphone, les données et les actions ;
+- continuité entre conversation vocale, chat et Studio.
 
 ---
 
-## 3. Positionnement et promesse
+## 2. État actuel observé dans le code
 
-### Positionnement
+L'analyse a porté notamment sur :
+- `apps/web/app/notebook/[id]/voice-assistant.tsx`
+- `apps/web/app/notebook/[id]/voice-turn.ts`
+- `apps/web/app/api/v1/notebooks/[id]/voice-token/route.ts`
+- `apps/web/app/api/v1/notebooks/[id]/voice-search/route.ts`
 
-**Leanna Notebook est un workspace de connaissance assisté par IA, centré sur les sources et orienté vers la production.**
+### Capacités déjà présentes
 
-Il s'adresse aux personnes qui travaillent à partir de beaucoup de matière : documents professionnels, cours, recherches, comptes rendus, procédures, dossiers clients, contenus web, fichiers audio et corpus personnels.
+1. Connexion temps réel à Gemini Live avec le modèle configuré côté serveur.
+2. Création d'un jeton éphémère ; la clé API longue durée reste côté serveur.
+3. Capture microphone via Web Audio / AudioWorklet.
+4. Conversion audio PCM et envoi audio bidirectionnel.
+5. Lecture des réponses audio PCM en flux.
+6. Transcriptions entrantes et sortantes.
+7. Détection d'interruption par le modèle et arrêt de la lecture audio en cours.
+8. Commande d'outil `search_notebook_sources` pour interroger les sources sélectionnées.
+9. Recherche documentaire hybride dans le notebook et retour de passages sourcés.
+10. Déduplication des citations et attente des recherches en cours avant de finaliser un tour.
+11. Affichage des transcriptions, réponses et sources consultées.
+12. Enregistrement des tours vocaux dans l'historique de conversation.
 
-### Promesse principale
+Le composant possède également un contrôle de microphone muet et un bouton pour terminer la session.
 
-« Déposez vos connaissances. Posez vos questions. Vérifiez les réponses. Produisez quelque chose d'utile. »
+### Limites et opportunités constatées
 
-### Principes produit non négociables
+- La voix est envoyée en dur au démarrage (`Aoede`) alors que le serveur accepte plusieurs voix Gemini.
+- Le composant vocal concentre beaucoup de responsabilités : capture, transport, lecture, recherche, état UI et persistance.
+- La configuration de session n'est pas encore exposée comme un profil utilisateur complet.
+- L'interface présente les tours terminés, mais le contrôle du déroulement, des sources et des actions reste limité.
+- La recherche vocale réserve actuellement l'usage sous la fonctionnalité `chat` ; une mesure distincte de la consommation vocale mérite d'être définie.
+- Il n'y a pas encore de gestion produit complète de la reconnexion, de la reprise, du diagnostic audio ou des préférences de confidentialité.
+- La fonction de recherche est le seul outil métier exposé dans la configuration vocale inspectée : la voix ne pilote pas encore réellement les autres fonctions du notebook.
 
-1. **Source avant supposition** — les réponses documentaires distinguent ce qui est prouvé, absent, contradictoire ou extrapolé.
-2. **Traçabilité native** — chaque élément important doit pouvoir remonter à un document, une page, un passage ou un horodatage.
-3. **Contexte maîtrisé** — l'utilisateur contrôle les sources prises en compte et peut comprendre pourquoi une réponse a été produite.
-4. **Travail continu** — un notebook est un espace vivant, pas un simple dépôt de fichiers à interroger une fois.
-5. **Production exploitable** — les contenus générés doivent être modifiables, exportables et réutilisables.
-6. **Sécurité par conception** — séparation stricte des espaces, permissions vérifiées côté serveur, stockage privé et actions sensibles auditées.
-7. **Choix IA transparent** — les capacités, coûts, limites et fournisseurs doivent être visibles sans imposer un modèle unique.
+Ces observations décrivent les fichiers consultés ; elles ne constituent pas un audit d'exécution ni une validation de chaque scénario en production.
 
 ---
 
-## 4. Les 20 fonctionnalités recommandées
+## 3. Les 20 fonctionnalités à développer
 
-Les fonctionnalités ci-dessous sont des opportunités nouvelles ou des extensions substantielles. Elles ne doivent pas être considérées comme déjà implémentées simplement parce qu'un composant voisin existe.
+Les fonctionnalités sont des propositions d'évolution, pas des capacités prétendument déjà disponibles. Lorsqu'une fonction existe partiellement, la proposition vise son approfondissement.
 
-### Priorité P0 — Rendre le corpus fiable et complet
+### Priorité P0 — Rendre l'expérience vocale fiable et personnalisable
 
-#### 1. OCR intelligent pour les documents et images
+#### 1. Profils vocaux et choix de voix persistant
 
-**Valeur :** rendre consultables les scans, photos de documents, captures d'écran et PDF image.
+Permettre de choisir la voix de Leanna et de conserver ce choix entre les sessions.
 
-- Détecter automatiquement si un fichier contient une couche texte exploitable.
-- Lancer l'OCR uniquement lorsque nécessaire, via le fournisseur configuré pour cette capacité.
-- Conserver les pages, blocs, coordonnées et scores de confiance.
-- Permettre de corriger le texte reconnu et de relancer l'extraction.
-- Afficher clairement les zones ou mots incertains.
+- Catalogue des voix prises en charge par le modèle réellement sélectionné.
+- Échantillon d'écoute avant validation, lorsque le fournisseur le permet.
+- Préférences par utilisateur et éventuellement par notebook.
+- Paramètres de débit, style et expressivité uniquement si le modèle expose ces contrôles.
+- Fallback clair si une voix devient indisponible.
 
-**Critères de réussite :** un PDF scanné devient interrogeable ; chaque citation pointe vers la bonne page ; l'utilisateur peut distinguer texte natif et texte OCR.
+**Réussite :** la voix choisie est utilisée à chaque nouvelle session sans valeur codée en dur dans le composant.
 
-#### 2. Connecteur Google Drive avec synchronisation
+#### 2. Modes de prise de parole : mains libres et push-to-talk
 
-**Valeur :** éviter le téléchargement manuel et garder les notebooks alignés sur les documents de travail.
+Adapter l'interaction à différents environnements.
 
-- Connexion OAuth sécurisée et révocable.
-- Parcourir Drive, sélectionner des fichiers ou dossiers et importer en lot.
-- Synchroniser les changements, suppressions et déplacements.
-- Détecter les doublons et suivre les versions.
-- Permettre une synchronisation manuelle ou planifiée.
+- Mode conversation mains libres avec détection de fin de parole.
+- Mode appuyer pour parler, puis relâcher pour envoyer.
+- Mode écoute continue avec commande claire de pause.
+- Indicateur visible du mode actif et de l'état du micro.
+- Raccourci clavier configurable pour activer/désactiver l'écoute.
 
-**Critères de réussite :** un fichier modifié dans Drive est actualisé dans le notebook sans créer une copie parasite ; la révocation coupe immédiatement les accès.
+**Réussite :** l'utilisateur sait toujours quand le microphone capte et peut contrôler l'écoute sans ambiguïté.
 
-#### 3. Centre de contrôle de l'ingestion
+#### 3. Gestion robuste des connexions et reprise de session
 
-**Valeur :** expliquer ce qui arrive aux sources et réduire les imports qui échouent silencieusement.
+Éviter qu'une coupure réseau détruise une conversation en cours.
 
-- Vue détaillée des étapes : réception, extraction, OCR/transcription, découpage, indexation et disponibilité.
-- Afficher la progression, la durée, le volume extrait et les erreurs compréhensibles.
-- Boutons de relance, annulation et réindexation.
-- Historique des tentatives et diagnostic exportable.
-- Indiquer si la recherche vectorielle ou plein texte est utilisée pour chaque source.
+- Détecter les pertes réseau, fermetures WebSocket et expirations de jeton.
+- Reconnexion avec temporisation progressive et limite de tentatives.
+- Renouveler le jeton éphémère en respectant les règles du fournisseur.
+- Préserver localement le dernier tour finalisé et les brouillons de transcription.
+- Proposer de reprendre le contexte ou de démarrer une nouvelle session.
 
-**Critères de réussite :** toute source possède un état explicable et une action de récupération adaptée.
+**Réussite :** une coupure temporaire n'efface pas les tours déjà enregistrés et le statut de reprise est explicite.
 
-#### 4. Versions et actualisation des sources
+#### 4. Diagnostic micro et qualité audio
 
-**Valeur :** éviter qu'une réponse s'appuie sur un document obsolète.
+Aider l'utilisateur à résoudre les problèmes de son avant de commencer.
 
-- Détecter une modification d'un fichier ou d'une URL.
-- Conserver les versions précédentes et leurs empreintes.
-- Comparer les versions avec un résumé des changements.
-- Réindexer sans perdre l'historique ni les références anciennes.
-- Montrer la date de dernière vérification et la version utilisée dans une citation.
+- Sélection du périphérique d'entrée et de sortie.
+- Test de niveau micro avec indicateur visuel.
+- Détection d'entrée silencieuse, saturation et périphérique déconnecté.
+- Vérification des autorisations navigateur/Electron.
+- Conseils de configuration et test de restitution audio.
 
-**Critères de réussite :** l'utilisateur sait quelle version a servi à produire un rapport et peut retrouver l'ancienne.
+**Réussite :** l'utilisateur peut identifier si le problème vient du micro, de la sortie, des permissions ou du service vocal.
 
-#### 5. Recherche documentaire avancée et filtres
+#### 5. Réglages audio et contrôle de lecture
 
-**Valeur :** retrouver une information dans un corpus important sans dépendre uniquement d'une question en langage naturel.
+Donner un contrôle simple sur le confort d'écoute.
 
-- Recherche plein texte, sémantique et hybride avec filtres.
-- Filtres par source, type, date, auteur, page, tag et statut.
-- Opérateurs exacts, exclusions et expressions entre guillemets.
-- Aperçu du passage avec contexte avant/après.
-- Classement explicable et possibilité d'épingler un résultat.
+- Volume indépendant de la sortie vocale de Leanna.
+- Sélection du périphérique audio.
+- Contrôle de vitesse de lecture si compatible avec la restitution.
+- Couper temporairement la sortie sans fermer le microphone.
+- Arrêt immédiat de tout audio en cours lors d'une interruption ou d'un arrêt de session.
 
-**Critères de réussite :** les résultats sont filtrables, reproductibles et ouvrent directement le passage original.
+**Réussite :** les commandes audio sont accessibles pendant une session et leur état est immédiatement compréhensible.
 
-### Priorité P1 — Transformer les connaissances en livrables
+### Priorité P1 — Faire du vocal un assistant documentaire puissant
 
-#### 6. Générateur de documents professionnels multi-formats
+#### 6. Navigation vocale dans les citations
 
-**Valeur :** faire du Studio un véritable atelier de production, et non seulement un générateur de texte.
+Rendre les références aussi utiles à l'oral qu'à l'écran.
 
-- Générer des documents structurés avec styles, tableaux, en-têtes, pieds de page et sommaire.
-- Exporter en DOCX, PDF et Markdown ; ajouter PPTX lorsque le moteur de présentation est prêt.
-- Proposer des formats adaptés : compte rendu, rapport d'activité, cahier des charges, procédure, proposition commerciale, dossier de synthèse.
-- Préserver les citations et une bibliographie vérifiable à l'export.
-- Permettre de choisir le niveau de détail, le ton et le public cible.
+- Leanna annonce le titre et la page ou l'horodatage du passage.
+- Commandes naturelles : « ouvre cette source », « montre le passage », « relis la citation ».
+- Synchronisation de l'ouverture du document avec la lecture vocale.
+- Possibilité de revenir au passage précédent ou suivant.
+- Affichage du niveau de preuve et du contexte autour du passage.
 
-**Critères de réussite :** le fichier exporté est immédiatement présentable et chaque affirmation documentaire importante reste traçable.
+**Réussite :** chaque réponse documentaire importante peut être vérifiée sans rechercher manuellement le document.
 
-#### 7. Éditeur de rapport avec réécriture ciblée
+#### 7. Commandes vocales de contrôle du notebook
 
-**Valeur :** donner à l'utilisateur le contrôle final sur le contenu généré.
+Permettre de piloter les opérations courantes sans toucher l'interface.
 
-- Éditer les sections indépendamment.
-- Demander à l'IA de raccourcir, détailler, clarifier ou reformuler une sélection.
-- Régénérer une section sans réécrire tout le document.
-- Verrouiller les passages validés.
-- Afficher les sources utilisées et les modifications apportées.
+- « Sélectionne cette source », « retire cette source de la sélection ».
+- « Passe au Studio », « ouvre le document ».
+- « Arrête de parler », « répète », « résume en une phrase ».
+- « Garde ce passage », « ajoute une note ».
+- Demander confirmation avant toute suppression, partage ou action sensible.
 
-**Critères de réussite :** une modification locale ne détruit pas les sections déjà validées et les références restent cohérentes.
+**Réussite :** les commandes sont interprétées comme des intentions structurées et les actions sensibles restent soumises à validation.
 
-#### 8. Présentations générées à partir des sources
+#### 8. Interrogation ciblée d'une source ou d'un groupe
 
-**Valeur :** transformer une analyse en support oral rapidement partageable.
+Laisser l'utilisateur définir oralement le périmètre de recherche.
 
-- Générer un plan de diapositives à partir d'un corpus ou d'un rapport.
-- Créer titres, messages clés, notes orateur et suggestions de visuels.
-- Ajuster le nombre de diapositives et le niveau de technicité.
-- Éditer et réordonner les diapositives.
-- Exporter en PPTX et PDF avec références en notes ou en fin de support.
+- Questionner une seule source, plusieurs sources ou tout le notebook.
+- Utiliser le contexte de la conversation pour comprendre « ce document » ou « les deux précédents ».
+- Confirmer le périmètre lorsque le référent est ambigu.
+- Montrer les sources incluses dans la recherche.
+- Respecter strictement les sélections et permissions serveur.
 
-**Critères de réussite :** le support suit un fil narratif, ne surcharge pas les diapositives et reste fidèle aux sources.
+**Réussite :** l'utilisateur peut changer le périmètre en langage naturel et voir quelles sources ont été consultées.
 
-#### 9. Tableaux comparatifs et extraction structurée
+#### 9. Comparaison orale de documents
 
-**Valeur :** passer de documents non structurés à des données directement exploitables.
+Transformer la voix en outil de comparaison.
 
-- Extraire des champs définis par l'utilisateur dans plusieurs documents.
-- Construire des tableaux comparatifs avec une cellule par information.
-- Signaler les valeurs absentes, contradictoires ou non comparables.
-- Relier chaque cellule à sa source exacte.
-- Exporter en CSV et XLSX.
+- « Compare ces deux contrats », « quelles différences entre les versions ? ».
+- Comparer dates, montants, engagements, définitions et conclusions.
+- Lire les différences principales à l'oral.
+- Afficher les deux preuves en parallèle.
+- Signaler les informations absentes ou contradictoires.
 
-**Critères de réussite :** aucune valeur manquante n'est inventée ; chaque cellule est vérifiable.
+**Réussite :** chaque différence annoncée possède une référence vérifiable dans chacun des documents concernés.
 
-#### 10. Modèles de Studio personnalisables et réutilisables
+#### 10. Dictée intelligente de notes et mémos
 
-**Valeur :** standardiser les productions récurrentes.
+Capturer les idées de l'utilisateur pendant qu'il travaille.
 
-- Enregistrer un modèle avec sections, consignes, longueur, ton et formats de sortie.
-- Créer des modèles personnels et des modèles partagés dans une équipe.
-- Suggérer des modèles à partir du type de sources et de l'objectif déclaré.
-- Versionner les modèles.
-- Prévisualiser le résultat attendu avant génération.
+- Créer une note par dictée.
+- Structurer automatiquement en titre, paragraphes, tâches et points clés.
+- Corriger la ponctuation et les répétitions sans modifier le sens.
+- Demander avant d'enregistrer dans le notebook.
+- Relier la note à la conversation ou aux sources concernées.
 
-**Critères de réussite :** un utilisateur peut réutiliser un même cadre de production sans ressaisir ses consignes.
+**Réussite :** une note dictée devient un contenu éditable et sauvegardé dans le bon notebook après confirmation.
 
-### Priorité P1 — Faire émerger la connaissance
+#### 11. Résumé oral à la demande
 
-#### 11. Carte de connaissances transversale
+Proposer des synthèses adaptées à l'écoute.
 
-**Valeur :** relier les concepts, personnes, organisations, projets et événements présents dans les documents.
+- Résumé express, détaillé ou exécutif.
+- Résumé d'une source, d'une sélection ou du notebook complet.
+- Durée cible : 30 secondes, 2 minutes ou 5 minutes.
+- Annonce des limites et des points non couverts.
+- Possibilité de demander un approfondissement sur un point.
 
-- Extraire des entités et relations avec leurs preuves.
-- Visualiser les liens entre sources et notions.
-- Ouvrir les passages justificatifs depuis un nœud ou une relation.
-- Distinguer les relations certaines, probables et contestées.
-- Filtrer la carte par période, source ou thème.
+**Réussite :** la longueur et le niveau de détail respectent la demande, avec des preuves consultables.
 
-**Critères de réussite :** chaque relation visible possède au moins une preuve consultable ; les liens non prouvés ne sont pas présentés comme des faits.
+#### 12. Détection des contradictions avec explication vocale
 
-#### 12. Comparaison multi-sources et détection des contradictions
+Ne pas masquer les désaccords entre sources.
 
-**Valeur :** identifier les divergences plutôt que produire une synthèse artificiellement homogène.
+- Détecter les chiffres, dates ou conclusions incompatibles.
+- Expliquer oralement les deux positions.
+- Citer les documents et passages concernés.
+- Demander à l'utilisateur quelle source fait autorité lorsque nécessaire.
+- Ne jamais arbitrer une contradiction sans fondement.
 
-- Comparer plusieurs documents sur un même sujet.
-- Repérer les chiffres, dates, définitions et conclusions incompatibles.
-- Afficher les éléments qui convergent et ceux qui divergent.
-- Expliquer les différences de périmètre ou de période.
-- Proposer une question de clarification lorsque les sources ne permettent pas de trancher.
+**Réussite :** les contradictions sont présentées comme telles et ne sont pas fusionnées en une réponse artificiellement certaine.
 
-**Critères de réussite :** les contradictions sont présentées avec leurs deux preuves et ne sont pas résolues arbitrairement.
+#### 13. Assistant vocal orienté Studio
 
-#### 13. Briefing automatique et veille sur un notebook
+Passer de la conversation à la création de livrables.
 
-**Valeur :** faire remonter ce qui a changé sans devoir relire tout le corpus.
+- « Prépare un rapport sur ce sujet ».
+- « Transforme cette réponse en plan ».
+- « Crée un quiz à partir de ces documents ».
+- « Prépare une présentation de dix diapositives ».
+- Prévisualiser le type de livrable, son périmètre et ses sources avant lancement.
+- Suivre la génération et annoncer lorsque le résultat est prêt.
 
-- Produire un résumé des nouvelles sources et des versions modifiées.
-- Repérer les changements importants par rapport au dernier briefing.
-- Laisser l'utilisateur définir les sujets à surveiller.
-- Envoyer un digest dans l'application et, ultérieurement, par email.
-- Exiger une preuve pour chaque changement signalé.
+**Réussite :** une commande vocale déclenche un job Studio traçable, avec confirmation du périmètre et accès au résultat.
 
-**Critères de réussite :** chaque briefing indique sa période, son périmètre et les sources nouvelles ou modifiées.
+### Priorité P2 — Créer une expérience vocale différenciante
 
-#### 14. Recherche approfondie multi-étapes
+#### 14. Conversation à deux voix : Leanna et Roxane
 
-**Valeur :** passer de la recherche web rapide à une investigation structurée.
+Créer un mode de discussion avec deux personnalités vocales complémentaires.
 
-- Décomposer une question complexe en sous-questions.
-- Chercher sur le web et dans le corpus existant.
-- Évaluer la pertinence et la diversité des sources.
-- Comparer les informations et relever les incertitudes.
-- Produire un dossier de recherche avec sources, dates et limites.
+- Deux profils configurables : nom, voix, rôle et style de dialogue.
+- Leanna peut mener l'analyse ; Roxane peut challenger, synthétiser ou apporter un second angle.
+- Répartition des prises de parole sans chevauchement audio.
+- L'utilisateur peut adresser une question à l'une ou aux deux.
+- Commandes pour mettre en pause une voix ou revenir au mode mono.
+- Transcription identifiant clairement chaque intervenante.
 
-**Critères de réussite :** l'utilisateur peut inspecter les étapes de recherche et retirer une source avant la synthèse finale.
+**Réussite :** les deux voix sont distinctes, les tours sont synchronisés et les réponses restent ancrées dans les mêmes sources.
 
-### Priorité P2 — Améliorer le travail quotidien et la collaboration
+#### 15. Débat documentaire et contradicteur IA
 
-#### 15. Agent de tâches documentaires avec validation humaine
+Permettre de confronter deux interprétations d'un corpus.
 
-**Valeur :** permettre à l'IA d'exécuter un processus multi-étapes sans perdre le contrôle.
+- Un agent formule une synthèse ; un second cherche les objections et contre-exemples.
+- Chaque intervenant doit justifier ses affirmations avec des passages.
+- L'utilisateur choisit la profondeur et la durée du débat.
+- Possibilité d'intervenir à tout moment.
+- Conclusion finale distinguant consensus, désaccords et questions ouvertes.
 
-- Définir un objectif : analyser un dossier, préparer un rapport, comparer des contrats, etc.
-- Afficher un plan d'exécution avant de commencer.
-- Exécuter les étapes longues en arrière-plan avec progression.
-- Demander une validation avant toute action externe ou irréversible.
-- Conserver un journal des actions, sources consultées et livrables créés.
+**Réussite :** le débat enrichit l'analyse sans inventer de preuves ni transformer une hypothèse en fait.
 
-**Critères de réussite :** aucune action sensible n'est exécutée sans autorisation explicite ; l'utilisateur peut interrompre et reprendre une tâche.
+#### 16. Mode entretien et questions successives
 
-#### 16. Commentaires, annotations et validation collaborative
+Faire de Leanna un interviewer documentaire ou un coach d'apprentissage.
 
-**Valeur :** transformer le partage d'un notebook en véritable travail d'équipe.
+- Poser une question à la fois à partir des sources.
+- Adapter la question suivante à la réponse de l'utilisateur.
+- Modes : révision, entretien, découverte d'un sujet, préparation de réunion.
+- Évaluer les réponses avec explications et références.
+- Générer un bilan final des points maîtrisés et à approfondir.
 
-- Commenter une source, un passage, une réponse ou une section de rapport.
-- Mentionner un collaborateur et attribuer une action.
-- Marquer une section comme à vérifier, validée ou rejetée.
-- Conserver les discussions et décisions liées au contenu.
-- Filtrer les éléments qui nécessitent une revue.
+**Réussite :** les questions sont adaptées au niveau de l'utilisateur et le bilan renvoie aux sources du notebook.
 
-**Critères de réussite :** les décisions de l'équipe restent attachées à l'élément concerné et respectent les rôles d'accès.
+#### 17. Marque-pages vocaux et moments importants
 
-#### 17. Historique des conversations et mémoire de travail contrôlée
+Permettre de retrouver facilement un moment d'une session.
 
-**Valeur :** reprendre un travail sans répéter les mêmes éléments de contexte.
+- « Marque ce passage », « garde cette idée ».
+- Enregistrer le timestamp, la transcription et le contexte de la conversation.
+- Ajouter un titre ou une catégorie.
+- Retrouver les marque-pages dans l'historique.
+- Transformer un marque-page en note ou en tâche.
 
-- Résumer les décisions, questions ouvertes et hypothèses d'une conversation.
-- Permettre de réutiliser un résumé dans une autre conversation du même notebook.
-- Séparer faits issus des sources, préférences utilisateur et hypothèses de travail.
-- Modifier, épingler ou supprimer les éléments de mémoire.
-- Afficher ce qui a été injecté dans le contexte d'une réponse.
+**Réussite :** un moment vocal peut être retrouvé et réutilisé sans réécouter toute la session.
 
-**Critères de réussite :** la mémoire ne mélange pas les notebooks et chaque fait mémorisé peut être relié à son origine ou identifié comme préférence.
+#### 18. Historique vocal enrichi et exportable
 
-#### 18. Connecteurs de travail supplémentaires
+Faire de chaque session une ressource documentaire.
 
-**Valeur :** faire du notebook un point de convergence des informations professionnelles.
+- Historique des sessions avec durée, notebook, participants et sujets.
+- Transcription éditable avec séparation utilisateur/assistant.
+- Recherche dans les conversations vocales.
+- Export TXT, Markdown et PDF.
+- Liens vers les citations et les notes créées pendant la session.
+- Suppression d'une session et de ses données associées.
 
-- Ajouter progressivement OneDrive/SharePoint, Dropbox, Notion et des espaces de stockage compatibles.
-- Prévoir des connecteurs email et calendrier uniquement avec des permissions explicites.
-- Normaliser les sources externes derrière un contrat commun.
-- Gérer les jetons, révocations, erreurs et limites de chaque fournisseur.
-- Autoriser une sélection fine des dossiers et contenus synchronisés.
+**Réussite :** l'utilisateur peut retrouver, corriger, exporter ou supprimer une session selon des règles de conservation explicites.
 
-**Critères de réussite :** chaque connecteur peut être déconnecté et ses données synchronisées peuvent être purgées selon une politique claire.
+#### 19. Mode vocal multilingue
 
-#### 19. Mode desktop hors ligne et synchronisation différée
+Permettre de travailler avec des documents et interlocuteurs de langues différentes.
 
-**Valeur :** rendre l'application Electron utile même avec une connexion instable.
+- Détection de la langue parlée.
+- Choix de la langue de réponse indépendamment de celle des sources.
+- Traduction orale d'un passage avec accès au texte original.
+- Préservation des noms propres, chiffres et termes métier.
+- Gestion explicite des langues non prises en charge par le modèle.
 
-- Mettre en cache les notebooks explicitement choisis.
-- Consulter les sources et artefacts déjà téléchargés.
-- Enregistrer localement les notes et brouillons.
-- Synchroniser les modifications au retour du réseau avec détection des conflits.
-- Chiffrer les données locales et proposer une purge à distance ou à la déconnexion.
+**Réussite :** l'utilisateur peut poser une question dans une langue et obtenir une réponse dans une autre sans perdre les références originales.
 
-**Critères de réussite :** le mode hors ligne ne prétend jamais disposer d'une information distante non synchronisée et les conflits sont résolus de façon explicite.
+#### 20. Confidentialité, consentement et contrôle des données vocales
 
-### Priorité P2 — Préparer une offre durable et mesurable
+Faire de la confiance un élément visible de l'expérience.
 
-#### 20. Console de confiance, qualité IA et consommation
+- Indicateur permanent d'écoute et de transmission audio.
+- Explication claire des traitements effectués par le fournisseur vocal.
+- Contrôles de conservation des transcriptions et de l'historique.
+- Option de ne pas enregistrer un tour vocal dans l'historique, lorsque le produit peut garantir ce comportement.
+- Suppression des données vocales selon une politique documentée.
+- Ne jamais enregistrer l'audio brut sans consentement explicite.
+- Journal des commandes vocales ayant déclenché une action.
 
-**Valeur :** rendre le produit compréhensible, maîtrisable et commercialisable.
-
-- Montrer le modèle réellement utilisé pour chaque tâche, son coût estimé et ses capacités.
-- Mesurer latence, erreurs, tokens, coût et taux de citations vérifiées.
-- Permettre de comparer les modèles sur un jeu de questions de référence.
-- Signaler les réponses sans preuve, les citations invalides et les sources insuffisantes.
-- Ajouter des quotas et une facturation réelle avec historique, reçus et alertes.
-- Fournir un journal de sécurité et des exports de données compréhensibles.
-
-**Critères de réussite :** les coûts sont attribuables à une fonctionnalité ; les évaluations sont reproductibles ; la facturation et les quotas sont cohérents côté serveur.
+**Réussite :** l'utilisateur sait ce qui est capté, transmis, conservé et supprimé ; les choix sont respectés côté serveur et côté client.
 
 ---
 
-## 5. Ordre de réalisation recommandé
+## 4. Parcours vocal cible
 
-L'ordre ci-dessous optimise la valeur utilisateur et réduit les dépendances techniques.
+1. L'utilisateur ouvre le mode vocal depuis son notebook.
+2. Il choisit son profil, sa voix et son mode d'interaction.
+3. Leanna vérifie les permissions, le micro et la connexion.
+4. L'utilisateur parle naturellement et peut interrompre la réponse.
+5. Leanna identifie l'intention : question, recherche, comparaison, dictée ou commande.
+6. Si la question concerne le corpus, Leanna recherche dans les sources autorisées.
+7. Elle répond oralement, affiche les passages et ouvre les citations à la demande.
+8. L'utilisateur peut demander un approfondissement, dicter une note ou lancer une création Studio.
+9. Les éléments importants sont enregistrés selon les préférences de l'utilisateur.
+10. La session se termine proprement ; l'historique et les livrables restent accessibles.
 
-| Vague | Fonctionnalités | Résultat attendu |
+---
+
+## 5. Architecture recommandée
+
+### Séparer les responsabilités
+
+Le composant vocal actuel gère plusieurs responsabilités. Il serait préférable de les isoler progressivement :
+
+- **VoiceSessionManager** : cycle de vie, connexion, jeton, reconnexion et état de session.
+- **AudioCaptureService** : microphone, AudioWorklet, conversion PCM et mute.
+- **AudioPlaybackService** : file de lecture, interruption, volume et périphérique de sortie.
+- **LiveProviderAdapter** : protocole Gemini Live, messages, événements et outils.
+- **VoiceIntentRouter** : classification des intentions et validation des commandes.
+- **VoiceTools** : recherche, comparaison, création de notes et déclenchement Studio.
+- **VoiceTranscriptStore** : transcription, tours, participants, citations et persistance.
+- **VoicePreferences** : voix, langue, mode mains libres, préférences audio et confidentialité.
+
+Cette séparation facilitera les tests et permettra de faire évoluer le fournisseur vocal sans réécrire l'interface.
+
+### Principes de sécurité
+
+- Les jetons Live restent éphémères et limités à une session.
+- Les clés fournisseurs restent côté serveur.
+- Chaque outil métier revérifie l'utilisateur, le notebook et le rôle requis.
+- Les documents sont des données non fiables, jamais des instructions système.
+- Toute action destructive, externe ou engageante exige une confirmation.
+- Les commandes vocales ne contournent jamais les permissions des routes API.
+- Les transcriptions et données audio suivent une politique de conservation explicite.
+
+### Mesure de la consommation
+
+Créer une fonctionnalité d'usage distincte pour la voix, avec au minimum :
+- durée de session ;
+- durée audio entrante et sortante si disponible ;
+- modèle et fournisseur ;
+- coût estimé et coût réel lorsque disponible ;
+- erreurs et reconnexions ;
+- recherches documentaires déclenchées ;
+- actions Studio déclenchées.
+
+Éviter de comptabiliser les recherches vocales sous le seul identifiant `chat` si cela empêche de mesurer correctement le coût du mode vocal.
+
+---
+
+## 6. Roadmap de réalisation proposée
+
+| Phase | Fonctionnalités | Objectif |
 |---|---|---|
-| **A — Corpus fiable** | 1 OCR, 3 centre d'ingestion, 4 versions, 5 recherche avancée | Les sources sont exploitables, actualisées et vérifiables. |
-| **B — Production** | 6 documents multi-formats, 7 éditeur, 9 tableaux structurés, 10 modèles | Le Studio produit des livrables réellement utilisables. |
-| **C — Connexions et intelligence** | 2 Google Drive, 11 carte de connaissances, 12 contradictions, 14 recherche approfondie | Le notebook devient un espace de connaissance vivant. |
-| **D — Travail d'équipe et automatisation** | 13 veille, 15 agent, 16 collaboration, 17 mémoire contrôlée, 18 connecteurs | Les usages récurrents et collectifs sont fluidifiés. |
-| **E — Produit mature** | 8 présentations, 19 hors ligne, 20 qualité et commercialisation | Leanna devient un produit robuste, différenciant et monétisable. |
+| **A — Fiabilité** | 1 à 5 | Une session vocale stable, réglable et diagnostiquable. |
+| **B — Travail documentaire** | 6 à 13 | Consulter, comparer, dicter et produire à la voix. |
+| **C — Expérience avancée** | 14 à 17 | Duo vocal, débat, entretien et marque-pages. |
+| **D — Produit mature** | 18 à 20 | Historique, multilingue et confidentialité avancée. |
 
-### Les 5 premières implémentations à lancer
+### Les 5 développements à commencer
 
-1. **OCR** : débloque immédiatement une classe importante de documents actuellement inexploitable.
-2. **Centre de contrôle d'ingestion** : rend les erreurs et la qualité visibles avant d'ajouter de nouveaux connecteurs.
-3. **Versions des sources** : fondation indispensable pour la synchronisation Drive et la veille.
-4. **Génération de documents professionnels** : transforme le Studio en valeur tangible pour l'utilisateur.
-5. **Recherche avancée** : améliore l'expérience à mesure que le corpus grandit.
-
-Google Drive peut être développé en parallèle du centre d'ingestion si le contrat de source et le suivi des versions sont définis avant le connecteur.
+1. **Profils vocaux persistants** : éliminer la voix codée en dur et rendre la configuration cohérente.
+2. **Gestion de session et reconnexion** : fiabiliser le socle temps réel avant d'ajouter des outils.
+3. **Navigation vocale dans les citations** : rendre l'avantage documentaire immédiatement perceptible.
+4. **Commandes vocales et dictée de notes** : donner une utilité concrète au microphone au-delà des questions/réponses.
+5. **Conversation à deux voix Leanna/Roxane** : développer une expérience différenciante, une fois la gestion des tours et de l'audio stabilisée.
 
 ---
 
-## 6. Expérience utilisateur cible
+## 7. Indicateurs de qualité
 
-### Le parcours principal
-
-1. L'utilisateur crée un notebook autour d'un sujet, d'un projet ou d'un dossier.
-2. Il importe des fichiers, ajoute des liens ou connecte une source cloud.
-3. Leanna explique ce qui a été traité, ce qui a échoué et ce qui est prêt.
-4. L'utilisateur pose une question dans le chat ou à la voix.
-5. Leanna répond avec des citations cliquables, les limites et les éventuelles contradictions.
-6. L'utilisateur sélectionne une réponse, un ensemble de passages ou tout le corpus.
-7. Le Studio transforme cette matière en document, tableau, présentation ou support audio.
-8. L'utilisateur révise, annote, valide et exporte.
-9. Le notebook reste vivant : les sources peuvent évoluer et Leanna signale les changements pertinents.
-
-### Rôle des trois zones principales
-
-- **Sources** : organiser, filtrer, connecter, inspecter et actualiser le corpus.
-- **Chat** : comprendre, questionner, comparer et décider avec l'aide de l'IA.
-- **Studio** : produire, réviser, présenter et exporter les résultats.
-
-Ces zones doivent rester cohérentes : une citation ouverte dans le chat doit retrouver le bon passage dans Sources ; un élément sélectionné dans Studio doit pouvoir être expliqué dans le chat ; un rapport doit conserver les références qui justifient son contenu.
+- Temps médian entre clic sur « démarrer » et première écoute possible.
+- Taux de sessions connectées avec succès.
+- Taux de reconnexion réussie après incident.
+- Latence entre fin de parole utilisateur et début de réponse.
+- Taux de compréhension des commandes vocales.
+- Taux de réponses documentaires avec citations valides.
+- Taux d'interruptions correctement prises en compte.
+- Taux d'échec des outils vocaux et des actions Studio.
+- Coût moyen par minute et par session.
+- Satisfaction après session et taux de réutilisation du mode vocal.
 
 ---
 
-## 7. Indicateurs de réussite
+## 8. Expérience finale recherchée
 
-Ne pas mesurer le succès uniquement au nombre de fonctionnalités livrées.
+Le mode vocal de Leanna doit donner l'impression de parler à un assistant qui connaît le dossier ouvert, pas à un assistant vocal générique.
 
-### Activation
-- Temps entre création du notebook et première source exploitable.
-- Part des nouveaux utilisateurs qui posent une première question.
-- Part des utilisateurs qui créent un premier livrable.
+Il doit pouvoir :
+- expliquer un document en langage simple ;
+- retrouver immédiatement une preuve ;
+- comparer plusieurs versions ;
+- transformer une idée dictée en note structurée ;
+- faire émerger les contradictions ;
+- préparer un rapport ou une présentation ;
+- mener un échange à deux voix ;
+- reprendre une conversation sans perdre les éléments importants.
 
-### Qualité et confiance
-- Taux de sources correctement extraites.
-- Taux de citations vérifiées et ouvrant le bon passage.
-- Taux de réponses signalées comme non pertinentes ou insuffisamment sourcées.
-- Nombre de contradictions correctement détectées.
-- Taux de réussite des imports OCR et cloud.
-
-### Productivité
-- Temps pour produire un rapport exploitable.
-- Nombre de documents réutilisés ou actualisés.
-- Part des livrables exportés ou partagés.
-- Taux de réutilisation des modèles de Studio.
-
-### Fiabilité et économie
-- Taux d'échec et de reprise des jobs.
-- Latence médiane et au 95e percentile par fonctionnalité.
-- Coût IA moyen par notebook actif et par livrable.
-- Taux de conflits et de synchronisations cloud échouées.
-- Incidents d'accès ou de séparation des données : objectif zéro.
-
----
-
-## 8. Garde-fous d'architecture
-
-Les nouvelles fonctionnalités doivent prolonger les fondations déjà présentes plutôt que créer une architecture parallèle.
-
-- Garder le worker et la file de jobs pour les traitements longs ; ne pas faire dépendre une requête utilisateur de l'extraction complète d'un gros fichier.
-- Définir une interface commune de connecteur avec identifiants externes, versions, permissions, état de synchronisation et stratégie de révocation.
-- Séparer extraction, OCR, transcription, normalisation, découpage, embeddings et indexation pour pouvoir relancer une étape sans tout recommencer.
-- Conserver les identifiants de source, de version et de passage dans chaque citation et chaque artefact.
-- Ne jamais considérer une sortie de modèle comme une preuve ; la validation des références doit rester déterministe côté application.
-- Traiter les documents importés comme des données non fiables, jamais comme des instructions système.
-- Maintenir les secrets fournisseurs côté serveur ; ne jamais exposer une clé longue durée au navigateur ou au client Electron.
-- Appliquer les rôles et les politiques RLS à toutes les nouvelles tables et routes.
-- Prévoir quotas, idempotence, annulation, reprise, journalisation et remboursement des unités consommées pour chaque nouveau job.
-- Mesurer les coûts et la qualité par fonctionnalité avant de généraliser un modèle ou un fournisseur.
-
----
-
-## 9. Ce que Leanna Notebook ne doit pas devenir
-
-- Un simple chat générique qui répond sans prouver ses affirmations.
-- Un stockage cloud de plus sans intelligence documentaire.
-- Un générateur de texte qui ne permet ni révision sérieuse ni export professionnel.
-- Une automatisation opaque qui agit sans montrer son plan ou ses conséquences.
-- Un catalogue de connecteurs ajoutés sans gestion cohérente des versions et des permissions.
-- Une interface surchargée de panneaux et de réglages qui masque le parcours principal.
-
-## 10. Vision à long terme
-
-À terme, un notebook doit pouvoir représenter le dossier de travail complet d'une personne ou d'une équipe : ses sources, ses analyses, ses décisions, ses productions et leur historique.
-
-Leanna doit être capable de répondre à trois questions fondamentales :
-
-- **Que savons-nous ?** — avec des preuves et des limites explicites.
-- **Qu'est-ce qui a changé ?** — avec comparaison des versions et veille.
-- **Que pouvons-nous en faire ?** — avec des livrables, des plans et des actions contrôlées.
-
-La réussite du produit sera atteinte lorsque l'utilisateur ne viendra plus seulement dans Leanna pour poser une question à ses fichiers, mais pour piloter tout un travail intellectuel de bout en bout, avec une IA utile, vérifiable et sous contrôle.
+**La vision finale : Leanna devient une interface vocale intelligente sur l'ensemble du savoir contenu dans le notebook, capable de comprendre et d'agir, tout en restant vérifiable, transparente et sous le contrôle de l'utilisateur.**
