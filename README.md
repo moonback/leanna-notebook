@@ -32,7 +32,8 @@ Application SaaS multi-utilisateur (Next.js + Supabase + worker Node), conçue p
 - Import de sources : **PDF, DOCX, PPTX, EPUB, TXT, Markdown, CSV** et **audio MP3/WAV/M4A/AAC/OGG/FLAC/WEBM** (200 Mo max), **page web** (protection SSRF), **texte collé**, **notes**.
 - Traitement en arrière-plan avec progression visible ; messages d’erreur explicites. Les fichiers audio sont transcrits par Deepgram Nova-3 ; les passages gardent leurs horodatages et la visionneuse permet de lire l’original.
 - Sélection des sources interrogées, renommage, suppression.
-- **Guide de source** : résumé et thèmes clés en tête de la visionneuse (cliquer un thème pose la question au chat).\n- **Conversation vocale Gemini Live** : échange audio bidirectionnel en temps réel, interruption naturelle, transcription affichée et recherche RAG dans les sources sélectionnées avant les réponses documentaires. La clé Gemini reste côté serveur ; le navigateur reçoit un jeton éphémère à usage unique.
+- **Guide de source** : résumé et thèmes clés en tête de la visionneuse (cliquer un thème pose la question au chat).
+- **Conversation vocale Gemini Live** : échange audio bidirectionnel en temps réel, interruption naturelle, transcription affichée et recherche RAG dans les sources sélectionnées avant les réponses documentaires. La clé Gemini reste côté serveur ; le navigateur reçoit un jeton éphémère à usage unique.
 
 ### Chat avec citations vérifiables
 - Réponses en flux (streaming), fondées **uniquement** sur les sources sélectionnées (recherche hybride vecteur + plein texte).
@@ -183,7 +184,8 @@ Les fichiers `.env*` ne sont jamais versionnés. Les clés `service_role` et Ope
 | `NEXT_PUBLIC_SUPABASE_URL` | URL de l'API Supabase (local : `http://127.0.0.1:58321`) |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Clé publique `anon` |
 | `SUPABASE_SERVICE_ROLE_KEY` | Clé serveur (écritures après contrôle du rôle) |
-| `OPENROUTER_API_KEY` | Clé OpenRouter ([openrouter.ai/keys](https://openrouter.ai/keys)) |\n| `GEMINI_API_KEY` | Clé Google AI Studio pour les conversations vocales Gemini Live (serveur uniquement) |\n| `GEMINI_API_KEY` | Clé Google AI Studio pour les conversations vocales Gemini Live (clé conservée côté serveur) |
+| `OPENROUTER_API_KEY` | Clé OpenRouter ([openrouter.ai/keys](https://openrouter.ai/keys)) |
+| `GEMINI_API_KEY` | Clé Google AI Studio pour les conversations vocales Gemini Live (serveur uniquement) |
 | `OPENROUTER_CHAT_MODEL` | Identifiant du modèle de chat sur OpenRouter |
 | `TAVILY_API_KEY` | Clé du fournisseur de recherche web Fast Research (également requise côté worker) |
 | `OPENROUTER_EMBEDDINGS_MODEL` | Modèle d'embeddings **1024 dimensions** (facultatif) |
