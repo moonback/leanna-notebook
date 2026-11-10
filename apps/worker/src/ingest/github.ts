@@ -33,17 +33,17 @@ export async function extractGitHubCodebase(rawUrl: string): Promise<string> {
 
   const headers = { Accept: "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28", "User-Agent": "Leanna-Notebook" };
   const request = async (path: string) => {
-    const response = await fetch(\`${API}\${path}\`, { headers, signal: AbortSignal.timeout(20_000) });
+    const response = await fetch(`${API}\${path}`, { headers, signal: AbortSignal.timeout(20_000) });
     if (response.status === 404) throw new PermanentError("github_not_found");
     if (response.status === 403 || response.status === 429) throw new Error("github_rate_limited");
-    if (!response.ok) throw new Error(\`github_http_${response.status}\`);
+    if (!response.ok) throw new Error(`github_http_${response.status}`);
     return response.json() as Promise<any>;
   };
 
-  const branchData = await request(\`/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/branches/${encodeURIComponent(ref)}\`);
+  const branchData = await request(`/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/branches/${encodeURIComponent(ref)}`);
   const commitSha = branchData.commit?.sha;
   if (typeof commitSha !== "string") throw new PermanentError("github_invalid_ref");
-  const tree = await request(\`/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/git/trees/${commitSha}?recursive=1\`);
+  const tree = await request(`/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/git/trees/${commitSha}?recursive=1`);
   if (tree.truncated) throw new PermanentError("github_repo_too_large");
   const files = (tree.tree ?? []).filter((entry: any) => entry.type === "blob" && typeof entry.path === "string" && shouldIndexGitHubPath(entry.path));
   if (!files.length) throw new PermanentError("github_no_indexable_files");
@@ -56,22 +56,22 @@ export async function extractGitHubCodebase(rawUrl: string): Promise<string> {
       if (typeof entry.size !== "number" || entry.size > MAX_FILE_BYTES) return null;
       const rawPath = entry.path.split("/").map(encodeURIComponent).join("/");
       const rawRef = commitSha.split("/").map(encodeURIComponent).join("/");
-      const response = await fetch(\`https://raw.githubusercontent.com/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/${rawRef}/${rawPath}\`, {
+      const response = await fetch(`https://raw.githubusercontent.com/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/${rawRef}/${rawPath}`, {
         headers: { "User-Agent": "Leanna-Notebook" }, signal: AbortSignal.timeout(20_000),
       });
       if (response.status === 404) return null;
-      if (!response.ok) throw new Error(\`github_raw_http_${response.status}\`);
+      if (!response.ok) throw new Error(`github_raw_http_${response.status}`);
       const content = await response.text();
       if (content.includes("\\u0000") || containsPotentialSecret(content)) return null;
       const bytes = Buffer.byteLength(content, "utf8");
       total += bytes;
       if (total > MAX_TOTAL_BYTES) throw new PermanentError("github_repo_too_large");
       const lines = content.replace(/\r\n?/g, "\n").split("\n");
-      const numbered = lines.map((line, index) => \`${String(index + 1).padStart(5, "0")} | ${line}\`).join("\n");
-      return \`## FILE: ${entry.path}\n${numbered}\`;
+      const numbered = lines.map((line, index) => `${String(index + 1).padStart(5, "0")} | ${line}`).join("\n");
+      return `## FILE: ${entry.path}\n${numbered}`;
     }));
     sections.push(...batch.filter((value): value is string => Boolean(value)));
   }
   if (!sections.length) throw new PermanentError("github_no_indexable_files");
-  return \`GITHUB CODEBASE: ${owner}/${repo}\nREF: ${ref}\nFILES INDEXED: ${sections.length}\n\n${sections.join("\n\n---\n\n")}\`;
+  return `GITHUB CODEBASE: ${owner}/${repo}\nREF: ${ref}\nFILES INDEXED: ${sections.length}\n\n${sections.join("\n\n---\n\n")}`;
 }
