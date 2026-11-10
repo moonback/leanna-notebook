@@ -35,9 +35,18 @@ export async function requireRole(notebookId: string, min: Role): Promise<Role> 
   return role;
 }
 
+/** Derrière un proxy (Railway), `nextUrl.origin` peut être l'adresse interne : on compare aussi à l'hôte public transmis. */
+function sameOrigin(req: NextRequest, origin: string): boolean {
+  if (origin === req.nextUrl.origin) return true;
+  const host = (req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? "").split(",")[0]?.trim();
+  if (!host) return false;
+  const proto = (req.headers.get("x-forwarded-proto") ?? "https").split(",")[0]?.trim();
+  return origin === `${proto}://${host}`;
+}
+
 export async function parseBody<T extends z.ZodTypeAny>(req: NextRequest, schema: T): Promise<z.infer<T>> {
   const origin = req.headers.get("origin");
-  if (origin && origin !== req.nextUrl.origin) throw new ApiError(403, "forbidden");
+  if (origin && !sameOrigin(req, origin)) throw new ApiError(403, "forbidden");
   let body: unknown;
   try { body = await req.json(); } catch { throw new ApiError(400, "invalid_json"); }
   const parsed = schema.safeParse(body);
