@@ -8,12 +8,13 @@
     "dev": "node scripts/check-port.cjs && pnpm build && concurrently -k -s first \"pnpm --dir ../web exec next dev --hostname 127.0.0.1 --port 3000\" \"wait-on --timeout 60000 --interval 500 http://127.0.0.1:3000 && electron .\"",
     "test": "pnpm build && node --test test/*.test.cjs",
     "doctor": "node scripts/doctor.cjs",
-    "dist:win": "pnpm build && node scripts/write-build-config.cjs && pnpm dlx electron-builder@26.0.12 --config electron-builder.yml --win nsis --x64"
+    "dist:win": "pnpm build && node scripts/write-build-config.cjs && electron-builder --config electron-builder.yml --win nsis --x64"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "concurrently": "^9.2.1",
     "electron": "^38.0.0",
+    "electron-builder": "26.0.12",
     "typescript": "^5.9.0",
     "wait-on": "^8.0.4"
   }
