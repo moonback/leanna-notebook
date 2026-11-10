@@ -1,6 +1,6 @@
 "use client";
 import * as React from "react";
-import { AlertTriangle, ArrowUp, BookmarkPlus, Eraser, Settings2, ThumbsDown, ThumbsUp, FileText, Globe, Inbox, Lock, NotebookPen, Pencil, Plus, Square, Sparkles, Trash2, Type, Upload } from "lucide-react";
+import { AlertTriangle, ArrowUp, AudioLines, BookmarkPlus, Eraser, Settings2, ThumbsDown, ThumbsUp, FileText, Globe, Inbox, Lock, NotebookPen, Pencil, Plus, Square, Sparkles, Trash2, Type, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Textarea } from "@/components/ui/field";
 import { Alert, Badge, EmptyState, Progress, Skeleton } from "@/components/ui/feedback";
@@ -39,7 +39,7 @@ const ERRORS: Record<string, string> = {
   lease_expired: "Le traitement a été interrompu. Supprimez puis réimportez la source.",
   archive_too_large: "Fichier compressé trop volumineux une fois décompressé.",
 };
-const KIND_ICON: Record<string, React.ReactNode> = { web: <Globe />, text: <Type />, note: <NotebookPen /> };
+const KIND_ICON: Record<string, React.ReactNode> = { web: <Globe />, text: <Type />, note: <NotebookPen />, audio: <AudioLines /> };
 const busyStatus = (s: string) => s === "pending" || s === "processing";
 
 /** Vrai si la requête média correspond (suit le redimensionnement). Rendu serveur : vue bureau. */
@@ -606,7 +606,7 @@ function AddSourcesDialog({ open, onOpenChange, notebookId, onAdded }: { open: b
 /* --------------------------------------------------------- Visionneuse ---- */
 
 function SourceViewer({ state, onClose, onAsk }: { state: { sourceId: string; range?: [number, number] } | null; onClose: () => void; onAsk: (text: string) => void }) {
-  const [source, setSource] = React.useState<{ title: string; extracted_text: string | null; guide: { summary: string; topics: string[] } | null } | null>(null);
+  const [source, setSource] = React.useState<{ title: string; kind: string; extracted_text: string | null; guide: { summary: string; topics: string[] } | null } | null>(null);
   const [failed, setFailed] = React.useState(false);
   const mark = React.useRef<HTMLElement>(null);
   React.useEffect(() => {
