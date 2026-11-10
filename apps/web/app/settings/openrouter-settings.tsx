@@ -37,18 +37,26 @@ export function OpenRouterSettings() {
       setModels(data.models);
       const next: Record<string, string> = {};
       for (const p of data.preferences as Preference[]) next[p.feature] = p.modelId;
-      const defaultModel = data.defaultModelId && data.models.some((m: Model) => m.id === data.defaultModelId && m.compatibleFeatures.includes("chat"))
-        ? data.defaultModelId
-        : data.models.find((m: Model) => m.compatibleFeatures.includes("chat"))?.id ?? "";
-      for (const f of AI_FEATURES) next[f.id] ??= defaultModel;
+      for (const feature of AI_FEATURES) {
+        const compatible = data.models.filter((m: Model) => m.compatibleFeatures.includes(feature.id));
+        const savedModel = next[feature.id];
+        const savedIsCompatible = savedModel && compatible.some((m: Model) => m.id === savedModel);
+        const preferredDefault = feature.id === "chat" ? data.defaultModelId : null;
+        next[feature.id] = savedIsCompatible
+          ? savedModel
+          : compatible.find((m: Model) => m.id === preferredDefault)?.id ?? compatible[0]?.id ?? "";
+      }
       setPreferences(next);
     }).catch((e) => alive && setError(e.message)).finally(() => alive && setLoading(false));
     return () => { alive = false; };
   }, []);
   const queryText = query.trim().toLowerCase();
-  const modelsForFeature = (featureId: string) => models
-    .filter((model) => model.compatibleFeatures.includes(featureId))
-    .filter((model) => !queryText || model.name.toLowerCase().includes(queryText) || model.id.toLowerCase().includes(queryText));
+  const modelsForFeature = (featureId: string) => {
+    const compatible = models.filter((model) => model.compatibleFeatures.includes(featureId));
+    const matches = compatible.filter((model) => !queryText || model.name.toLowerCase().includes(queryText) || model.id.toLowerCase().includes(queryText));
+    const selected = compatible.find((model) => model.id === preferences[featureId]);
+    return selected && !matches.some((model) => model.id === selected.id) ? [selected, ...matches] : matches;
+  };
   async function save() {
     setSaving(true); setError(""); setNotice("");
     try {
@@ -65,7 +73,8 @@ export function OpenRouterSettings() {
     {loading ? <p className="text-sm text-text-muted">Chargement du catalogue OpenRouter…</p> : error && !models.length ? <p role="alert" className="text-sm text-danger">{error}</p> : <>
       <div className="grid gap-4">{AI_FEATURES.map((feature) => {
         const compatible = modelsForFeature(feature.id);
-        const selected = compatible.find((model) => model.id === preferences[feature.id]);
+        const allCompatible = models.filter((model) => model.compatibleFeatures.includes(feature.id));
+        const selected = allCompatible.find((model) => model.id === preferences[feature.id]);
         return <div key={feature.id} className="grid gap-2 border-b pb-4 last:border-0">
           <div><h3 className="text-sm font-medium">{feature.label}</h3><p className="text-xs text-text-muted">{feature.description}</p></div>
           <select aria-label={`Modèle compatible pour ${feature.label}`} value={preferences[feature.id] ?? ""} onChange={(e) => setPreferences((p) => ({ ...p, [feature.id]: e.target.value }))} className="h-10 w-full rounded-md border bg-surface px-3 text-sm">
@@ -73,7 +82,8 @@ export function OpenRouterSettings() {
             {compatible.map((model) => <option key={model.id} value={model.id}>{model.name} — {priceLabel(model)} — {model.id}</option>)}
           </select>
           {selected && <p className="text-xs text-text-subtle">Tarif : {priceLabel(selected)} · Entrée : {money(selected.promptPrice)} · Sortie : {money(selected.completionPrice)} · Contexte : {selected.contextLength?.toLocaleString("fr-FR") ?? "inconnu"} tokens · Entrées : {selected.inputModalities.join(", ") || "inconnues"} · Sorties : {selected.outputModalities.join(", ") || "inconnues"}</p>}
-          {!compatible.length && <p className="text-xs text-text-subtle">Aucun modèle du catalogue ne déclare les modalités requises (texte en entrée et en sortie).</p>}
+          {!allCompatible.length && <p className="text-xs text-text-subtle">Aucun modèle du catalogue ne déclare les modalités requises (texte en entrée et en sortie).</p>}
+          {allCompatible.length > 0 && !compatible.length && <p className="text-xs text-text-subtle">Aucun résultat pour cette recherche. Effacez le filtre pour revoir les modèles compatibles.</p>}
         </div>;
       })}</div>
       {error && <p role="alert" className="text-sm text-danger">{error}</p>}
