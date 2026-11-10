@@ -144,7 +144,7 @@ export function Workspace({ notebookId, initialTitle, role, allowCopies }: { not
   const allSelected = ready.length > 0 && selectedCount === ready.length;
 
   const sourcesPanel = (
-    <Panel id="sources" title="Sources" className="h-full" actions={canEdit && <span className="flex gap-1"><FastResearch notebookId={notebookId} onImported={() => void load()} /><Button size="sm" variant="ghost" onClick={() => setNoteEditor({})}><NotebookPen aria-hidden /> Note</Button><Button size="sm" variant="soft" onClick={() => setAdding(true)}><Plus aria-hidden /> Ajouter</Button></span>}>
+    <Panel id="sources" title="Sources" className="h-full" actions={canEdit && <span className="flex flex-wrap items-center gap-1"><FastResearch notebookId={notebookId} onImported={() => void load()} /><Button size="sm" variant="ghost" onClick={() => setNoteEditor({})}><NotebookPen aria-hidden /> Note</Button><Button size="sm" variant="soft" onClick={() => setAdding(true)}><Plus aria-hidden /> Ajouter</Button></span>}>
       {loadError ? (
         <div className="p-4"><Alert tone="danger" title="Sources indisponibles" action={<Button size="sm" variant="secondary" onClick={load}>Réessayer</Button>} /></div>
       ) : sources === null ? (

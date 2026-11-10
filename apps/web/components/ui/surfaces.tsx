@@ -31,9 +31,9 @@ export function Panel({
       aria-labelledby={`${id}-title`}
       className={cn("flex min-h-0 flex-col rounded-xl border bg-surface-raised", collapsed && "w-[var(--panel-collapsed-w)]", className)}
     >
-      <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
-        <h2 id={`${id}-title`} className={cn("flex-1 truncate text-sm font-semibold", collapsed && "sr-only")}>{title}</h2>
-        {!collapsed && actions}
+      <header className="flex min-h-12 shrink-0 flex-wrap items-center gap-x-2 gap-y-1 border-b px-4 py-2">
+        <h2 id={`${id}-title`} className={cn("shrink-0 text-sm font-semibold", !collapsed && "mr-auto", collapsed && "sr-only")}>{title}</h2>
+        {!collapsed && actions && <div className="flex min-w-0 flex-wrap items-center justify-end gap-1">{actions}</div>}
         {onToggle && (
           <button
             type="button"
