@@ -3,7 +3,8 @@ import { PermanentError, type Handler } from "../worker.ts";
 import type { Embedder } from "../ai/embeddings.ts";
 import { chunk, normalize } from "./chunker.ts";
 import { extract } from "./extract.ts";
-import { enqueueSummaries } from "../studio/summaries.ts";\nimport type { Transcriber } from "../ai/transcription.ts";
+import { enqueueSummaries } from "../studio/summaries.ts";
+import type { Transcriber } from "../ai/transcription.ts";
 
 const FTS_CONFIG: Record<string, string> = { fr: "french", en: "english", es: "spanish", de: "german", it: "italian", pt: "portuguese", nl: "dutch" };
 
