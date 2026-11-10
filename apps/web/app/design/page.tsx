@@ -13,7 +13,7 @@ import { Badge, Skeleton, Progress, EmptyState, Alert } from "@/components/ui/fe
 import { Card, Panel, Table, Th, Td, Tr, ListRow } from "@/components/ui/surfaces";
 import { Citation } from "@/components/ui/citation";
 import { toast } from "@/components/ui/toast";
-import tokens from "../../../../replica/design/tokens.json";
+import tokens from "./tokens.json";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
