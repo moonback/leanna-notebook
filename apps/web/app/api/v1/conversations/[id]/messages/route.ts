@@ -71,11 +71,12 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
   const db = createServiceClient();
 
   // Sources prêtes et sélectionnées (défaut : toutes sauf les désélections de l'utilisateur)
-  const [{ data: ready }, { data: desel }, { data: nb }, { data: profile }] = await Promise.all([
+  const [{ data: ready }, { data: desel }, { data: nb }, { data: profile }, { data: promptOverride }] = await Promise.all([
     db.from("sources").select("id, title, fts_config").eq("notebook_id", conv.notebook_id).eq("status", "ready"),
     db.from("source_deselections").select("source_id").eq("notebook_id", conv.notebook_id).eq("user_id", user.id),
     db.from("notebooks").select("chat_style, chat_custom_prompt, response_length, output_language").eq("id", conv.notebook_id).single(),
     db.from("profiles").select("output_language").eq("id", user.id).single(),
+    db.from("ai_prompt_overrides").select("content").eq("user_id", user.id).eq("prompt_key", "chat").maybeSingle(),
   ]);
   const off = new Set((desel ?? []).map((d) => d.source_id));
   const selected = (ready ?? []).filter((s) => (sourceIds ? sourceIds.includes(s.id) : !off.has(s.id)));
@@ -115,7 +116,7 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
     .map((h, i) => ({ n: i + 1, chunk_id: h.chunk_id, source_id: h.source_id, source_title: titles.get(h.source_id) ?? "source", content: h.content, char_start: h.char_start, char_end: h.char_end, page_start: h.page_start }));
 
   const messages: ChatMessage[] = [
-    { role: "system", content: systemPrompt(nb?.output_language ?? profile?.output_language ?? "fr", nb?.chat_style ?? "default", nb?.chat_custom_prompt ?? null, nb?.response_length ?? "default", passages.length > 0) },
+    { role: "system", content: [promptOverride?.content, systemPrompt(nb?.output_language ?? profile?.output_language ?? "fr", nb?.chat_style ?? "default", nb?.chat_custom_prompt ?? null, nb?.response_length ?? "default", passages.length > 0)].filter(Boolean).join("\n\n") },
     ...(history ?? []).reverse().map((m) => ({ role: m.role as "user" | "assistant", content: m.content })),
     { role: "user", content: `<passages>\n${formatPassages(passages)}\n</passages>\n\nQuestion : ${text}` },
   ];

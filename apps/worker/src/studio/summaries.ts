@@ -34,6 +34,13 @@ async function outputLanguage(db: SupabaseClient, notebookId: string) {
   return (p?.output_language as string | undefined) ?? "fr";
 }
 
+async function promptOverride(db: SupabaseClient, notebookId: string, key: "summary.source" | "summary.notebook") {
+  const { data: notebook } = await db.from("notebooks").select("created_by").eq("id", notebookId).maybeSingle();
+  if (!notebook?.created_by) return null;
+  const { data } = await db.from("ai_prompt_overrides").select("content").eq("user_id", notebook.created_by).eq("prompt_key", key).maybeSingle();
+  return data?.content ?? null;
+}
+
 /**
  * Après une ingestion réussie (ou une suppression) : guide de la source + résumé du notebook, différé.
  * Gratuit pour l'utilisateur (pas de quota), comme dans l'original. Rien n'est créé sans modèle configuré.
@@ -57,7 +64,9 @@ export function guideHandler(db: SupabaseClient, llm: Llm): Handler {
     const text = String(src.extracted_text ?? "").slice(0, GUIDE_INPUT_CHARS);
     if (!text.trim()) return { skipped: "texte_vide" };
     await ctx.progress(30, "résumé");
+    const customPrompt = await promptOverride(db, src.notebook_id, "summary.source");
     const out = await llm([
+      ...(customPrompt ? [{ role: "system" as const, content: customPrompt }] : []),
       { role: "system", content: `${rules(await outputLanguage(db, src.notebook_id))}\nTÂCHE : résume cette source en 3 à 5 phrases et liste 3 à 8 thèmes clés (2 à 5 mots chacun). Réponds UNIQUEMENT en JSON : {"summary":"…","topics":["…"]}` },
       { role: "user", content: `<source titre="${src.title.replace(/"/g, "'")}">\n${text}\n</source>` },
     ], { json: true, maxTokens: 800 });
@@ -80,7 +89,9 @@ export function overviewHandler(db: SupabaseClient, llm: Llm): Handler {
     await ctx.progress(20, "lecture des sources");
     const passages = await gatherPassages(db, nbId, [], OVERVIEW_INPUT_CHARS);
     await ctx.progress(50, "résumé");
+    const customPrompt = await promptOverride(db, nbId, "summary.notebook");
     const out = await llm([
+      ...(customPrompt ? [{ role: "system" as const, content: customPrompt }] : []),
       { role: "system", content: `${rules(await outputLanguage(db, nbId))}\nTÂCHE : écris un résumé d'ensemble des passages (un paragraphe de 4 à 6 phrases) et 3 questions courtes et précises auxquelles ces sources permettent de répondre. Réponds UNIQUEMENT en JSON : {"overview":"…","questions":["…","…","…"]}` },
       { role: "user", content: `<passages>\n${formatPassages(passages)}\n</passages>` },
     ], { json: true, maxTokens: 900 });
