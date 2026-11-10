@@ -40,8 +40,13 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
   if (userId && userId === nb.created_by) throw new ApiError(409, "already_owner");
   const limit = (nb.workspaces as unknown as { plans: { limits: { max_members_per_notebook?: number } } } | null)?.plans?.limits?.max_members_per_notebook;
   if (limit != null && (count ?? 0) >= limit) throw new ApiError(409, "max_members");
+  // Libère immédiatement une invitation expirée portant la même adresse, sans attendre le cron quotidien.
+  if (!userId) {
+    await db.from("notebook_members").delete().eq("notebook_id", id).eq("invited_email", email)
+      .is("user_id", null).lte("expires_at", new Date().toISOString());
+  }
   const { data: member, error } = await db.from("notebook_members")
-    .insert({ notebook_id: id, role, invited_by: user.id, ...(userId ? { user_id: userId } : { invited_email: email }) })
+    .insert({ notebook_id: id, role, invited_by: user.id, ...(userId ? { user_id: userId } : { invited_email: email, expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() }) })
     .select("id").single();
   if (error?.code === "23505") throw new ApiError(409, "already_member");
   if (error) throw error;

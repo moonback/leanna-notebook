@@ -79,11 +79,12 @@ export function Dashboard({ initial, loadError, initialView, name }: { initial: 
       {loadError && <Alert tone="danger" title="Impossible de charger vos notebooks" action={<Button size="sm" variant="secondary" onClick={() => router.refresh()}>Réessayer</Button>} />}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)}>
+        <Tabs value={tab} onValueChange={(v) => { if (v === "discover") router.push("/discover"); else setTab(v as Tab); }}>
           <TabsList aria-label="Filtrer les notebooks">
             <TabsTrigger value="all">Tous</TabsTrigger>
             <TabsTrigger value="mine">Les miens</TabsTrigger>
             <TabsTrigger value="shared">Partagés avec moi</TabsTrigger>
+            <TabsTrigger value="discover">Découvrir</TabsTrigger>
           </TabsList>
         </Tabs>
         <div className="flex w-full items-center gap-2 sm:w-auto">

@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { Studio } from "./studio";
 import { CopyButton } from "./copy-button";
 import { ShareButton } from "./share-dialog";
+import { FastResearch } from "./fast-research";
 
 export type Role = "chat" | "viewer" | "editor" | "owner";
 type Source = { id: string; kind: string; title: string; status: string; error_code: string | null; word_count: number | null };
@@ -137,7 +138,7 @@ export function Workspace({ notebookId, initialTitle, role, allowCopies }: { not
   const allSelected = ready.length > 0 && selectedCount === ready.length;
 
   const sourcesPanel = (
-    <Panel id="sources" title="Sources" className="h-full" actions={canEdit && <span className="flex gap-1"><Button size="sm" variant="ghost" onClick={() => setNoteEditor({})}><NotebookPen aria-hidden /> Note</Button><Button size="sm" variant="soft" onClick={() => setAdding(true)}><Plus aria-hidden /> Ajouter</Button></span>}>
+    <Panel id="sources" title="Sources" className="h-full" actions={canEdit && <span className="flex gap-1"><FastResearch notebookId={notebookId} onImported={() => void load()} /><Button size="sm" variant="ghost" onClick={() => setNoteEditor({})}><NotebookPen aria-hidden /> Note</Button><Button size="sm" variant="soft" onClick={() => setAdding(true)}><Plus aria-hidden /> Ajouter</Button></span>}>
       {loadError ? (
         <div className="p-4"><Alert tone="danger" title="Sources indisponibles" action={<Button size="sm" variant="secondary" onClick={load}>Réessayer</Button>} /></div>
       ) : sources === null ? (

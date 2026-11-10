@@ -47,6 +47,9 @@ Application SaaS multi-utilisateur (Next.js + Supabase + worker Node), conçue p
 - **Fiches de révision** : retourner, « Je savais » / « À revoir », reprise là où on s'est arrêté, export **CSV**.
 - **Quiz** (QCM) : indice, explication, score enregistré, reprise, « Expliquer dans le chat ».
 - **Carte mentale** dépliable ; cliquer un thème l'explore dans le chat.
+- **Fast Research (B17)** : recherche web asynchrone, cinq résultats maximum avec extrait explicatif, sélection multiple et import direct comme sources indexées.
+- **Découvrir (S04)** : galerie de notebooks éditoriaux publiés, ouverture en lecture seule et copie dans sa bibliothèque si autorisée.
+- **Invitations** : les invitations en attente expirent après 30 jours et sont nettoyées quotidiennement par pg_cron.
 - Options (difficulté, quantité, consignes libres), génération en arrière-plan, point « non lu », notification du navigateur quand l'onglet est en arrière-plan, crédit restitué en cas d'échec.
 
 ### Compte, partage et offres
@@ -108,6 +111,7 @@ apps/
     lib/                  Auth/rôles, validation (zod), clients Supabase, OpenRouter, facturation
   worker/                 Worker de jobs
     src/ingest/           Extraction, découpage, protection SSRF
+    src/research/        Recherche web Fast Research (Tavily)
     src/studio/           Génération Studio, guides de source, résumés
     src/ai/               Clients OpenRouter (génération, embeddings)
 packages/
@@ -180,6 +184,7 @@ Les fichiers `.env*` ne sont jamais versionnés. Les clés `service_role` et Ope
 | `SUPABASE_SERVICE_ROLE_KEY` | Clé serveur (écritures après contrôle du rôle) |
 | `OPENROUTER_API_KEY` | Clé OpenRouter ([openrouter.ai/keys](https://openrouter.ai/keys)) |
 | `OPENROUTER_CHAT_MODEL` | Identifiant du modèle de chat sur OpenRouter |
+| `TAVILY_API_KEY` | Clé du fournisseur de recherche web Fast Research (également requise côté worker) |
 | `OPENROUTER_EMBEDDINGS_MODEL` | Modèle d'embeddings **1024 dimensions** (facultatif) |
 | `OPENROUTER_BASE_URL` | Facultatif : autre point d'accès compatible (tests) |
 | `APP_URL` | URL publique de l'application |

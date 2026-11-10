@@ -44,14 +44,26 @@ Date : 2026-11-09. Les références **Fxx** renvoient à [user-flows.md](user-fl
 | GET `/api/v1/notebooks/:id/sources` | Lister les sources, labels et sélection personnelle | viewer+ | — | `{sources[], labels[], deselected[]}` |
 | POST `/api/v1/sources/:id/retry` | Relancer une ingestion en échec | editor+ | — | `202 {jobId}` |
 
+## S04 / H07 : Découvrir des notebooks éditoriaux
+
+| méthode et chemin | rôle | qui | entrée | sortie |
+| --- | --- | --- | --- | --- |
+| GET `/discover` (page) | Lister les notebooks explicitement publiés (`is_featured=true`) | authenticated | recherche locale titre + résumé | cartes éditoriales, sans données de sources |
+| POST `/api/v1/discover/:id/open` | Ouvrir une sélection publiée | authenticated | — | `{notebookId}`, visite enregistrée, rôle `viewer` |
+| POST `/api/v1/notebooks/:id/copy` | Copier dans la bibliothèque personnelle si `allow_copies=true` | viewer+ | — | `201 {notebook}` |
+
+La galerie ne liste jamais les notebooks privés. Le flag `is_featured` est réservé à l'administration (jamais modifiable par un client). La RPC `accept_featured_notebook` ne crée une visite que si le notebook est toujours publié ; le rôle lecteur est recalculé en base et disparaît dès que le notebook n'est plus featured. Les notebooks éditoriaux sont ouverts en lecture seule ; la copie reste soumise au flag `allow_copies`.
+
 ## F04, F05 : recherche de sources (Fast / Deep Research)
 
 | méthode et chemin | rôle | qui | entrée | sortie |
 | --- | --- | --- | --- | --- |
-| POST `/api/v1/notebooks/:id/research` | Lancer une recherche web (B17) ou approfondie (B18) | editor+ | `{query, mode:"fast"\|"deep", scope:"web"}` | `202 {jobId}` (quota `research` ou `deep_research`) |
-| GET `/api/v1/research/:jobId` | Résultats : `[{title,url,why,cited?}]` et rapport (deep) | editor+ | — | `{status, report?, results[]}` |
-| POST `/api/v1/research/:jobId/import` | Importer les résultats choisis comme sources | editor+ | `{urls[], includeReport?}` | `202 {sources[], jobIds}` |
+| POST `/api/v1/notebooks/:id/research` | Lancer B17 Fast Research | editor+ | `{query (3–300), mode:"fast", scope:"web"}` | `202 {jobId}` (quota `research`) |
+| GET `/api/v1/research/:jobId` | Progression et jusqu’à cinq résultats (`title`, `url`, `why`, `domain`) | editor+ | — | `{job, query, results[], searchedAt}` |
+| POST `/api/v1/research/:jobId/import` | Importer une sélection de 1 à 5 URLs issues du job | editor+ | `{urls[]}` | `202 {sources[], skipped}` ; chaque source passe dans `ingest_source` |
 | POST `/api/v1/jobs/:id/cancel` | Annuler la recherche (ou tout autre job) | auteur ou editor+ | — | 202 |
+
+Le fournisseur Fast Research est Tavily côté worker (`TAVILY_API_KEY`, configurée côté web et worker). Le serveur web ne télécharge jamais les résultats ; les URLs sélectionnées sont ensuite traitées par le pipeline d’ingestion existant, avec ses protections SSRF.
 
 ## F06, F07, F08, F11 : chat
 
@@ -114,13 +126,15 @@ Date : 2026-11-09. Les références **Fxx** renvoient à [user-flows.md](user-fl
 | méthode et chemin | rôle | qui | entrée | sortie |
 | --- | --- | --- | --- | --- |
 | GET `/api/v1/notebooks/:id/members` | Liste des membres et invitations (H01) | viewer+ | — | `{members[], links[]}` |
-| POST `/api/v1/notebooks/:id/members` | Inviter par email | editor+ | `{emails[] (≤ 50 au total), role}` | `201 {members[]}` + emails. 422 email invalide (Q33), 409 plafond |
+| POST `/api/v1/notebooks/:id/members` | Inviter par email | owner | `{email, role}` | `201 {member}` ; compte existant = accès immédiat, sinon invitation en attente expirant après 30 jours |
 | PATCH `/api/v1/notebooks/:id/members/:memberId` | Changer de rôle | editor+ | `{role}` | 200 |
 | DELETE `/api/v1/notebooks/:id/members/:memberId` | Retirer un membre (ou se retirer soi-même) | editor+ ou la personne | — | 204 |
 | POST `/api/v1/notebooks/:id/links` | Créer un lien public (H02, H03, H04). **Le jeton n'est renvoyé qu'une seule fois.** | editor+ | `{scope:"full"\|"chat_only"\|"artifact", artifactId?}` | `201 {url}` |
 | DELETE `/api/v1/links/:id` | Révoquer un lien | editor+ | — | 204 |
 | PATCH `/api/v1/notebooks/:id/sharing` | Autoriser les copies | owner | `{allowCopies}` | 200 |
 | POST `/api/v1/share/:token/accept` | Ouvrir un lien public : enregistre la visite (S32) | auth | — | `{notebookId, role}`. 404 si le lien est invalide ou révoqué |
+| POST `/api/v1/artifacts/:id/share` | Créer un lien public vers un artefact prêt (H04) | editor+ | — | `201 {link:{id,url,created_at}}`; jeton affiché une seule fois |
+| GET `/a/:token` | Consulter un artefact partagé sans compte (H04) | public | — | Contenu de l'artefact uniquement ; 404 si invalide, révoqué ou supprimé |
 | GET `/a/:token` | Page publique d'un artefact, accessible sans compte (S33) | anonyme | — | HTML (lecteur seul) |
 | POST `/api/v1/notebooks/:id/copy` | Copier le notebook avec ses sources et artefacts, sans le chat ni les notes (H05) | owner, ou viewer+ si `allowCopies` | `{title?}` | `202 {notebookId, jobId}` |
 | GET `/api/v1/notebooks/:id/analytics` | Utilisateurs et requêtes par jour sur 7 jours (H06) | owner | — | `{days[]}` |
