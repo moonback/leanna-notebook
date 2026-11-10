@@ -26,8 +26,7 @@ export function OpenRouterSettings() {
       const next: Record<string, string> = {};
       for (const p of data.preferences as Preference[]) next[p.feature] = p.modelId;
       const defaultModel = data.defaultModelId && data.models.some((m: Model) => m.id === data.defaultModelId) ? data.defaultModelId : data.models[0]?.id ?? "";
-      const embeddingModel = data.defaultEmbeddingModelId && data.models.some((m: Model) => m.id === data.defaultEmbeddingModelId) ? data.defaultEmbeddingModelId : defaultModel;
-      for (const f of AI_FEATURES) next[f.id] ??= f.id === "embeddings" ? embeddingModel : defaultModel;
+      for (const f of AI_FEATURES) next[f.id] ??= defaultModel;
       setPreferences(next);
     }).catch((e) => alive && setError(e.message)).finally(() => alive && setLoading(false));
     return () => { alive = false; };
