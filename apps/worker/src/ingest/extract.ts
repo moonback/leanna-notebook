@@ -4,7 +4,7 @@ import { Readability } from "@mozilla/readability";
 import { parseHTML } from "linkedom";
 import { PermanentError } from "../worker.ts";
 import { FetchRefused, safeFetch } from "./ssrf.ts";
-import { fromEpub, fromPptx, readZip } from "./office.ts";\nimport type { Transcriber } from "../ai/transcription.ts";\nimport type { ChunkTimeRange } from "./chunker.ts";
+import { fromEpub, fromPptx, readZip } from "./office.ts";\nimport type { Transcriber } from "../ai/transcription.ts";\nimport { normalize, type ChunkTimeRange } from "./chunker.ts";
 
 export type Extracted = { text: string; pageStarts: number[]; pageCount: number | null; title?: string; timeRanges?: ChunkTimeRange[] };
 
