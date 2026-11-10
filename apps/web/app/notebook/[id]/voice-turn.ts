@@ -9,6 +9,11 @@ export type RetrievedVoicePassage = {
 };
 export type NumberedVoicePassage = RetrievedVoicePassage & { number: number };
 
+/** Roxane reste silencieuse pendant les deux premiers échanges du studio vocal. */
+export function shouldInviteRoxane(turnNumber: number): boolean {
+  return Number.isInteger(turnNumber) && turnNumber > 2;
+}
+
 /** Keeps citations scoped to one Gemini Live turn and deduplicates exact source ranges. */
 export class VoiceTurnCitationStore {
   private readonly passages = new Map<string, NumberedVoicePassage>();
