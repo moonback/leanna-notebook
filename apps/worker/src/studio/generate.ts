@@ -156,6 +156,7 @@ export function studioHandler(db: SupabaseClient, llm: Llm | null, speech: Speec
       await db.from("artifacts").update({ status: "generating", error_code: null }).eq("id", art.id);
       await ctx.progress(10, "sélection des passages");
       const passages = await gatherPassages(db, art.notebook_id, art.source_ids ?? []);
+      const audioOverview = art.type === "audio" || (art.type === "report" && isAudioOverviewPrompt(art.custom_prompt));
       const promptKey = audioOverview ? "studio.audio_overview" : `studio.${art.type === "report" ? "report" : art.type}`;
       const [{ data: profile }, { data: modelPreference }, { data: promptOverride }] = await Promise.all([
         db.from("profiles").select("output_language").eq("id", art.created_by).maybeSingle(),
@@ -164,7 +165,6 @@ export function studioHandler(db: SupabaseClient, llm: Llm | null, speech: Speec
         db.from("ai_prompt_overrides").select("content").eq("user_id", art.created_by).eq("prompt_key", promptKey).maybeSingle(),
       ]);
       const language = (art.options as { language?: string })?.language ?? profile?.output_language ?? "fr";
-      const audioOverview = art.type === "audio" || (art.type === "report" && isAudioOverviewPrompt(art.custom_prompt));
       const customPrompt = audioOverview ? audioOverviewInstructions(art.custom_prompt) : art.custom_prompt;
       if (audioOverview && !speech) throw new PermanentError("audio_tts_not_configured", "Configurez ELEVENLABS_API_KEY et les deux identifiants de voix.");
       if (audioOverview && (!audioEnv.AUDIO_OVERVIEW_HOST_VOICE_ID || !audioEnv.AUDIO_OVERVIEW_GUEST_VOICE_ID || audioEnv.AUDIO_OVERVIEW_HOST_VOICE_ID === audioEnv.AUDIO_OVERVIEW_GUEST_VOICE_ID)) throw new PermanentError("audio_voices_invalid");
