@@ -95,7 +95,7 @@ describe("modèles de rapport du Studio", () => {
     const { messages } = buildPrompt("report", { template: "action_plan", reportFormat: "interactive" }, null, "sources", "fr");
     expect(messages[0].content).toContain("rapport interactif");
     expect(messages[0].content).toContain("Plan d’action");
-    expect(messages[0].content).not.toContain("HTML");
+    expect(messages[0].content).toContain("N’utilise pas de HTML");
   });
 
   it("accepte les modèles IA supplémentaires et conserve le modèle par défaut", () => {
