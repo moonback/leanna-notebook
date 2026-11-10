@@ -44,9 +44,10 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
     user_id: user.id,
     source_ids: sourceIds,
   };
+  const now = Date.now();
   const { data, error } = await db.from("chat_messages").insert([
-    { ...base, role: "user", content: body.userText, status: "complete" },
-    { ...base, role: "assistant", content: body.assistantText, status: "complete" },
+    { ...base, role: "user", content: body.userText, status: "complete", created_at: new Date(now).toISOString() },
+    { ...base, role: "assistant", content: body.assistantText, status: "complete", created_at: new Date(now + 1).toISOString() },
   ]).select("id, role, content, status, created_at");
   if (error) throw error;
 
