@@ -132,6 +132,19 @@ Date : 2026-11-09.
 | Décisions | **D3** STT et TTS (qualité en français, coût à la minute), **D5** YouTube |
 | Critère de sortie | Un audio de 10 minutes généré en moins de 6 minutes, coût mesuré ; une source Drive modifiée est resynchronisée en moins de 15 minutes ; un retry d'audio ne repaie pas les segments TTS déjà produits |
 
+## Studio : extension des formats (tranche en cours)
+
+> Implémentation sur `feat/studio-expanded-artifacts`, PR #49 — à valider par typecheck, tests et exécution avec sources réelles.
+
+| Format | État |
+| --- | --- |
+| Infographie | Génération Markdown sourcée, rendu SVG dans le Studio, export SVG ; mise en page basée sur les sections et repères détectés. |
+| Chronologie | Génération chronologique en Markdown avec citations cliquables vers les passages. |
+| Comparaison | Tableau Markdown sourcé ; données manquantes explicitement signalées. |
+| Glossaire / FAQ / éditorial / plan d'étude | Génération Markdown dédiée avec citations résolues côté worker. |
+| Diagramme | Génération Mermaid ; prévisualisation SVG et éditeur local limités aux flowcharts simples ; export SVG. Les modifications locales ne sont pas persistées dans l'artefact. |
+| Suite | Persistance des éditions, moteur Mermaid complet, rendu visuel de la chronologie, version/diff, régénération ciblée, Pack d'étude, exports DOCX/PDF/PPTX, quiz adaptatif et répétition espacée. |
+
 ## M6 : P2 (3 semaines)
 
 - Fonctionnalités : G04 (deck : plan → rendu → révisions, PPTX/PDF), G05 (infographie en SVG), B16 (labels automatiques), B18 (Deep Research), C06 (multi-conversations), D05 (corbeille des notes), A06, A07 (collections), B05 (YouTube selon D5), Z01 (workspaces d'équipe + facturation par siège), Z02 (recherche multi-notebooks), B09 (Notion ou OneDrive), F04 (répétition espacée).

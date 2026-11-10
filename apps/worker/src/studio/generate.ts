@@ -40,12 +40,19 @@ const TEMPLATES: Record<string, string> = {
   custom: "Rapport personnalisé : suis précisément les consignes de personnalisation de l’utilisateur et organise le contenu de façon claire.",
   briefing: "Note de synthèse pour un décideur : contexte, points clés, chiffres, risques, recommandations.",
   study_guide: "Guide d'étude : notions clés définies, résumé par thème, 5 questions de révision avec réponses, glossaire.",
-  faq: "FAQ : les 8 à 12 questions les plus utiles, chacune avec une réponse courte et sourcée.",
   blog_post: "Article de blog : un titre accrocheur, une introduction, des sections fluides, des exemples concrets et une conclusion. Reste fidèle aux sources.",
   specification: "Spécification : contexte, objectifs, périmètre, exigences fonctionnelles, contraintes, cas limites et critères d’acceptation. Signale explicitement les éléments absents des sources.",
   action_plan: "Plan d’action : objectifs, étapes ordonnées, priorités, dépendances, livrables et indicateurs de réussite. N’invente pas de responsables ni d’échéances.",
   practical_sheet: "Fiche pratique : objectif, prérequis, informations nécessaires, étapes numérotées, conseils, erreurs à éviter et checklist finale.",
   detailed_guide: "Guide détaillé : introduction, progression pédagogique par étapes, explications, exemples tirés des sources, bonnes pratiques et synthèse finale.",
+  infographic: "Infographie : crée une synthèse visuelle en Markdown avec titre, 3 à 6 chiffres clés uniquement s'ils figurent dans les sources, étapes, comparaisons et blocs À retenir. N'invente aucune donnée.",
+  timeline: "Chronologie : liste les événements explicitement datés dans les sources, dans l'ordre chronologique. Pour chaque événement, indique la date, le fait et la citation [n]. Si la date est imprécise, indique-le sans la deviner.",
+  comparison: "Tableau comparatif : compare les sources ou concepts selon des critères pertinents. Utilise un tableau Markdown, indique « non précisé » si une donnée manque et cite chaque cellule factuelle.",
+  glossary: "Glossaire : extrais les termes clés, définis-les uniquement à partir des sources et ajoute les citations [n] à chaque définition.",
+  faq: "FAQ : formule 8 à 12 questions utiles et réponds de façon concise. Chaque réponse factuelle doit citer les passages [n]. Signale quand les sources ne permettent pas de répondre.",
+  diagram: "Diagramme : produis un diagramme Mermaid valide (flowchart ou sequenceDiagram selon les sources), dans un bloc de code Mermaid, puis une courte légende. N'ajoute aucune étape non documentée.",
+  editorial: "Contenu éditorial : réécris fidèlement les sources sous forme de newsletter, article de blog ou fil de réseaux sociaux selon les consignes. Conserve les citations [n] et n'ajoute aucun fait externe.",
+  study_plan: "Plan d'étude : crée un planning de révision sur le nombre de jours indiqué dans les consignes, répartis par jour avec objectifs, notions, exercices et rappels. Chaque notion doit être sourcée [n].",
 };
 
 /** Construit le prompt d'un type d'artefact. Exporté pour les tests. */
@@ -54,12 +61,14 @@ export function buildPrompt(type: string, options: Record<string, unknown>, cust
   const sys = (task: string) => ({ role: "system" as const, content: `${RULES(lang)}\n${task}${focus}` });
   const user = { role: "user" as const, content: `<passages>\n${passagesBlock}\n</passages>` };
   switch (type) {
-    case "report": {
-      const t = TEMPLATES[String(options.template ?? "briefing")] ?? TEMPLATES.briefing;
-      const mode = options.reportFormat === "interactive"
+    case "report": case "infographic": case "timeline": case "comparison": case "glossary": case "faq": case "diagram": case "editorial": case "study_plan": {
+      const t = type === "report"
+        ? (TEMPLATES[String(options.template ?? "briefing")] ?? TEMPLATES.briefing)
+        : TEMPLATES[type];
+      const mode = type === "report" && options.reportFormat === "interactive"
         ? "Présente le résultat comme un rapport interactif à parcourir dans le Studio : sections courtes et autonomes, encadrés « À retenir », questions de réflexion et listes d’actions lorsque les sources le permettent. N’utilise pas de HTML ni de code."
-        : "Présente le résultat comme un document final soigné, directement exploitable et facile à exporter.";
-      const task = "TÂCHE : rédige un rapport en Markdown (titres ##, listes). Format : " + t + "\n" + mode + "\nChaque affirmation tirée d’un passage se termine par son numéro entre crochets, ex. [3] ou [1, 4]. N’invente jamais de numéro.";
+        : "Respecte strictement le format demandé. Utilise uniquement du Markdown sûr, sans HTML ni JavaScript.";
+      const task = "TÂCHE : rédige le contenu en Markdown (titres ##, listes et tableaux si utiles). Format : " + t + "\n" + mode + "\nChaque affirmation tirée d’un passage doit se terminer par son numéro entre crochets, ex. [3] ou [1, 4]. N’invente jamais de numéro.";
       return { json: false, messages: [sys(task), user] };
     }
     case "flashcards": {
@@ -80,7 +89,7 @@ export function buildPrompt(type: string, options: Record<string, unknown>, cust
 /** Valide la sortie du modèle et la convertit en contenu stocké (références vérifiées contre les passages fournis). */
 export function toContent(type: string, raw: string, passages: Passage[]) {
   const byN = new Map(passages.map((p) => [p.n, p]));
-  if (type === "report") {
+  if (["report", "infographic", "timeline", "comparison", "glossary", "faq", "diagram", "editorial", "study_plan"].includes(type)) {
     const r = resolveCitations(raw, passages);
     return { content: { markdown: r.text, dropped: r.dropped }, citations: r.citations };
   }

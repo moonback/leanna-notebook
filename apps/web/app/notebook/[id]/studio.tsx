@@ -1,6 +1,6 @@
 "use client";
 import * as React from "react";
-import { AudioLines, BookOpen, Check, ChevronDown, ChevronRight, Download, Layers, ListChecks, Network, RotateCcw, Sparkles, Trash2, X } from "lucide-react";
+import { AudioLines, BookOpen, Check, ChevronDown, ChevronRight, Download, Layers, ListChecks, Network, RotateCcw, Sparkles, Trash2, X, Clock3, Table2, BookText, CircleHelp, Workflow, Newspaper, CalendarDays, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, Textarea } from "@/components/ui/field";
 import { Alert, Badge, EmptyState, Progress, Skeleton } from "@/components/ui/feedback";
@@ -11,7 +11,7 @@ import { toast } from "@/components/ui/toast";
 import { ArtifactShareButton } from "./artifact-share-button";
 import { cn } from "@/lib/utils";
 
-type ArtType = "report" | "flashcards" | "quiz" | "mind_map" | "audio";
+type ArtType = "report" | "flashcards" | "quiz" | "mind_map" | "audio" | "infographic" | "timeline" | "comparison" | "glossary" | "faq" | "diagram" | "editorial" | "study_plan";
 type Art = { id: string; type: ArtType; title: string | null; status: string; error_code: string | null; options: Record<string, string> | null; custom_prompt?: string | null; created_at: string; progress?: number; stage?: string; unread?: boolean };
 type Cite = { marker: number; source_id: string; quote_text: string; char_start: number; char_end: number; verified: boolean };
 
@@ -21,6 +21,14 @@ const TYPES: Record<ArtType, { label: string; icon: React.ReactNode; hint: strin
   quiz: { label: "Quiz", icon: <ListChecks />, hint: "QCM corrigé avec explications" },
   mind_map: { label: "Carte mentale", icon: <Network />, hint: "Les thèmes et leurs liens" },
   audio: { label: "Audio Overview", icon: <AudioLines />, hint: "Podcast dialogué à deux voix à partir des sources" },
+  infographic: { label: "Infographie", icon: <BarChart3 />, hint: "Synthèse visuelle structurée et sourcée" },
+  timeline: { label: "Chronologie", icon: <Clock3 />, hint: "Événements classés par date avec citations" },
+  comparison: { label: "Tableau comparatif", icon: <Table2 />, hint: "Comparaison sourcée de concepts ou de sources" },
+  glossary: { label: "Glossaire", icon: <BookText />, hint: "Termes clés et définitions sourcées" },
+  faq: { label: "FAQ", icon: <CircleHelp />, hint: "Questions fréquentes et réponses sourcées" },
+  diagram: { label: "Diagramme", icon: <Workflow />, hint: "Flux ou organigramme Mermaid éditable" },
+  editorial: { label: "Contenu éditorial", icon: <Newspaper />, hint: "Newsletter, article ou fil social" },
+  study_plan: { label: "Plan d'étude", icon: <CalendarDays />, hint: "Planning de révision construit depuis les sources" },
 };
 const ERRORS: Record<string, string> = {
   ai_not_configured: "L’assistant n’est pas configuré côté serveur.",
@@ -102,7 +110,7 @@ export function Studio({ notebookId, canEdit, sourceIds, sourceTitle, onOpenCita
     <Panel id="studio" title="Studio" className="h-full">
       {canEdit && (
         <div className="grid grid-cols-2 gap-2 border-b p-3">
-          {(["report", "flashcards", "quiz", "mind_map"] as ArtType[]).map((t) => (
+          {(["report", "flashcards", "quiz", "mind_map", "infographic", "timeline", "comparison", "glossary", "faq", "diagram", "editorial", "study_plan"] as ArtType[]).map((t) => (
             <Button key={t} variant="secondary" className="justify-start" disabled={!readyCount} title={readyCount ? TYPES[t].hint : "Ajoutez d’abord une source"} onClick={() => setCreating(t)}>
               {TYPES[t].icon} {TYPES[t].label}
             </Button>
@@ -357,7 +365,9 @@ function ArtifactViewer({ id, canShare, onClose, sourceTitle, onOpenCitation, on
           {art?.custom_prompt && !art.custom_prompt.startsWith(AUDIO_OVERVIEW_MARKER) && <p className="mb-4 rounded-md bg-surface px-3 py-2 text-xs text-text-muted"><span className="font-medium">Consignes de génération :</span> {art.custom_prompt}</p>}
           {failed ? <Alert tone="danger" title="Contenu indisponible" />
             : !art ? <div className="grid gap-2" aria-busy="true" aria-label="Chargement"><Skeleton className="h-5 w-2/3" /><Skeleton className="h-4" /><Skeleton className="h-4 w-5/6" /></div>
-             : art.type === "report" || art.type === "audio" ? <div className="grid gap-4">{art.content.audio_path && <div className="grid gap-2 rounded-lg border border-border p-3"><audio ref={audioRef} controls preload="metadata" className="w-full" src={`/api/v1/artifacts/${art.id}/audio`} /><div className="flex flex-wrap items-center justify-between gap-2"><div className="flex flex-wrap items-center gap-3 text-xs text-text-muted">{typeof art.content.estimated_duration_seconds === "number" && <span>Durée estimée : {Math.floor(art.content.estimated_duration_seconds / 60)} min</span>}{typeof art.content.tts_characters === "number" && <span>{art.content.tts_characters.toLocaleString("fr-FR")} caractères TTS</span>}{typeof art.content.segment_count === "number" && <span>{art.content.segment_count} répliques</span>}</div><label className="flex items-center gap-2 text-xs text-text-muted">Vitesse <select aria-label="Vitesse de lecture" className="h-8 rounded-md border border-border-input bg-surface-raised px-2 text-sm text-text" value={playbackRate} onChange={(e) => setPlaybackRate(e.target.value)}>{["0.75", "1", "1.25", "1.5", "1.75", "2"].map((v) => <option key={v} value={v}>{v}×</option>)}</select></label><a className="inline-flex items-center gap-2 text-sm font-medium text-accent hover:underline" href={`/api/v1/artifacts/${art.id}/audio?download=1`}><Download aria-hidden size={16} /> Télécharger le MP3</a></div></div>}<Markdown text={art.content.markdown ?? ""} citations={data!.citations} sourceTitle={sourceTitle} onOpen={onOpenCitation ? (c) => { onClose(); onOpenCitation(c); } : undefined} /></div>
+             : art.type === "infographic" ? <InfographicView markdown={art.content.markdown ?? ""} citations={data!.citations} sourceTitle={sourceTitle} onOpen={onOpenCitation ? (c) => { onClose(); onOpenCitation(c); } : undefined} />
+             : art.type === "diagram" ? <DiagramEditor markdown={art.content.markdown ?? ""} />
+             : art.type === "report" || art.type === "audio" || ["timeline", "comparison", "glossary", "faq", "editorial", "study_plan"].includes(art.type) ? <div className="grid gap-4">{art.content.audio_path && <div className="grid gap-2 rounded-lg border border-border p-3"><audio ref={audioRef} controls preload="metadata" className="w-full" src={`/api/v1/artifacts/${art.id}/audio`} /><div className="flex flex-wrap items-center justify-between gap-2"><div className="flex flex-wrap items-center gap-3 text-xs text-text-muted">{typeof art.content.estimated_duration_seconds === "number" && <span>Durée estimée : {Math.floor(art.content.estimated_duration_seconds / 60)} min</span>}{typeof art.content.tts_characters === "number" && <span>{art.content.tts_characters.toLocaleString("fr-FR")} caractères TTS</span>}{typeof art.content.segment_count === "number" && <span>{art.content.segment_count} répliques</span>}</div><label className="flex items-center gap-2 text-xs text-text-muted">Vitesse <select aria-label="Vitesse de lecture" className="h-8 rounded-md border border-border-input bg-surface-raised px-2 text-sm text-text" value={playbackRate} onChange={(e) => setPlaybackRate(e.target.value)}>{["0.75", "1", "1.25", "1.5", "1.75", "2"].map((v) => <option key={v} value={v}>{v}×</option>)}</select></label><a className="inline-flex items-center gap-2 text-sm font-medium text-accent hover:underline" href={`/api/v1/artifacts/${art.id}/audio?download=1`}><Download aria-hidden size={16} /> Télécharger le MP3</a></div></div>}<Markdown text={art.content.markdown ?? ""} citations={data!.citations} sourceTitle={sourceTitle} onOpen={onOpenCitation ? (c) => { onClose(); onOpenCitation(c); } : undefined} /></div>
             : art.type === "flashcards" ? <Flashcards id={art.id} title={art.title || "fiches"} cards={art.content.cards ?? []} progress={data!.progress} />
             : art.type === "quiz" ? <Quiz id={art.id} questions={art.content.questions ?? []} progress={data!.progress} onExplain={onAsk} />
             : art.content.root ? <MindMap root={art.content.root} onAsk={(l) => onAsk(`Explique « ${l} » à partir de mes sources.`)} />
@@ -366,6 +376,80 @@ function ArtifactViewer({ id, canShare, onClose, sourceTitle, onOpenCitation, on
       </DialogContent>
     </Dialog>
   );
+}
+
+function InfographicView({ markdown, citations, sourceTitle, onOpen }: { markdown: string; citations: Cite[]; sourceTitle: (id: string) => string | undefined; onOpen?: (c: Cite) => void }) {
+  const lines = markdown.split(/\r?\n/);
+  const title = lines.find((line) => /^#\s+/.test(line))?.replace(/^#\s+/, "") ?? "Synthèse visuelle";
+  const stats = [...markdown.matchAll(/(?:^|\n)[-*]\s+([^:\n]{2,60}):\s*([^\n]{1,70})/g)].slice(0, 4).map((m) => ({ label: m[1].replace(/\*\*/g, ""), value: m[2].replace(/\[(\d+)\]/g, "") }));
+  const sections: { title: string; items: string[] }[] = [];
+  let current: { title: string; items: string[] } | null = null;
+  for (const line of lines) {
+    const h = /^#{2,4}\s+(.+)/.exec(line.trim());
+    if (h) { current = { title: h[1], items: [] }; sections.push(current); continue; }
+    const item = /^\s*(?:[-*]|\d+[.)])\s+(.+)/.exec(line);
+    if (item && current && current.items.length < 4) current.items.push(item[1].replace(/\[(\d+(?:,\s*\d+)*)\]/g, "").replace(/\*\*/g, ""));
+  }
+  const cards = sections.filter((x) => x.items.length).slice(0, 6);
+  const cols = cards.length > 3 ? 3 : Math.max(1, cards.length);
+  const downloadSvg = () => {
+    const svg = document.getElementById("studio-infographic-preview");
+    if (!svg) return;
+    const blob = new Blob([new XMLSerializer().serializeToString(svg)], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = "infographie-studio.svg"; a.click(); URL.revokeObjectURL(url);
+  };
+  return <div className="grid gap-3">
+    <div className="flex justify-end"><Button size="sm" variant="secondary" onClick={downloadSvg}><Download aria-hidden size={15} /> Exporter en SVG</Button></div>
+    <div className="overflow-hidden rounded-xl border border-border bg-surface">
+      <svg id="studio-infographic-preview" viewBox="0 0 960 620" role="img" aria-label={title} className="h-auto w-full">
+        <defs><linearGradient id="studioInfographicBg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="var(--color-accent, #0f4c8a)" stopOpacity=".16" /><stop offset="100%" stopColor="var(--color-surface, #f3f1ec)" /></linearGradient></defs>
+        <rect width="960" height="620" rx="22" fill="url(#studioInfographicBg)" />
+        <text x="48" y="64" fontSize="29" fontWeight="700" fill="currentColor">{title.slice(0, 58)}</text>
+        <text x="48" y="94" fontSize="13" fill="currentColor" opacity=".62">SYNTHÈSE EXTRAITE DES SOURCES DU NOTEBOOK</text>
+        {stats.map((stat, i) => { const w = 864 / stats.length - 14; return <g key={i} transform={"translate(" + (48 + i * (864 / stats.length)) + ",124)"}><rect width={w} height="94" rx="12" fill="var(--color-surface, #f3f1ec)" stroke="var(--color-border, #e2ded5)" /><text x="14" y="30" fontSize="12" fill="currentColor" opacity=".65">{stat.label.slice(0, 24)}</text><text x="14" y="65" fontSize="23" fontWeight="700" fill="var(--color-accent, #0f4c8a)">{stat.value.slice(0, 18)}</text></g>; })}
+        {cards.map((card, i) => { const w = 864 / cols - 14; const x = 48 + (i % cols) * (864 / cols); const y = 246 + Math.floor(i / cols) * 164; return <g key={i} transform={"translate(" + x + "," + y + ")"}><rect width={w} height="146" rx="12" fill="var(--color-surface, #f3f1ec)" stroke="var(--color-border, #e2ded5)" /><circle cx="22" cy="24" r="11" fill="var(--color-accent, #0f4c8a)" opacity=".18" /><text x="22" y="28" textAnchor="middle" fontSize="11" fontWeight="700" fill="var(--color-accent, #0f4c8a)">{i + 1}</text><text x="42" y="29" fontSize="15" fontWeight="700" fill="currentColor">{card.title.slice(0, 28)}</text>{card.items.map((item, j) => <g key={j}><circle cx="18" cy={58 + j * 20} r="3" fill="var(--color-accent, #0f4c8a)" /><text x="30" y={62 + j * 20} fontSize="11.5" fill="currentColor">{item.slice(0, Math.floor((w - 48) / 7))}</text></g>)}</g>; })}
+        <text x="48" y="590" fontSize="11" fill="currentColor" opacity=".55">Détails et références vérifiées conservés sous le visuel.</text>
+      </svg>
+    </div>
+    <details className="rounded-lg border border-border p-3"><summary className="cursor-pointer text-sm font-medium">Afficher le contenu détaillé et les citations</summary><div className="pt-4"><Markdown text={markdown} citations={citations} sourceTitle={sourceTitle} onOpen={onOpen} /></div></details>
+  </div>;
+}
+
+function DiagramEditor({ markdown }: { markdown: string }) {
+  const [source, setSource] = React.useState(markdown.match(/```mermaid\s*([\s\S]*?)```/i)?.[1]?.trim() ?? markdown);
+  const [editing, setEditing] = React.useState(false);
+  const code = source;
+  const direction = /^\s*(?:flowchart|graph)\s+LR/im.test(code) ? "LR" : "TD";
+  const nodeMap = new Map<string, string>();
+  const edges: { from: string; to: string }[] = [];
+  const nodePattern = /([A-Za-z0-9_]+)\s*(?:\[\s*([^\]]+)\s*\]|\(\(\s*([^)]+)\s*\)\)|\(\s*([^)]+)\s*\)|\{\s*([^}]+)\s*\})/g;
+  for (const m of code.matchAll(nodePattern)) nodeMap.set(m[1], (m[2] ?? m[3] ?? m[4] ?? m[5] ?? m[1]).trim());
+  for (const m of code.matchAll(/([A-Za-z0-9_]+)\s*(?:-->|==>|-\.\->)\s*(?:\|[^|]*\|\s*)?([A-Za-z0-9_]+)/g)) {
+    if (!nodeMap.has(m[1])) nodeMap.set(m[1], m[1]);
+    if (!nodeMap.has(m[2])) nodeMap.set(m[2], m[2]);
+    if (!edges.some((e) => e.from === m[1] && e.to === m[2])) edges.push({ from: m[1], to: m[2] });
+  }
+  const nodes = [...nodeMap.entries()].slice(0, 18);
+  const horizontal = direction === "LR";
+  const positions = new Map(nodes.map(([id], i) => [id, horizontal ? { x: 35 + i * 185, y: 70 } : { x: 285, y: 25 + i * 100 }]));
+  const width = horizontal ? Math.max(400, nodes.length * 185 + 30) : 720;
+  const height = horizontal ? 190 : Math.max(190, nodes.length * 100 + 20);
+  const downloadSvg = () => {
+    const svg = document.getElementById("studio-diagram-preview");
+    if (!svg) return;
+    const blob = new Blob([new XMLSerializer().serializeToString(svg)], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = "diagramme-studio.svg"; a.click(); URL.revokeObjectURL(url);
+  };
+  return <div className="grid gap-3">
+    <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-sm text-text-muted">Aperçu du diagramme · {nodes.length} nœuds · {edges.length} liens</p><div className="flex gap-2"><Button size="sm" variant="secondary" onClick={() => setEditing((v) => !v)}>{editing ? "Masquer l’éditeur" : "Modifier le code Mermaid"}</Button><Button size="sm" variant="secondary" onClick={downloadSvg} disabled={!nodes.length}><Download aria-hidden size={15} /> SVG</Button></div></div>
+    {editing && <Textarea value={source} onChange={(e) => setSource(e.target.value)} rows={8} maxLength={12000} aria-label="Code Mermaid éditable" />}
+    {nodes.length ? <div className="overflow-x-auto rounded-xl border border-border bg-surface p-3"><svg id="studio-diagram-preview" viewBox={"0 0 " + width + " " + height} role="img" aria-label="Aperçu du diagramme Mermaid" className="mx-auto h-auto max-h-[560px] w-full" style={{ minWidth: horizontal ? Math.min(width, 620) + "px" : undefined }}>
+      <defs><marker id="studioDiagramArrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="var(--color-text-muted, #5c584f)" /></marker></defs>
+      {edges.map((edge, i) => { const a = positions.get(edge.from); const b = positions.get(edge.to); if (!a || !b) return null; return <line key={i} x1={horizontal ? a.x + 140 : a.x + 70} y1={horizontal ? a.y + 32 : a.y + 64} x2={horizontal ? b.x : b.x + 70} y2={horizontal ? b.y + 32 : b.y} stroke="var(--color-text-muted, #5c584f)" strokeWidth="1.5" markerEnd="url(#studioDiagramArrow)" />; })}
+      {nodes.map(([id, label]) => { const p = positions.get(id)!; return <g key={id} transform={"translate(" + p.x + "," + p.y + ")"}><rect width="140" height="64" rx="10" fill="var(--color-surface-raised, #ffffff)" stroke="var(--color-accent, #0f4c8a)" strokeWidth="1.5" /><text x="70" y="25" textAnchor="middle" fontSize="10" fill="var(--color-text-muted, #5c584f)">{id}</text><text x="70" y="44" textAnchor="middle" fontSize="12" fontWeight="600" fill="var(--color-text, #1c1b19)">{label.slice(0, 20)}</text></g>; })}
+    </svg></div> : <Alert tone="warning" title="Syntaxe non reconnue">La prévisualisation prend en charge les flowcharts Mermaid simples avec nœuds et flèches.</Alert>}
+    <p className="text-xs text-text-muted">Les modifications sont locales à cette prévisualisation et ne modifient pas l’artefact enregistré. L’export SVG correspond à l’aperçu rendu.</p>
+  </div>;
 }
 
 /** Markdown minimal et sûr (aucun HTML injecté) : titres, listes, gras, pastilles [n]. Exporté pour les tests. */
