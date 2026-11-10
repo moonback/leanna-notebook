@@ -9,6 +9,7 @@ import { ProfileForm } from "../profile-form";
 import { DeleteAccount } from "./delete-account";
 import { PlanCard } from "./plan-card";
 import { SettingsTabs } from "./settings-tabs";
+import { OpenRouterSettings } from "./openrouter-settings";
 
 export const metadata: Metadata = { title: "Réglages · Notebook" };
 
@@ -65,6 +66,11 @@ export default async function SettingsPage() {
               id: "usage",
               label: "Consommation",
               content: limits && usage ? <UsageCard limits={limits} usage={usage} dayStart={dayStart} /> : <p className="text-sm text-text-muted">Aucune donnée de consommation.</p>,
+            },
+            {
+              id: "ai",
+              label: "Intelligence artificielle",
+              content: <OpenRouterSettings />,
             },
             {
               id: "data",
