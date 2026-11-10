@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   AUDIO_OVERVIEW_MARKER,
+  buildAudioOverviewFfmpegArgs,\n  estimateAudioOverviewMetrics,
   audioOverviewInstructions,
   buildAudioOverviewMessages,
   isAudioOverviewPrompt,
@@ -35,6 +36,33 @@ Adopte un ton accessible.`;
     expect(messages[1].content).toContain("Extrait de source.");
   });
 
+  it("builds a normalized mix with a short silence between speaker turns", () => {
+    const args = buildAudioOverviewFfmpegArgs(["host.mp3", "guest.mp3", "host-2.mp3"], "final.mp3");
+    expect(args).toContain("-filter_complex");
+    const graph = args[args.indexOf("-filter_complex") + 1];
+    expect(args).toContain("anullsrc=r=44100:cl=stereo");
+    expect(graph).toContain("[pause0]");
+    expect(graph).toContain("concat=n=5");
+    expect(graph).toContain("loudnorm=I=-16:TP=-1.5:LRA=11");
+    expect(args).toContain("final.mp3");
+  });
+
+  it("rejects invalid pause durations and empty segment lists", () => {
+    expect(() => buildAudioOverviewFfmpegArgs([], "final.mp3")).toThrow("audio_segments_missing");
+    expect(() => buildAudioOverviewFfmpegArgs(["one.mp3"], "final.mp3", 3)).toThrow("audio_pause_invalid");
+  });
+  it("reports exact TTS characters and an approximate spoken duration", () => {
+    const metrics = estimateAudioOverviewMetrics({
+      title: "Metrics",
+      segments: [
+        { speaker: "host", text: "Bonjour à tous." },
+        { speaker: "guest", text: "Bienvenue ici." },
+      ],
+    });
+    expect(metrics.ttsCharacters).toBe(Array.from("Bonjour à tous.").length + Array.from("Bienvenue ici.").length);
+    expect(metrics.segmentCount).toBe(2);
+    expect(metrics.estimatedDurationSeconds).toBe(2);
+  });
   it("accepts a valid dialogue with two speaker identities", () => {
     expect(parseAudioOverviewScript(JSON.stringify(validScript)).segments).toHaveLength(8);
   });

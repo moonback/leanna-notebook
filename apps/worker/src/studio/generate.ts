@@ -152,7 +152,7 @@ export function studioHandler(db: SupabaseClient, llm: Llm | null, speech: Speec
           ffmpegPath: audioEnv.FFMPEG_PATH || "ffmpeg",
           onProgress: ctx.progress,
         });
-        content = { markdown: rendered.transcript, audio_path: rendered.storagePath, audio_format: "mp3", model: out.model };
+        content = { markdown: rendered.transcript, audio_path: rendered.storagePath, audio_format: "mp3", tts_characters: rendered.ttsCharacters, segment_count: rendered.segmentCount, estimated_duration_seconds: rendered.estimatedDurationSeconds, audio_bytes: rendered.audioBytes, model: out.model };
         title = script.title || "Audio Overview";
         citations = [];
       } else {
