@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   AUDIO_OVERVIEW_MARKER,
+  buildAudioOverviewFfmpegArgs,
   audioOverviewInstructions,
   buildAudioOverviewMessages,
   isAudioOverviewPrompt,
@@ -35,6 +36,20 @@ Adopte un ton accessible.`;
     expect(messages[1].content).toContain("Extrait de source.");
   });
 
+  it("builds a normalized mix with a short silence between speaker turns", () => {
+    const args = buildAudioOverviewFfmpegArgs(["host.mp3", "guest.mp3", "host-2.mp3"], "final.mp3");
+    expect(args).toContain("-filter_complex");
+    const graph = args[args.indexOf("-filter_complex") + 1];
+    expect(graph).toContain("anullsrc");
+    expect(graph).toContain("concat=n=5");
+    expect(graph).toContain("loudnorm=I=-16:TP=-1.5:LRA=11");
+    expect(args).toContain("final.mp3");
+  });
+
+  it("rejects invalid pause durations and empty segment lists", () => {
+    expect(() => buildAudioOverviewFfmpegArgs([], "final.mp3")).toThrow("audio_segments_missing");
+    expect(() => buildAudioOverviewFfmpegArgs(["one.mp3"], "final.mp3", 3)).toThrow("audio_pause_invalid");
+  });
   it("accepts a valid dialogue with two speaker identities", () => {
     expect(parseAudioOverviewScript(JSON.stringify(validScript)).segments).toHaveLength(8);
   });
