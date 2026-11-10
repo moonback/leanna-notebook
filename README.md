@@ -48,6 +48,8 @@ Application SaaS multi-utilisateur (Next.js + Supabase + worker Node), conçue p
 - **Quiz** (QCM) : indice, explication, score enregistré, reprise, « Expliquer dans le chat ».
 - **Carte mentale** dépliable ; cliquer un thème l'explore dans le chat.
 - **Fast Research (B17)** : recherche web asynchrone, cinq résultats maximum avec extrait explicatif, sélection multiple et import direct comme sources indexées.
+- **Découvrir (S04)** : galerie de notebooks éditoriaux publiés, ouverture en lecture seule et copie dans sa bibliothèque si autorisée.
+- **Invitations** : les invitations en attente expirent après 30 jours et sont nettoyées quotidiennement par pg_cron.
 - Options (difficulté, quantité, consignes libres), génération en arrière-plan, point « non lu », notification du navigateur quand l'onglet est en arrière-plan, crédit restitué en cas d'échec.
 
 ### Compte, partage et offres
