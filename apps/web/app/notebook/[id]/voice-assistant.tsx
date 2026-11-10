@@ -102,6 +102,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
   const processor = React.useRef<AudioWorkletNode | null>(null);
   const micSource = React.useRef<MediaStreamAudioSourceNode | null>(null);
   const playbackNodes = React.useRef<Set<AudioBufferSourceNode>>(new Set());
+  const playbackSuppressed = React.useRef(false);
   const nextPlaybackTime = React.useRef(0);
   const mutedRef = React.useRef(false);
   const mounted = React.useRef(true);
@@ -138,7 +139,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
 
   async function playPcm(base64: string, mimeType: string) {
     const ctx = audioContext.current;
-    if (!ctx) return;
+    if (!ctx || playbackSuppressed.current) return;
     const rate = Number(/rate=(\d+)/i.exec(mimeType)?.[1] ?? 24000);
     const bytes = base64ToBytes(base64);
     const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
@@ -197,7 +198,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
             if (action === "repeat_current_citation") result = `Relis cette citation et annonce sa source. ${result}`;
           } else result = "Aucune citation disponible dans ce tour.";
         } else if (action === "next_citation" || action === "previous_citation") {
-          const next = resolveCitationIndex(action === "next_citation" ? "next" : "previous", activePassageIndex, passages.length);
+          const next = resolveCitationIndex(action === "next_citation" ? "next" : "previous", activePassageIndexRef.current, passages.length);
           if (next !== null && openPassage(next)) {
             const p = passages[next];
             result = `Citation ${p.number} sur ${passages.length} : ${p.title}${p.page ? `, page ${p.page}` : p.timeStartMs != null ? `, horodatage ${Math.floor(p.timeStartMs / 1000)} secondes` : ""}. ${p.excerpt}`;
@@ -223,6 +224,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
           onNavigateStudio?.();
           result = "Le Studio est maintenant affiché.";
         } else if (action === "stop_speaking") {
+          playbackSuppressed.current = true;
           playbackNodes.current.forEach((node) => { try { node.stop(); } catch {} });
           playbackNodes.current.clear();
           nextPlaybackTime.current = audioContext.current?.currentTime ?? 0;
@@ -233,7 +235,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
           socket.current?.send(JSON.stringify({ clientContent: { turns: [{ role: "user", parts: [{ text: instruction }] }], turnComplete: true } }));
           result = action === "repeat" ? "Je répète la dernière réponse." : "Je résume la dernière réponse en une phrase.";
         } else if (action === "save_passage" || action === "keep_passage") {
-          const index = Number.isInteger(requestedNumber) && requestedNumber > 0 ? passages.findIndex((p) => p.number === requestedNumber) : activePassageIndex;
+          const index = Number.isInteger(requestedNumber) && requestedNumber > 0 ? passages.findIndex((p) => p.number === requestedNumber) : activePassageIndexRef.current;
           if (index < 0 || !passages[index]) result = "Aucun passage à conserver. Ouvre d'abord une citation.";
           else {
             const p = passages[index];
