@@ -6,4 +6,5 @@ supabase/.temp
 capture/
 replica/screens/*.png
 .leanna
-apps/desktop/dist/
+apps/desktop/dist
+apps/desktop/release
