@@ -74,7 +74,7 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
 
   let response: Response;
   try {
-    response = await fetch(`${(process.env.OPENROUTER_BASE_URL || "https://openrouter.ai/api/v1").replace(/\\/+$/, "")}/chat/completions`, {
+    response = await fetch(`${(process.env.OPENROUTER_BASE_URL || "https://openrouter.ai/api/v1").replace(/\/+$/, "")}/chat/completions`, {
       method: "POST",
       headers: { authorization: `Bearer ${key}`, "content-type": "application/json", "X-Title": "Notebook" },
       body: JSON.stringify({
