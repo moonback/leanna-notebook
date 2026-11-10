@@ -11,7 +11,7 @@ const createSchema = z.object({
   options: z.object({
     template: z.enum(["briefing", "study_guide", "faq"]).optional(),
     difficulty: z.enum(["easy", "medium", "hard"]).optional(),
-    count: z.enum(["fewer", "standard", "more"]).optional(),
+    count: z.enum(["fewer", "standard", "more"]).optional(),\n    format: z.enum(["deep_dive", "brief", "critique", "debate"]).optional(),\n    duration: z.enum(["short", "standard", "long"]).optional(),\n    style: z.enum(["accessible", "professional", "dynamic"]).optional(),
   }).strict().default({}),
   customPrompt: z.string().trim().max(4000, "4 000 caractères maximum.").optional(),
   sourceIds: z.array(z.string().uuid()).max(600).optional(),
