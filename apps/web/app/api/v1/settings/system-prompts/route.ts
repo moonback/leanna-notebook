@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
-import { ApiError, handle, requireUser } from "@/lib/api";
+import { ApiError, handle, parseBody, requireUser } from "@/lib/api";
 import { createServiceClient } from "@/lib/supabase/server";
 import { SYSTEM_PROMPT_CATALOG } from "@/lib/ai/prompt-catalog";
 
@@ -18,13 +18,12 @@ export const GET = handle(async () => {
 
 export const PUT = handle(async (req: NextRequest) => {
   const user = await requireUser();
-  const body = await req.json().catch(() => null);
-  const parsed = bodySchema.safeParse(body);
-  if (!parsed.success || !allowed.has(parsed.data.key)) throw new ApiError(400, "invalid_prompt");
-  const content = parsed.data.content.trim();
+  const parsed = await parseBody(req, bodySchema);
+  if (!allowed.has(parsed.key)) throw new ApiError(400, "invalid_prompt");
+  const content = parsed.content.trim();
   const db = createServiceClient();
   if (!content) {
-    const { error } = await db.from("ai_prompt_overrides").delete().eq("user_id", user.id).eq("prompt_key", parsed.data.key);
+    const { error } = await db.from("ai_prompt_overrides").delete().eq("user_id", user.id).eq("prompt_key", parsed.key);
     if (error) throw error;
     return NextResponse.json({ ok: true, reset: true });
   }
