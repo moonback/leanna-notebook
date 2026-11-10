@@ -121,6 +121,8 @@ Date : 2026-11-09. Les références **Fxx** renvoient à [user-flows.md](user-fl
 | DELETE `/api/v1/links/:id` | Révoquer un lien | editor+ | — | 204 |
 | PATCH `/api/v1/notebooks/:id/sharing` | Autoriser les copies | owner | `{allowCopies}` | 200 |
 | POST `/api/v1/share/:token/accept` | Ouvrir un lien public : enregistre la visite (S32) | auth | — | `{notebookId, role}`. 404 si le lien est invalide ou révoqué |
+| POST `/api/v1/artifacts/:id/share` | Créer un lien public vers un artefact prêt (H04) | editor+ | — | `201 {link:{id,url,created_at}}`; jeton affiché une seule fois |
+| GET `/a/:token` | Consulter un artefact partagé sans compte (H04) | public | — | Contenu de l'artefact uniquement ; 404 si invalide, révoqué ou supprimé |
 | GET `/a/:token` | Page publique d'un artefact, accessible sans compte (S33) | anonyme | — | HTML (lecteur seul) |
 | POST `/api/v1/notebooks/:id/copy` | Copier le notebook avec ses sources et artefacts, sans le chat ni les notes (H05) | owner, ou viewer+ si `allowCopies` | `{title?}` | `202 {notebookId, jobId}` |
 | GET `/api/v1/notebooks/:id/analytics` | Utilisateurs et requêtes par jour sur 7 jours (H06) | owner | — | `{days[]}` |
