@@ -32,6 +32,15 @@ describe("chunk", () => {
     expect(chunks[0].page_start).toBe(1);
     expect(chunks.at(-1)!.page_start).toBe(2);
   });
+  it("associe les horodatages audio aux chunks qui recouvrent chaque segment", () => {
+    const transcript = "Bonjour tout le monde.\\n\\nBienvenue dans ce cours.";
+    const timed = chunk(transcript, { maxChars: 30, overlapChars: 0, timeRanges: [
+      { char_start: 0, char_end: 22, start_ms: 420, end_ms: 1800 },
+      { char_start: 24, char_end: transcript.length, start_ms: 2000, end_ms: 3250 },
+    ] });
+    expect(timed[0]).toMatchObject({ time_start_ms: 420, time_end_ms: 1800 });
+    expect(timed.at(-1)).toMatchObject({ time_start_ms: 2000, time_end_ms: 3250 });
+  });
   it("gère texte vide et phrase géante", () => {
     expect(chunk("")).toEqual([]);
     const huge = "x".repeat(2000);
