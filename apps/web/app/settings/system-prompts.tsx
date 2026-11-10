@@ -56,7 +56,7 @@ export function SystemPromptsSettings() {
   async function reset() {
     setSaving(true); setError(""); setMessage("");
     try {
-      const response = await fetch("/api/v1/settings/system-prompts?key=" + encodeURIComponent(active.key), { method: "DELETE" });
+      const response = await fetch("/api/v1/settings/system-prompts", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ key: active.key, content: "" }) });
       if (!response.ok) throw new Error("Restauration impossible.");
       setOverrides((current) => { const next = { ...current }; delete next[active.key]; return next; });
       setDraft("");
