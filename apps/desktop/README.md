@@ -1,6 +1,6 @@
 # Leanna Notebook Desktop
 
-Premier socle Electron de développement pour le monorepo Leanna Notebook.
+Socle Electron de développement pour le monorepo Leanna Notebook.
 
 ## Prérequis
 
@@ -29,16 +29,24 @@ pnpm --filter @notebook/desktop rebuild electron
 pnpm --dir apps/desktop exec electron --version
 ```
 
+## Expérience native
+
+- Le sélecteur HTML `input[type=file]` utilisé par l'ajout de sources ouvre le sélecteur de fichiers natif fourni par Electron/Chromium. Le transfert reste celui de l'application web : URL signée Supabase Storage, puis création de source et ingestion par le worker distant.
+- Les téléchargements déclenchés par l'application ouvrent maintenant une boîte de dialogue native « Enregistrer sous ». L'utilisateur choisit explicitement le chemin ; l'annulation interrompt le téléchargement.
+- Menu natif en français : édition (annuler/rétablir/copier/coller), affichage, zoom, plein écran et fermeture.
+- Les outils de développement sont présents uniquement en mode non packagé.
+
 ## Sécurité
 
-- `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`.
+- `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`, `webSecurity: true`.
 - Le renderer n'accède jamais directement à Node.js.
 - Le preload expose une API étroite et typée via `contextBridge`.
-- Les dialogues natifs sont déclenchés par IPC et vérifient le processus émetteur.
+- Les dialogues IPC vérifient le processus émetteur.
+- Les téléchargements sont acceptés uniquement depuis la fenêtre principale et nécessitent une destination choisie par l'utilisateur.
 - La navigation interne reste limitée à l'origine Next configurée.
 - Les liens externes HTTPS sont ouverts dans le navigateur système.
 - Aucun secret Supabase, Gemini ou worker n'est embarqué dans Electron.
 
 ## Périmètre actuel
 
-Cette tranche fournit le shell Electron de développement, les dialogues de fichiers et le contrat IPC. Elle ne constitue pas encore un installateur autonome : le serveur Next.js standalone, les callbacks OAuth/deep links, les mises à jour et les signatures seront ajoutés après validation de ce socle.
+Cette tranche améliore l'expérience native en développement. Elle ne constitue pas encore un installateur autonome : le serveur Next.js standalone ou le raccordement à l'URL SaaS de production, les callbacks OAuth/deep links, les mises à jour et les signatures seront traités dans des phases distinctes.
