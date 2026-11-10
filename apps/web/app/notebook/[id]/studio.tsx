@@ -182,7 +182,7 @@ function CreateDialog({ type, notebookId, sourceIds, onClose, onGenerate }: { ty
     setAiModels([]);
     setAiModelsError(false);
     setSelectedAiModel(null);
-    if (type !== "report" || sourceIds.length === 0) return;
+    if (type !== "report" || !sourceKey) return;
     let active = true;
     setAiModelsLoading(true);
     fetch(`/api/v1/notebooks/${notebookId}/artifacts/suggestions`, {
