@@ -227,11 +227,12 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
       ws.binaryType = "arraybuffer";
       socket.current = ws;
       let roxaneWs: WebSocket | null = null;
+      let roxaneTokenPayload: { token: string; model: string; config: { systemInstruction: unknown } } | null = null;
       if (roxaneEnabledRef.current) {
         const roxaneTokenResponse = await fetch(`/api/v1/notebooks/${notebookId}/voice-token`, {
           method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ voice: "Kore", persona: "roxane" })
         });
-        const roxaneTokenPayload = await roxaneTokenResponse.json();
+        roxaneTokenPayload = await roxaneTokenResponse.json();
         if (!roxaneTokenResponse.ok) throw new Error("Impossible d'ouvrir la session vocale de Roxane.");
         roxaneWs = new WebSocket(`wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContentConstrained?access_token=${encodeURIComponent(roxaneTokenPayload.token)}`);
         roxaneWs.binaryType = "arraybuffer";
@@ -250,12 +251,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
         outputAudioTranscription: {}
       }}));
 
-      if (roxaneWs) {
-        const roxaneTokenResponse = await fetch(`/api/v1/notebooks/${notebookId}/voice-token`, {
-          method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ voice: "Kore", persona: "roxane" })
-        });
-        const roxaneTokenPayload = await roxaneTokenResponse.json();
-        if (!roxaneTokenResponse.ok) throw new Error("Impossible de configurer la voix de Roxane.");
+      if (roxaneWs && roxaneTokenPayload) {
         roxaneWs.send(JSON.stringify({ setup: {
           model: `models/${roxaneTokenPayload.model}`,
           generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } } } },
@@ -436,7 +432,27 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
     }
   }
 
-  function toggleRoxane() {\n    if (state !== "idle" && state !== "error") return;\n    const next = !roxaneEnabledRef.current;\n    roxaneEnabledRef.current = next;\n    setRoxaneEnabled(next);\n    setStatus(next ? "Roxane sera présente à la prochaine session." : "Roxane est désactivée. Leanna reste disponible.");\n  }\n\n  async function copyConversation() {\n    const content = turnHistory.map((turn) => [`Vous : ${turn.user}`, `Leanna : ${turn.assistant}`, turn.roxane ? `Roxane : ${turn.roxane}` : ""].filter(Boolean).join("\\n")).join("\\n\\n");\n    if (!content.trim()) return;\n    await navigator.clipboard.writeText(content);\n    setCopied(true);\n    window.setTimeout(() => setCopied(false), 1800);\n  }\n\n  function toggleMute() {
+  function toggleRoxane() {
+    if (state !== "idle" && state !== "error") return;
+    const next = !roxaneEnabledRef.current;
+    roxaneEnabledRef.current = next;
+    setRoxaneEnabled(next);
+    setStatus(next ? "Roxane sera présente à la prochaine session." : "Roxane est désactivée. Leanna reste disponible.");
+  }
+
+  async function copyConversation() {
+    const content = turnHistory.map((turn) => [
+      `Vous : ${turn.user}`,
+      `Leanna : ${turn.assistant}`,
+      turn.roxane ? `Roxane : ${turn.roxane}` : ""
+    ].filter(Boolean).join("\\n")).join("\\n\\n");
+    if (!content.trim()) return;
+    await navigator.clipboard.writeText(content);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1800);
+  }
+
+  function toggleMute() {
     mutedRef.current = !mutedRef.current;
     setMuted(mutedRef.current);
     setStatus(mutedRef.current ? "Microphone coupé." : "Microphone actif.");
