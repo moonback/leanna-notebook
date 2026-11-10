@@ -129,7 +129,7 @@ export function studioHandler(db: SupabaseClient, llm: Llm | null, speech: Speec
       const passages = await gatherPassages(db, art.notebook_id, art.source_ids ?? []);
       const { data: profile } = await db.from("profiles").select("output_language").eq("id", art.created_by).maybeSingle();
       const language = (art.options as { language?: string })?.language ?? profile?.output_language ?? "fr";
-      const audioOverview = art.type === "report" && isAudioOverviewPrompt(art.custom_prompt);
+      const audioOverview = art.type === "audio" || (art.type === "report" && isAudioOverviewPrompt(art.custom_prompt));
       const customPrompt = audioOverview ? audioOverviewInstructions(art.custom_prompt) : art.custom_prompt;
       const prompt = audioOverview
         ? { messages: buildAudioOverviewMessages(formatPassages(passages), language, customPrompt), json: true }
