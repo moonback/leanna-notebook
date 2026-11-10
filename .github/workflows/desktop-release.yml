@@ -3,6 +3,9 @@ name: Desktop release
 on:
   push:
     tags:
+      # electron-updater GitHub provider resolves the release tag from the
+      # package version (1.2.0). Accept both plain semver and v-prefixed tags.
+      - "*.*.*"
       - "v*"
 
 permissions:
