@@ -33,6 +33,6 @@ describe("Google Drive OAuth security helpers", () => {
     expect(url.searchParams.get("code_challenge_method")).toBe("S256");
     expect(url.searchParams.get("state")).toBe("signed-state");
     expect(url.searchParams.get("scope")).toContain("https://www.googleapis.com/auth/drive.readonly");
-    expect(url.searchParams.get("scope")).not.toContain("drive");
+    expect(url.searchParams.get("scope")).not.toContain("https://www.googleapis.com/auth/drive");
   });
 });
