@@ -8,6 +8,9 @@ import { Dialog, DialogContent } from "@/components/ui/overlay";
 import { PendingVoiceSearches, VoiceTurnCitationStore, type NumberedVoicePassage } from "./voice-turn";
 
 type VoiceState = "idle" | "connecting" | "listening" | "speaking" | "error";
+const VOICE_OPTIONS = ["Aoede", "Charon", "Fenrir", "Kore", "Puck", "Leda", "Orus", "Zephyr"] as const;
+type VoiceName = typeof VOICE_OPTIONS[number];
+const VOICE_LABELS: Record<VoiceName, string> = { Aoede: "Aoede · chaleureuse", Charon: "Charon · posée", Fenrir: "Fenrir · affirmée", Kore: "Kore · claire", Puck: "Puck · vive", Leda: "Leda · douce", Orus: "Orus · profonde", Zephyr: "Zephyr · énergique" };
 type Passage = NumberedVoicePassage;
 type VoiceTurn = { user: string; assistant: string; sources: Passage[] };
 type LiveFunctionCall = { id: string; name: string; args?: Record<string, unknown> };
@@ -86,6 +89,8 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
   const turnCompletePending = React.useRef(false);
   const turnFinalizing = React.useRef(false);
   const [muted, setMuted] = React.useState(false);
+  const [selectedVoice, setSelectedVoice] = React.useState<VoiceName>("Aoede");
+  const [voicePreferenceLoaded, setVoicePreferenceLoaded] = React.useState(false);
   const socket = React.useRef<WebSocket | null>(null);
   const audioContext = React.useRef<AudioContext | null>(null);
   const mediaStream = React.useRef<MediaStream | null>(null);
@@ -201,7 +206,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
       audioContext.current = ctx;
       await ctx.resume();
       const tokenResponse = await fetch(`/api/v1/notebooks/${notebookId}/voice-token`, {
-        method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ voice: "Aoede" })
+        method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ voice: selectedVoice })
       });
       const tokenPayload = await tokenResponse.json();
       if (!tokenResponse.ok) throw new Error(tokenPayload.error === "voice_not_configured" ? "Ajoutez GEMINI_API_KEY côté serveur." : "Impossible d'ouvrir une session vocale.");
@@ -215,7 +220,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
       });
       ws.send(JSON.stringify({ setup: {
         model: `models/${tokenPayload.model}`,
-        generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Aoede" } } } },
+        generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: selectedVoice } } } },
         systemInstruction: tokenPayload.config.systemInstruction,
         tools: tokenPayload.config.tools,
         inputAudioTranscription: {},
