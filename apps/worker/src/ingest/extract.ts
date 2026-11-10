@@ -102,6 +102,24 @@ export async function extract(kind: string, data: { file?: Uint8Array; url?: str
       return finalize({ text: r.text, pageStarts: [], pageCount: null, title: r.title });
     }
     case "docx": {
+      const mime = data.mimeType ?? "";
+      if (mime === "application/rtf" || mime === "text/rtf") {
+        const text = new TextDecoder().decode(data.file!)
+          .replace(/\\'[0-9a-f]{2}/gi, (m) => String.fromCharCode(parseInt(m.slice(2), 16)))
+          .replace(/\\par[d]?/g, "\n").replace(/\\tab/g, "\t")
+          .replace(/\\[a-z]+-?\d* ?/gi, "").replace(/[{}]/g, "").trim();
+        return finalize({ text, pageStarts: [], pageCount: null });
+      }
+      if (mime === "application/vnd.oasis.opendocument.text" || mime === "application/vnd.hancom.hwpx") {
+        const files = readZip(data.file!, (n) => n === "content.xml" || /^Contents\/section\d+\.xml$/.test(n));
+        const text = Object.entries(files)
+          .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))
+          .map(([, xml]) => parseHTML(xml).document.textContent ?? "").join("\n\n");
+        return finalize({ text, pageStarts: [], pageCount: null });
+      }
+      if (mime === "application/x-hwp") {
+        throw new PermanentError("unsupported_type", "Le format HWP binaire doit être converti en HWPX, DOCX ou PDF avant import.");
+      }
       readZip(data.file!, () => false); // plafonds anti « zip bomb » avant de confier l'archive à mammoth
       try {
         const { value } = await mammoth.extractRawText({ buffer: Buffer.from(data.file!) });
