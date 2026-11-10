@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
 import { AudioLines, Mic, MicOff, PhoneOff, Maximize2, Minimize2, Sparkles, Copy, Trash2, Check, Radio } from "lucide-react";
@@ -196,11 +196,62 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
     turnSourceIds.current.clear();
   }
 
+  async function connectRoxane() {
+    if (roxaneSocket.current?.readyState === WebSocket.OPEN) return;
+    const response = await fetch(`/api/v1/notebooks/${notebookId}/voice-token`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ voice: "Kore", persona: "roxane" }) });
+    const payload = await response.json();
+    if (!response.ok) throw new Error("Impossible d'ouvrir la session vocale de Roxane.");
+    const connection = new WebSocket(`wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContentConstrained?access_token=${encodeURIComponent(payload.token)}`);
+    connection.binaryType = "arraybuffer"; roxaneSocket.current = connection;
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const timeout = window.setTimeout(() => reject(new Error("Délai de connexion dépassé pour Roxane.")), 15000);
+        connection.onopen = () => connection.send(JSON.stringify({ setup: { model: `models/${payload.model}`, generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } } } }, systemInstruction: payload.config.systemInstruction, inputAudioTranscription: {}, outputAudioTranscription: {} } }));
+        connection.onerror = () => { window.clearTimeout(timeout); reject(new Error("Connexion à Roxane impossible.")); };
+        connection.onclose = () => { window.clearTimeout(timeout); if (roxaneSocket.current === connection) roxaneSocket.current = null; reject(new Error("La session de Roxane a été fermée avant son initialisation.")); };
+        connection.onmessage = (event) => {
+          const message = parseFrame(event.data);
+          if (message?.error) { window.clearTimeout(timeout); reject(new Error(message.error.message ?? "Erreur de configuration de Roxane.")); }
+          if (message?.setupComplete) {
+            window.clearTimeout(timeout);
+            connection.onclose = () => {
+              if (roxaneSocket.current === connection) {
+                roxaneSocket.current = null;
+                if (roxaneEnabledRef.current) {
+                  roxaneEnabledRef.current = false;
+                  setRoxaneEnabled(false);
+                  setStatus("La connexion de Roxane a été interrompue. Leanna reste disponible.");
+                }
+              }
+            };
+            connection.onmessage = async (nextEvent) => {
+              try {
+                const nextMessage = parseFrame(nextEvent.data); if (!nextMessage?.serverContent) return;
+                const data = nextMessage.serverContent, spoken = data.outputTranscription?.text;
+                if (spoken) { roxaneTurnText.current += spoken; setRoxaneAnswer((current) => current + spoken); setStatus("Roxane intervient…"); }
+                for (const part of data.modelTurn?.parts ?? []) if (part.inlineData?.data) await playPcm(part.inlineData.data, part.inlineData.mimeType ?? "audio/pcm;rate=24000");
+                if (data.turnComplete) { roxaneTurnResolver.current?.(); roxaneTurnResolver.current = null; }
+              } catch { /* ignore malformed Roxane frames */ }
+            };
+            resolve();
+          }
+        };
+      });
+    } catch (error) { if (roxaneSocket.current === connection) roxaneSocket.current = null; connection.close(); throw error; }
+  }
+
+  function disconnectRoxane() {
+    roxaneEnabledRef.current = false; roxaneSpeaking.current = false;
+    roxaneTurnResolver.current?.(); roxaneTurnResolver.current = null;
+    roxaneSocket.current?.close(); roxaneSocket.current = null;
+    roxaneTurnText.current = ""; setRoxaneAnswer("");
+  }
+
   async function start() {
     if (state === "connecting" || state === "listening" || state === "speaking") { stop(); return; }
     intentionalClose.current = false;
     setState("connecting");
-    setStatus("Connexion s├®curis├®e ├á Gemini LiveÔÇª");
+    setStatus("Connexion sécurisée à Gemini Live…");
     setTranscript("");
     setAnswer("");
     setRoxaneAnswer("");
@@ -224,27 +275,13 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
         method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ voice: "Aoede", persona: "leanna" })
       });
       const tokenPayload = await tokenResponse.json();
-      if (!tokenResponse.ok) throw new Error(tokenPayload.error === "voice_not_configured" ? "Ajoutez GEMINI_API_KEY c├┤t├® serveur." : "Impossible d'ouvrir la session vocale de Leanna.");
+      if (!tokenResponse.ok) throw new Error(tokenPayload.error === "voice_not_configured" ? "Ajoutez GEMINI_API_KEY côté serveur." : "Impossible d'ouvrir la session vocale de Leanna.");
 
       const ws = new WebSocket(`wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContentConstrained?access_token=${encodeURIComponent(tokenPayload.token)}`);
       ws.binaryType = "arraybuffer";
       socket.current = ws;
-      let roxaneWs: WebSocket | null = null;
-      let roxaneTokenPayload: { token: string; model: string; config: { systemInstruction: unknown } } | null = null;
-      if (roxaneEnabledRef.current) {
-        const roxaneTokenResponse = await fetch(`/api/v1/notebooks/${notebookId}/voice-token`, {
-          method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ voice: "Kore", persona: "roxane" })
-        });
-        roxaneTokenPayload = await roxaneTokenResponse.json();
-        if (!roxaneTokenResponse.ok) throw new Error("Impossible d'ouvrir la session vocale de Roxane.");
-        roxaneWs = new WebSocket(`wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContentConstrained?access_token=${encodeURIComponent(roxaneTokenPayload.token)}`);
-        roxaneWs.binaryType = "arraybuffer";
-        roxaneSocket.current = roxaneWs;
-      }
-      await Promise.all([ws, ...(roxaneWs ? [roxaneWs] : [])].map((connection) => new Promise<void>((resolve, reject) => {
-        connection.onopen = () => resolve();
-        connection.onerror = () => reject(new Error("Connexion ├á l'une des sessions vocales impossible."));
-      })));
+      await new Promise<void>((resolve, reject) => { ws.onopen = () => resolve(); ws.onerror = () => reject(new Error("Connexion à la session vocale impossible.")); });
+      if (roxaneEnabledRef.current) await connectRoxane();
       ws.send(JSON.stringify({ setup: {
         model: `models/${tokenPayload.model}`,
         generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Aoede" } } } },
@@ -253,16 +290,6 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
         inputAudioTranscription: {},
         outputAudioTranscription: {}
       }}));
-
-      if (roxaneWs && roxaneTokenPayload) {
-        roxaneWs.send(JSON.stringify({ setup: {
-          model: `models/${roxaneTokenPayload.model}`,
-          generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } } } },
-          systemInstruction: roxaneTokenPayload.config.systemInstruction,
-          inputAudioTranscription: {},
-          outputAudioTranscription: {}
-        }}));
-      }
 
       const waitForSetup = (connection: WebSocket, label: string) => new Promise<void>((resolve, reject) => {
         const timeout = window.setTimeout(() => reject(new Error(`D├®lai de configuration d├®pass├® pour ${label}.`)), 15000);
@@ -277,7 +304,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
           if (data.error) { window.clearTimeout(timeout); reject(new Error(data.error.message ?? `Erreur ${label}.`)); }
         };
       });
-      await Promise.all([waitForSetup(ws, "Leanna"), ...(roxaneWs ? [waitForSetup(roxaneWs, "Roxane")] : [])]);
+      await waitForSetup(ws, "Leanna");
 
       const stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
       mediaStream.current = stream;
@@ -294,9 +321,9 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
       source.connect(node);
       node.connect(ctx.destination);
       setState("listening");
-      setStatus("Je vous ├®coute. Parlez naturellement.");
-      ws.onclose = () => { if (mounted.current && !intentionalClose.current) { stop(); setStatus("Session vocale termin├®e."); } };
-      ws.onerror = () => { if (mounted.current) setStatus("Connexion vocale instableÔÇª"); };
+      setStatus("Connecté · je vous écoute. Parlez naturellement.");
+      ws.onclose = () => { if (mounted.current && !intentionalClose.current) { stop(); setStatus("Session vocale terminée. Relancez-la pour continuer."); } };
+      ws.onerror = () => { if (mounted.current) setStatus("Connexion vocale instable… vérifiez votre réseau."); };
       const askRoxane = async (turnNumber: number) => {
         if (!roxaneEnabledRef.current || roxaneAskedForTurn.current || !assistantTurn.current.trim() || !shouldInviteRoxane(turnNumber)) return;
         roxaneAskedForTurn.current = true;
@@ -313,13 +340,13 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
         ].join("\n\n");
         const connection = roxaneSocket.current;
         if (!connection || connection.readyState !== WebSocket.OPEN) {
-          setStatus("Roxane est indisponible ; la r├®ponse de Leanna est conserv├®e.");
+          setStatus("Roxane est indisponible ; la réponse de Leanna est conservée.");
           return;
         }
         roxaneTurnText.current = "";
         setRoxaneAnswer("");
         roxaneSpeaking.current = true;
-        setStatus("Roxane analyse la r├®ponse de LeannaÔÇª");
+        setStatus("Roxane analyse la réponse de Leanna…");
         await new Promise<void>((resolve) => {
           const timeout = window.setTimeout(() => {
             roxaneTurnResolver.current = null;
@@ -332,27 +359,6 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
         if (roxaneTurnText.current.trim()) assistantTurn.current += `\n\nRoxane : ${roxaneTurnText.current.trim()}`;
       };
 
-      if (roxaneWs) roxaneWs.onmessage = async (event) => {
-        try {
-          const message = parseFrame(event.data);
-          if (!message?.serverContent) return;
-          const content = message.serverContent;
-          const spoken = content.outputTranscription?.text;
-          if (spoken) {
-            roxaneTurnText.current += spoken;
-            setRoxaneAnswer((current) => current + spoken);
-            setStatus("Roxane intervientÔÇª");
-          }
-          for (const part of content.modelTurn?.parts ?? []) {
-            if (part.inlineData?.data) await playPcm(part.inlineData.data, part.inlineData.mimeType ?? "audio/pcm;rate=24000");
-          }
-          if (content.turnComplete) {
-            roxaneTurnResolver.current?.();
-            roxaneTurnResolver.current = null;
-          }
-        } catch { /* ignore malformed Roxane frames */ }
-      };
-
       const finalizeVoiceTurn = async () => {
         if (turnFinalizing.current || pendingSearches.current.count > 0) return;
         turnFinalizing.current = true;
@@ -362,7 +368,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
           if (shouldInviteRoxane(completedTurnNumber)) {
             await askRoxane(completedTurnNumber);
           } else {
-            setStatus(roxaneEnabledRef.current ? `├ëchange ${completedTurnNumber}/2 ┬À Roxane reste en ├®coute.` : "Leanna vous r├®pond ┬À Roxane est d├®sactiv├®e.");
+            setStatus(roxaneEnabledRef.current ? `Échange ${completedTurnNumber}/2 · Roxane reste en écoute.` : "Leanna a répondu · Roxane est désactivée.");
           }
           const completedTurn = { user: userTurn.current.trim(), assistant: leannaAnswer, roxane: roxaneTurnText.current.trim(), sources: turnPassages.current.snapshot() };
           await persistVoiceTurn();
@@ -379,10 +385,10 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
           assistantTurn.current = "";
           turnCompletePending.current = false;
           setState("listening");
-          setStatus("├Ç vous de parler.");
+          setStatus("À vous de parler. Posez votre prochaine question.");
         } catch (error) {
           setState("listening");
-          setStatus(error instanceof Error ? error.message : "Enregistrement de lÔÇÖhistorique impossible.");
+          setStatus(error instanceof Error ? error.message : "Enregistrement de l’historique impossible. Votre échange reste visible.");
         } finally {
           turnFinalizing.current = false;
         }
@@ -403,7 +409,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
             playbackNodes.current.clear();
             nextPlaybackTime.current = 0;
             setState("listening");
-            setStatus("Je vous ├®coute.");
+            setStatus("Interruption prise en compte · je vous écoute.");
           }
           const heard = content?.inputTranscription?.text;
           const spoken = content?.outputTranscription?.text;
@@ -412,13 +418,13 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
             assistantTurn.current += spoken;
             setAnswer((v) => v + spoken);
             setState("speaking");
-            setStatus("Leanna vous r├®pondÔÇª");
+            setStatus("Leanna vous répond…");
           }
           for (const part of content?.modelTurn?.parts ?? []) {
             if (part.inlineData?.data) {
               await playPcm(part.inlineData.data, part.inlineData.mimeType ?? "audio/pcm;rate=24000");
               setState("speaking");
-              setStatus("Leanna vous r├®pondÔÇª");
+              setStatus("Leanna vous répond…");
             }
           }
           if (content?.turnComplete) {
@@ -431,16 +437,22 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
     } catch (error) {
       stop();
       setState("error");
-      setStatus(error instanceof Error ? error.message : "Erreur pendant le d├®marrage vocal.");
+      setStatus(error instanceof Error ? error.message : "Erreur pendant le démarrage vocal. Vérifiez le micro et réessayez.");
     }
   }
 
-  function toggleRoxane() {
-    if (state !== "idle" && state !== "error") return;
+  async function toggleRoxane() {
     const next = !roxaneEnabledRef.current;
-    roxaneEnabledRef.current = next;
-    setRoxaneEnabled(next);
-    setStatus(next ? "Roxane sera pr├®sente ├á la prochaine session." : "Roxane est d├®sactiv├®e. Leanna reste disponible.");
+    if (!next) {
+      disconnectRoxane(); setRoxaneEnabled(false);
+      setStatus("Roxane est désactivée. Leanna continue la conversation.");
+      return;
+    }
+    roxaneEnabledRef.current = true; setRoxaneEnabled(true);
+    if (socket.current?.readyState === WebSocket.OPEN) {
+      try { await connectRoxane(); setStatus("Roxane a rejoint la conversation."); }
+      catch (error) { roxaneEnabledRef.current = false; setRoxaneEnabled(false); setStatus(error instanceof Error ? error.message : "Impossible d'activer Roxane."); }
+    } else setStatus("Roxane sera présente au démarrage de la prochaine session.");
   }
 
   async function copyConversation() {
@@ -458,7 +470,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
   function toggleMute() {
     mutedRef.current = !mutedRef.current;
     setMuted(mutedRef.current);
-    setStatus(mutedRef.current ? "Microphone coup├®." : "Microphone actif.");
+    setStatus(mutedRef.current ? "Microphone coupé · Leanna ne vous entend plus." : "Microphone actif · je vous écoute.");
   }
 
   return (
@@ -495,7 +507,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
                 </div>
               ) : null}
               <div className="flex shrink-0 items-center gap-1.5">
-                <Button size="sm" variant={roxaneEnabled ? "secondary" : "ghost"} onClick={toggleRoxane} disabled={state !== "idle" && state !== "error"} aria-pressed={roxaneEnabled} title={roxaneEnabled ? "Désactiver Roxane" : "Activer Roxane"} className="hidden sm:inline-flex">
+                <Button size="sm" variant={roxaneEnabled ? "secondary" : "ghost"} onClick={toggleRoxane} aria-pressed={roxaneEnabled} title={roxaneEnabled ? "Désactiver Roxane" : "Activer Roxane"} className="hidden sm:inline-flex">
                   <Sparkles aria-hidden /> {roxaneEnabled ? "Roxane" : "Ajouter Roxane"}
                 </Button>
                 {state === "idle" || state === "error" ? (
@@ -523,7 +535,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
                   </span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <Button size="sm" variant={roxaneEnabled ? "secondary" : "ghost"} onClick={toggleRoxane} disabled={state !== "idle" && state !== "error"} aria-pressed={roxaneEnabled}>
+                  <Button size="sm" variant={roxaneEnabled ? "secondary" : "ghost"} onClick={toggleRoxane} aria-pressed={roxaneEnabled}>
                     <Sparkles aria-hidden /> <span className="hidden sm:inline">{roxaneEnabled ? "Roxane activée" : "Activer Roxane"}</span><span className="sm:hidden">Roxane</span>
                   </Button>
                   <Button size="icon" variant="ghost" aria-label="Réduire le studio vocal" title="Réduire" onClick={() => setExpanded(false)}><Minimize2 aria-hidden /></Button>
