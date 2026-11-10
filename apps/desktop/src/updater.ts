@@ -52,12 +52,18 @@ export function initializeAutoUpdater(getWindow: () => BrowserWindow | null): vo
         downloading = false;
         const detail = error instanceof Error ? error.message : String(error);
         notify(getWindow(), "error", { message: detail });
-        await dialog.showMessageBox(getWindow() ?? undefined, {
-          type: "error",
+        const currentWindow = getWindow();
+        const options = {
+          type: "error" as const,
           title: "Téléchargement impossible",
           message: "La mise à jour n'a pas pu être téléchargée.",
           detail,
-        });
+        };
+        if (currentWindow && !currentWindow.isDestroyed()) {
+          await dialog.showMessageBox(currentWindow, options);
+        } else {
+          await dialog.showMessageBox(options);
+        }
       }
     }
   });
