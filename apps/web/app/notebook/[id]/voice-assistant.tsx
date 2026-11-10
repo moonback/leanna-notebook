@@ -7,6 +7,19 @@ import { Dialog, DialogContent } from "@/components/ui/overlay";
 
 type VoiceState = "idle" | "connecting" | "listening" | "speaking" | "error";
 type Passage = { number: number; title: string; page: number | null; excerpt: string };
+type LiveFunctionCall = { id: string; name: string; args?: Record<string, unknown> };
+type LiveMessage = {
+  toolCall?: { functionCalls?: LiveFunctionCall[] };
+  setupComplete?: boolean;
+  error?: { message?: string };
+  serverContent?: {
+    interrupted?: boolean;
+    inputTranscription?: { text?: string };
+    outputTranscription?: { text?: string };
+    modelTurn?: { parts?: Array<{ inlineData?: { data?: string; mimeType?: string } }> };
+    turnComplete?: boolean;
+  };
+};
 
 function bytesToBase64(bytes: Uint8Array) {
   let binary = "";
@@ -104,7 +117,7 @@ export function VoiceAssistant({ notebookId, disabled = false }: { notebookId: s
     node.start(startAt);
   }
 
-  async function handleToolCall(message: any) {
+  async function handleToolCall(message: LiveMessage) {
     const calls = message?.toolCall?.functionCalls ?? [];
     for (const call of calls) {
       if (call.name !== "search_notebook_sources") continue;
@@ -165,7 +178,7 @@ export function VoiceAssistant({ notebookId, disabled = false }: { notebookId: s
         ws.onmessage = (event) => {
           previous?.call(ws, event);
           try {
-            const data = JSON.parse(typeof event.data === "string" ? event.data : "");
+            const data = JSON.parse(typeof event.data === "string" ? event.data : "") as LiveMessage;
             if (data.setupComplete) { window.clearTimeout(timeout); resolve(); }
             if (data.error) { window.clearTimeout(timeout); reject(new Error(data.error.message ?? "Erreur Gemini Live.")); }
           } catch {}
@@ -192,7 +205,7 @@ export function VoiceAssistant({ notebookId, disabled = false }: { notebookId: s
       ws.onerror = () => { if (mounted.current) setStatus("Connexion vocale instable…"); };
       ws.onmessage = async (event) => {
         try {
-          const msg = JSON.parse(typeof event.data === "string" ? event.data : "");
+          const msg = JSON.parse(typeof event.data === "string" ? event.data : "") as LiveMessage;
           if (msg.toolCall) { await handleToolCall(msg); return; }
           const content = msg.serverContent;
           if (content?.interrupted) {
