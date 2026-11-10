@@ -8,6 +8,7 @@ import { createUserClient, getUser } from "@/lib/supabase/server";
 import { ProfileForm } from "../profile-form";
 import { DeleteAccount } from "./delete-account";
 import { PlanCard } from "./plan-card";
+import { SettingsTabs } from "./settings-tabs";
 
 export const metadata: Metadata = { title: "Réglages · Notebook" };
 
@@ -35,31 +36,59 @@ export default async function SettingsPage() {
       <AppHeader><h1 className="truncate text-lg">Réglages</h1></AppHeader>
       <main className="mx-auto grid max-w-3xl gap-6 px-4 py-8 sm:px-6">
         <p className="text-sm text-text-muted">Connecté·e avec {user.email}</p>
-        <Card className="grid gap-4 p-5">
-          <h2 className="text-lg">Préférences</h2>
-          {profile ? <ProfileForm initial={{ ...profile, theme: profile.theme as "light" | "dark" | "system" }} /> : <p role="alert" className="text-sm text-danger">Profil introuvable.</p>}
-        </Card>
-        <Card className="grid gap-4 p-5">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="text-lg">Offre</h2>
-            <Badge tone="warning">Paiement simulé</Badge>
-          </div>
-          {personal && plans ? <PlanCard workspaceId={personal.id} current={personal.plan_id} plans={plans} /> : <p role="alert" className="text-sm text-danger">Espace de travail introuvable.</p>}
-        </Card>
-        {limits && usage && <UsageCard limits={limits} usage={usage} dayStart={dayStart} />}
-        <Card className="grid gap-3 p-5">
-          <h2 className="text-lg">Vos données</h2>
-          <p className="text-sm text-text-muted">
-            Téléchargez une copie de vos données (profil, notebooks, sources, conversations, contenus générés, usage) au format JSON. Les fichiers d’origine sont accessibles par des liens valables 7 jours.
-          </p>
-          <div><Button asChild variant="secondary"><a href="/api/v1/me/export" download>Exporter mes données</a></Button></div>
-        </Card>
-        {user.email && (
-          <Card className="grid gap-4 border-danger/40 p-5">
-            <h2 className="text-lg text-danger">Zone dangereuse</h2>
-            <DeleteAccount email={user.email} />
-          </Card>
-        )}
+        <SettingsTabs
+          tabs={[
+            {
+              id: "preferences",
+              label: "Préférences",
+              content: (
+                <Card className="grid gap-4 p-5">
+                  <h2 className="text-lg">Préférences</h2>
+                  {profile ? <ProfileForm initial={{ ...profile, theme: profile.theme as "light" | "dark" | "system" }} /> : <p role="alert" className="text-sm text-danger">Profil introuvable.</p>}
+                </Card>
+              ),
+            },
+            {
+              id: "plan",
+              label: "Offre",
+              content: (
+                <Card className="grid gap-4 p-5">
+                  <div className="flex items-center justify-between gap-3">
+                    <h2 className="text-lg">Offre</h2>
+                    <Badge tone="warning">Paiement simulé</Badge>
+                  </div>
+                  {personal && plans ? <PlanCard workspaceId={personal.id} current={personal.plan_id} plans={plans} /> : <p role="alert" className="text-sm text-danger">Espace de travail introuvable.</p>}
+                </Card>
+              ),
+            },
+            {
+              id: "usage",
+              label: "Consommation",
+              content: limits && usage ? <UsageCard limits={limits} usage={usage} dayStart={dayStart} /> : <p className="text-sm text-text-muted">Aucune donnée de consommation.</p>,
+            },
+            {
+              id: "data",
+              label: "Données",
+              content: (
+                <>
+                  <Card className="grid gap-3 p-5">
+                    <h2 className="text-lg">Vos données</h2>
+                    <p className="text-sm text-text-muted">
+                      Téléchargez une copie de vos données (profil, notebooks, sources, conversations, contenus générés, usage) au format JSON. Les fichiers d’origine sont accessibles par des liens valables 7 jours.
+                    </p>
+                    <div><Button asChild variant="secondary"><a href="/api/v1/me/export" download>Exporter mes données</a></Button></div>
+                  </Card>
+                  {user.email && (
+                    <Card className="grid gap-4 border-danger/40 p-5">
+                      <h2 className="text-lg text-danger">Zone dangereuse</h2>
+                      <DeleteAccount email={user.email} />
+                    </Card>
+                  )}
+                </>
+              ),
+            },
+          ]}
+        />
       </main>
     </div>
   );
