@@ -19,9 +19,9 @@ describe("audio extraction", () => {
     expect(extracted.text).toBe("Bonjour tout le monde.\n\nBienvenue dans ce cours.");
     expect(extracted.timeRanges).toEqual([
       { char_start: 0, char_end: 22, start_ms: 420, end_ms: 1800 },
-      { char_start: 24, char_end: 49, start_ms: 2000, end_ms: 3250 },
+      { char_start: 24, char_end: 48, start_ms: 2000, end_ms: 3250 },
     ]);
-    const chunks = chunk(extracted.text, { timeRanges: extracted.timeRanges });
+    const chunks = chunk(extracted.text, { maxChars: 24, overlapChars: 0, timeRanges: extracted.timeRanges });
     expect(chunks[0]).toMatchObject({ time_start_ms: 420, time_end_ms: 1800 });
     expect(chunks.at(-1)).toMatchObject({ time_start_ms: 2000, time_end_ms: 3250 });
   });
