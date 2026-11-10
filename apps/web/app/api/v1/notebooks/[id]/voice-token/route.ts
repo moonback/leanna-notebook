@@ -46,14 +46,20 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
     }] }]
   };
 
-  const response = await fetch("https://generativelanguage.googleapis.com/v1beta/auth_tokens", {
+  // L'API REST attend `bidiGenerateContentSetup` (le SDK le nomme `liveConnectConstraints`), uniquement en v1alpha.
+  const { responseModalities, speechConfig, ...setupRest } = config;
+  const response = await fetch("https://generativelanguage.googleapis.com/v1alpha/auth_tokens", {
     method: "POST",
     headers: { "x-goog-api-key": apiKey, "content-type": "application/json" },
     body: JSON.stringify({
       uses: 1,
       expireTime: expiresAt,
       newSessionExpireTime: newSessionExpiresAt,
-      liveConnectConstraints: { model: MODEL, config }
+      bidiGenerateContentSetup: {
+        model: `models/${MODEL}`,
+        generationConfig: { responseModalities, speechConfig },
+        ...setupRest
+      }
     }),
     signal: AbortSignal.timeout(12_000)
   });

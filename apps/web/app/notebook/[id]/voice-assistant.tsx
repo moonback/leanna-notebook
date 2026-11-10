@@ -33,6 +33,16 @@ function base64ToBytes(value: string) {
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
   return bytes;
 }
+/** Gemini Live envoie ses trames JSON en binaire : on décode texte et ArrayBuffer. */
+const frameDecoder = new TextDecoder();
+function parseFrame(data: unknown): LiveMessage | null {
+  try {
+    const text = typeof data === "string" ? data : data instanceof ArrayBuffer ? frameDecoder.decode(data) : "";
+    return text ? JSON.parse(text) as LiveMessage : null;
+  } catch {
+    return null;
+  }
+}
 function downsampleTo16k(input: Float32Array, inputRate: number) {
   if (inputRate === 16000) return input;
   const ratio = inputRate / 16000;
@@ -161,11 +171,11 @@ export function VoiceAssistant({ notebookId, disabled = false }: { notebookId: s
       if (!tokenResponse.ok) throw new Error(tokenPayload.error === "voice_not_configured" ? "Ajoutez GEMINI_API_KEY côté serveur." : "Impossible d'ouvrir une session vocale.");
 
       const ws = new WebSocket(`wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContentConstrained?access_token=${encodeURIComponent(tokenPayload.token)}`);
+      ws.binaryType = "arraybuffer";
       socket.current = ws;
       await new Promise<void>((resolve, reject) => {
         ws.onopen = () => resolve();
         ws.onerror = () => reject(new Error("Connexion Gemini Live impossible."));
-        ws.onclose = () => reject(new Error("La session Gemini Live a été fermée avant son initialisation."));
       });
       ws.send(JSON.stringify({ setup: {
         model: `models/${tokenPayload.model}`,
@@ -178,14 +188,16 @@ export function VoiceAssistant({ notebookId, disabled = false }: { notebookId: s
 
       await new Promise<void>((resolve, reject) => {
         const timeout = window.setTimeout(() => reject(new Error("Délai de configuration Gemini dépassé.")), 15000);
-        const previous = ws.onmessage;
+        // Une config refusée se traduit par une fermeture avec motif : on le remonte au lieu d'attendre le délai.
+        ws.onclose = (event) => {
+          window.clearTimeout(timeout);
+          reject(new Error(event.reason ? `Gemini Live : ${event.reason}` : "La session Gemini Live a été fermée avant son initialisation."));
+        };
         ws.onmessage = (event) => {
-          previous?.call(ws, event);
-          try {
-            const data = JSON.parse(typeof event.data === "string" ? event.data : "") as LiveMessage;
-            if (data.setupComplete) { window.clearTimeout(timeout); resolve(); }
-            if (data.error) { window.clearTimeout(timeout); reject(new Error(data.error.message ?? "Erreur Gemini Live.")); }
-          } catch {}
+          const data = parseFrame(event.data);
+          if (!data) return;
+          if (data.setupComplete) { window.clearTimeout(timeout); resolve(); }
+          if (data.error) { window.clearTimeout(timeout); reject(new Error(data.error.message ?? "Erreur Gemini Live.")); }
         };
       });
 
@@ -209,7 +221,8 @@ export function VoiceAssistant({ notebookId, disabled = false }: { notebookId: s
       ws.onerror = () => { if (mounted.current) setStatus("Connexion vocale instable…"); };
       ws.onmessage = async (event) => {
         try {
-          const msg = JSON.parse(typeof event.data === "string" ? event.data : "") as LiveMessage;
+          const msg = parseFrame(event.data);
+          if (!msg) return;
           if (msg.toolCall) { await handleToolCall(msg); return; }
           const content = msg.serverContent;
           if (content?.interrupted) {
@@ -219,9 +232,11 @@ export function VoiceAssistant({ notebookId, disabled = false }: { notebookId: s
             setState("listening");
             setStatus("Je vous écoute.");
           }
-          if (content?.inputTranscription?.text) setTranscript((v) => v + content.inputTranscription.text);
-          if (content?.outputTranscription?.text) {
-            setAnswer((v) => v + content.outputTranscription.text);
+          const heard = content?.inputTranscription?.text;
+          const spoken = content?.outputTranscription?.text;
+          if (heard) setTranscript((v) => v + heard);
+          if (spoken) {
+            setAnswer((v) => v + spoken);
             setState("speaking");
             setStatus("Leanna vous répond…");
           }
