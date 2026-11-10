@@ -9,7 +9,11 @@ export interface NormalizedFileFilter {
 export function isSafeExternalUrl(value: unknown): value is string {
   if (typeof value !== "string" || value.length > 2048) return false;
   try {
-    return new URL(value).protocol === "https:";
+    const url = new URL(value);
+    return url.protocol === "https:" &&
+      Boolean(url.hostname) &&
+      !url.username &&
+      !url.password;
   } catch {
     return false;
   }
@@ -23,7 +27,9 @@ export function normalizeFilters(value: unknown): NormalizedFileFilter[] {
     const filter = entry as Partial<DesktopFileFilter>;
     if (
       typeof filter.name !== "string" ||
+      !filter.name.trim() ||
       !Array.isArray(filter.extensions) ||
+      filter.extensions.length < 1 ||
       filter.extensions.length > 30 ||
       !filter.extensions.every(
         (extension) => typeof extension === "string" && /^[a-z0-9]{1,10}$/i.test(extension),
