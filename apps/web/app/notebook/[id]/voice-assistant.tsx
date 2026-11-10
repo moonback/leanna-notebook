@@ -479,6 +479,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
                 <p className="truncate text-sm font-semibold">{roxaneEnabled ? "Leanna + Roxane" : "Leanna · Studio vocal"}</p>
                 <p className="truncate text-xs text-text-muted">{state === "idle" || state === "error" ? "Studio vocal réduit · Prêt à démarrer" : status}</p>
               </div>
+              <Button size="sm" variant={roxaneEnabled ? "secondary" : "ghost"} onClick={toggleRoxane} disabled={state !== "idle" && state !== "error"} aria-pressed={roxaneEnabled} title={roxaneEnabled ? "Désactiver Roxane" : "Activer Roxane"}><Sparkles aria-hidden /> Roxane {roxaneEnabled ? "activée" : "désactivée"}</Button>
               {state === "idle" || state === "error" ? (
                 <Button size="sm" onClick={() => void start()} disabled={disabled}><Mic aria-hidden /> Démarrer</Button>
               ) : (
