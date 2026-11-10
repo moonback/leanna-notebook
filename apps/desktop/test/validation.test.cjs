@@ -11,6 +11,8 @@ test("external URL validation rejects non-HTTPS and malformed values", () => {
     "http://example.com",
     "file:///C:/secret.txt",
     "javascript:alert(1)",
+    "https://user:password@example.com/path",
+    "https:///missing-host",
     "//example.com",
     "",
     null,
@@ -28,6 +30,8 @@ test("file filters keep valid entries and discard malformed entries", () => {
   assert.deepEqual(normalizeFilters([
     { name: "Documents PDF", extensions: ["pdf"] },
     { name: "Invalid", extensions: ["pdf", "../secret"] },
+    { name: "Empty extensions", extensions: [] },
+    { name: "   ", extensions: ["pdf"] },
     null,
     { name: "Images", extensions: ["png", "jpg"] },
   ]), [
