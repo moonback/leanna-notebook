@@ -109,7 +109,7 @@ Date : 2026-11-09.
 
 ## M5 : Audio + connecteurs (3 semaines)
 
-> **État au 2026-11-10 — M5 poursuivi sur `feat/m5-audio-connectors`, navigation audio ajoutée sur `feat/m5-audio-overview`**
+> **État au 2026-11-10 — M5 poursuivi sur `feat/m5-audio-connectors` et `feat/m5-audio-overview` ; connexion Google Drive commencée sur `feat/m5-google-drive-connection` (branche créée depuis `main` à jour).**
 >
 > | Élément | État |
 > | --- | --- |
@@ -117,7 +117,7 @@ Date : 2026-11-09.
 > | Adaptateur STT | Interface isolée dans `apps/worker/src/ai/transcription.ts` ; clé uniquement côté worker (`DEEPGRAM_API_KEY`). Modèle et langue configurables. |
 > | Tests | Tests unitaires ajoutés pour l'adaptateur et l'association des timestamps aux chunks ; non exécutés à ce stade. |
 > | Reste B06 | Lecteur source et navigation transcript → position audio ajoutés dans la visionneuse : chaque segment horodaté permet de reprendre la lecture au bon instant. Restent le benchmark français (qualité, latence, coût/minute) et les tests d'intégration réels. |
-> | B08 Google Drive | Pas encore implémenté : OAuth, sélecteur, import Docs/Slides/Sheets et synchronisation restent à faire. |
+> | B08 Google Drive | Première tranche OAuth ajoutée sur `feat/m5-google-drive-connection` : connexion/déconnexion, vérification d'état, scope Drive en lecture seule, état OAuth signé + PKCE, jeton de renouvellement chiffré AES-256-GCM et panneau Réglages → Intégrations. Migration et variables d'environnement documentées. Sélecteur, import Docs/Slides/Sheets, renouvellement des jetons et synchronisation restent à faire ; tests/typecheck/runtime non exécutés. |
 > | G01 Audio Overview | G01 génération deux voix ; G02 formats, durées, styles, vitesse et téléchargement ; G03 mixage stéréo, pauses inter-répliques, normalisation loudnorm (−16 LUFS / −1,5 dBTP) et métriques de consommation TTS. Restent validation locale, test réel ffmpeg/ElevenLabs et benchmark qualité/coût. |
 >
 > **Décision D3 provisoire** : Deepgram Nova-3 est le premier adaptateur STT, car son API expose des segments horodatés. Ce n'est pas une décision fournisseur définitive : comparer la qualité française et le coût réel avant lancement. Sans clé Deepgram, les autres types de sources continuent à fonctionner et une source audio échoue avec un code explicite.
