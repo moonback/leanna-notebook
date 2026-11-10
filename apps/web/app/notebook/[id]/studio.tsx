@@ -179,7 +179,7 @@ function CreateDialog({ type, onClose, onGenerate }: { type: ArtType | null; onC
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setSending(true);
-    const audioPrompt = type === "audio" ? `${AUDIO_OVERVIEW_MARKER}${prompt.trim() ? `\
+    const audioPrompt = type === "audio" ? `${AUDIO_OVERVIEW_MARKER}${prompt.trim() ? `\n${prompt.trim()}` : ""}` : undefined;
 ${prompt.trim()}` : ""}` : undefined;
     const ok = await onGenerate(type!, opts, type === "audio" ? audioPrompt : prompt.trim() || undefined);
     setSending(false);
