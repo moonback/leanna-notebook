@@ -159,16 +159,16 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false }:
   async function persistVoiceTurn() {
     const userText = userTurn.current.trim();
     const assistantText = assistantTurn.current.trim();
-    userTurn.current = "";
-    assistantTurn.current = "";
     const sourceIds = [...turnSourceIds.current];
-    turnSourceIds.current.clear();
     if (!userText || !assistantText) return;
     const response = await fetch(`/api/v1/conversations/${conversationId}/voice-messages`, {
       method: "POST", headers: { "content-type": "application/json" },
       body: JSON.stringify({ userText, assistantText, sourceIds })
     });
     if (!response.ok) throw new Error("Le tour vocal n’a pas pu être enregistré dans l’historique.");
+    userTurn.current = "";
+    assistantTurn.current = "";
+    turnSourceIds.current.clear();
   }
 
   async function start() {
