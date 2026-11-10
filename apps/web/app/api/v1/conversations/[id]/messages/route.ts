@@ -82,12 +82,10 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
   if (selected.length === 0) throw new ApiError(422, "no_sources");
 
   // Configuration IA vérifiée AVANT de consommer du quota
-  const [{ data: chatPreference }, { data: embeddingPreference }] = await Promise.all([
-    db.from("ai_model_preferences").select("model_id").eq("user_id", user.id).eq("feature_key", "chat").maybeSingle(),
-    db.from("ai_model_preferences").select("model_id").eq("user_id", user.id).eq("feature_key", "embeddings").maybeSingle(),
-  ]);
+  const { data: chatPreference } = await db.from("ai_model_preferences")
+    .select("model_id").eq("user_id", user.id).eq("feature_key", "chat").maybeSingle();
   let query: Awaited<ReturnType<typeof embedQuery>>;
-  try { query = await embedQuery(text, { model: embeddingPreference?.model_id ?? undefined }); } catch (e) {
+  try { query = await embedQuery(text); } catch (e) {
     if (e instanceof AiNotConfigured) throw new ApiError(503, "ai_not_configured");
     throw e;
   }
