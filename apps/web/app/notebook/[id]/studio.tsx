@@ -179,7 +179,9 @@ function CreateDialog({ type, onClose, onGenerate }: { type: ArtType | null; onC
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setSending(true);
-    const audioPrompt = type === "audio" ? `${AUDIO_OVERVIEW_MARKER}${prompt.trim() ? `\\n${prompt.trim()}` : ""}` : undefined;\n    const ok = await onGenerate(type!, opts, type === "audio" ? audioPrompt : prompt.trim() || undefined);
+    const audioPrompt = type === "audio" ? `${AUDIO_OVERVIEW_MARKER}${prompt.trim() ? `\
+${prompt.trim()}` : ""}` : undefined;
+    const ok = await onGenerate(type!, opts, type === "audio" ? audioPrompt : prompt.trim() || undefined);
     setSending(false);
     if (ok) onClose();
   }
@@ -187,7 +189,8 @@ function CreateDialog({ type, onClose, onGenerate }: { type: ArtType | null; onC
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent title={`Générer : ${TYPES[type].label}`} description="À partir des sources sélectionnées. La génération continue en arrière-plan.">
         <form onSubmit={submit} className="grid gap-4">
-          {type === "report" && choice("template", "Format", [["briefing", "Note de synthèse"], ["study_guide", "Guide d’étude"], ["faq", "Questions fréquentes"]])}\n          {type === "audio" && <div className="grid gap-4 sm:grid-cols-2">{choice("format", "Format du podcast", [["deep_dive", "Deep Dive · approfondi"], ["brief", "Brief · essentiel"], ["critique", "Critique · analyse"], ["debate", "Débat · points de vue"]])}{choice("duration", "Durée cible", [["short", "Court · 5 min"], ["standard", "Standard · 10 min"], ["long", "Long · 15 min"]])}{choice("style", "Ton", [["accessible", "Accessible et pédagogique"], ["professional", "Professionnel et précis"], ["dynamic", "Dynamique et vivant"]])}</div>}
+          {type === "report" && choice("template", "Format", [["briefing", "Note de synthèse"], ["study_guide", "Guide d’étude"], ["faq", "Questions fréquentes"]])}
+          {type === "audio" && <div className="grid gap-4 sm:grid-cols-2">{choice("format", "Format du podcast", [["deep_dive", "Deep Dive · approfondi"], ["brief", "Brief · essentiel"], ["critique", "Critique · analyse"], ["debate", "Débat · points de vue"]])}{choice("duration", "Durée cible", [["short", "Court · 5 min"], ["standard", "Standard · 10 min"], ["long", "Long · 15 min"]])}{choice("style", "Ton", [["accessible", "Accessible et pédagogique"], ["professional", "Professionnel et précis"], ["dynamic", "Dynamique et vivant"]])}</div>}
           {(type === "flashcards" || type === "quiz") && (
             <div className="grid gap-4 sm:grid-cols-2">
               {choice("difficulty", "Difficulté", [["easy", "Facile"], ["medium", "Moyenne"], ["hard", "Difficile"]])}
@@ -226,6 +229,9 @@ async function resetProgress(id: string) {
 function ArtifactViewer({ id, canShare, onClose, sourceTitle, onOpenCitation, onAsk }: { id: string | null; canShare: boolean; onClose: () => void; sourceTitle: (id: string) => string | undefined; onOpenCitation?: (c: Cite) => void; onAsk: (t: string) => void }) {
   const [data, setData] = React.useState<{ artifact: { id: string; type: ArtType; title: string | null; content: Content; custom_prompt: string | null }; citations: Cite[]; progress: Progress[] } | null>(null);
   const [failed, setFailed] = React.useState(false);
+  const audioRef = React.useRef<HTMLAudioElement | null>(null);
+  const [playbackRate, setPlaybackRate] = React.useState("1");
+  React.useEffect(() => { if (audioRef.current) audioRef.current.playbackRate = Number(playbackRate); }, [playbackRate, data]);
   React.useEffect(() => {
     if (!id) return;
     setData(null); setFailed(false);
@@ -270,7 +276,8 @@ export function Markdown({ text, citations, sourceTitle, onOpen }: { text: strin
     blocks.push(<ul key={`l${blocks.length}`} className="ml-5 list-disc space-y-1">{list.map((li, i) => <li key={i}>{inline(li)}</li>)}</ul>);
     list = [];
   };
-  text.split("\n").forEach((line, i) => {
+  text.split("
+").forEach((line, i) => {
     const t = line.trim();
     if (/^[-*]\s+/.test(t)) { list.push(t.replace(/^[-*]\s+/, "")); return; }
     flush();
@@ -287,7 +294,8 @@ type Card = { key: string; front: string; back: string };
 /** Export CSV (recto ; verso), lisible par Excel et les applis de révision. Exporté pour les tests. */
 export function cardsToCsv(cards: Card[]) {
   const cell = (s: string) => `"${s.replace(/"/g, '""')}"`;
-  return "﻿" + ["Recto,Verso", ...cards.map((c) => `${cell(c.front)},${cell(c.back)}`)].join("\r\n");
+  return "﻿" + ["Recto,Verso", ...cards.map((c) => `${cell(c.front)},${cell(c.back)}`)].join("\r
+");
 }
 function downloadCsv(name: string, csv: string) {
   const a = document.createElement("a");
