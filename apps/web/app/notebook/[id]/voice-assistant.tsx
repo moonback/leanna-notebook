@@ -231,9 +231,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
           setState("listening");
           result = "Lecture vocale arrêtée. Je reste à l'écoute.";
         } else if (action === "repeat" || action === "summarize") {
-          const instruction = action === "repeat" ? "Répète ta dernière réponse à l'identique, sans ajouter de nouvelle information." : "Résume ta dernière réponse en une seule phrase, sans ajouter de nouvelle information.";
-          socket.current?.send(JSON.stringify({ clientContent: { turns: [{ role: "user", parts: [{ text: instruction }] }], turnComplete: true } }));
-          result = action === "repeat" ? "Je répète la dernière réponse." : "Je résume la dernière réponse en une phrase.";
+          result = action === "repeat" ? "Répète ta dernière réponse à l'identique, sans ajouter de nouvelle information." : "Résume ta dernière réponse en une seule phrase, sans ajouter de nouvelle information.";
         } else if (action === "save_passage" || action === "keep_passage") {
           const index = Number.isInteger(requestedNumber) && requestedNumber > 0 ? passages.findIndex((p) => p.number === requestedNumber) : activePassageIndexRef.current;
           if (index < 0 || !passages[index]) result = "Aucun passage à conserver. Ouvre d'abord une citation.";
