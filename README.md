@@ -52,8 +52,11 @@ Application SaaS multi-utilisateur (Next.js + Supabase + worker Node), conçue p
 ### Compte, partage et offres
 - Inscription / connexion par email et mot de passe ou **lien magique**.
 - **Partage privé** : inviter par email en lecteur ou éditeur, invitation en attente rattachée à l'inscription, changer le rôle, retirer l'accès (effet immédiat).
+- **Liens de partage** : « lecture et chat » ou « chat seul » (sources et Studio refusés par le serveur), jeton haché, révocation immédiate.
+- **Copie de notebook** : le propriétaire peut autoriser les lecteurs à copier. La copie reprend sources prêtes, passages indexés, guides, artefacts prêts et leurs citations, avec les fichiers ; pas les conversations, notes ni partages. Elle est annulée entièrement si la duplication des fichiers échoue.
 - Offres Gratuit / Pro avec quotas (crédits mensuels, limites quotidiennes par type, nombre de notebooks, de sources, de membres) ; écran **Consommation** dans les réglages.
 - Préférences : nom affiché, langue des réponses, thème clair / sombre / système.
+- **Export des données** (Réglages › Vos données) : un fichier JSON avec profil, notebooks, sources (texte extrait), contenus générés, conversations, progression, usage et journal d'audit, plus des liens signés de 7 jours vers les fichiers d'origine. Les passages indexés et les embeddings n'y figurent pas.
 - **Suppression définitive du compte** (Réglages › Zone dangereuse) : confirmation par saisie de l'email, puis effacement en cascade du profil, des espaces possédés (notebooks, sources, conversations, artefacts) et des fichiers du stockage. Les notebooks partagés disparaissent aussi pour leurs destinataires.
 - Pages publiques **Confidentialité** (`/privacy`) et **Conditions d'utilisation** (`/terms`), liées depuis les écrans de connexion et d'inscription.
 - Envoyer un avis ou **signaler un notebook** (stocké pour modération).
@@ -110,8 +113,8 @@ apps/
 packages/
   core/                   Citations partagées
 supabase/
-  migrations/             Schéma, stockage, partage
-  tests/                  Tests pgTAP (sécurité, isolation, partage)
+  migrations/             Schéma, stockage, partage, copie de notebook
+  tests/                  Tests pgTAP (sécurité, isolation, partage, copie)
   seed.sql                Offres Gratuit et Pro
   config.toml             Ports locaux 583xx
 replica/                  Documents de conception (voir plus bas)
@@ -227,7 +230,7 @@ pnpm db:test
 - **packages/core** : résolution des citations (renumérotation, numéros inventés, offsets).
 - **apps/web** : validation des entrées, rendu Markdown sûr des rapports, export CSV.
 - **apps/worker** : découpage, protection SSRF, extraction Office, ingestion de bout en bout, génération Studio, guides et résumés, cycle de vie des jobs (échec, remboursement, rattrapage d'un worker arrêté). Les tests d'intégration utilisent Supabase local et sont ignorés sans `apps/worker/.env`.
-- **pgTAP** : RLS sur toutes les tables, isolation entre clients (un autre utilisateur ne voit ni notebook, ni source, ni passage, ni fichier), liens « chat seul », quotas atomiques, partage et retrait d'accès.
+- **pgTAP** : RLS sur toutes les tables, isolation entre clients (un autre utilisateur ne voit ni notebook, ni source, ni passage, ni fichier), liens « chat seul », quotas atomiques, partage et retrait d'accès, copie de notebook (`03_copy.test.sql`).
 
 > Les tests d'intégration du worker partagent la base locale de développement. Leurs jobs passent en priorité pour ne jamais traiter vos jobs réels ; une base de test séparée reste préférable.
 
@@ -258,13 +261,13 @@ Préfixe `/api/v1`. Authentification par cookie de session ; chaque route vérif
 
 | Ressource | Routes |
 | --- | --- |
-| Profil | `GET` `PATCH` `DELETE` `/me` (`DELETE` : `{ "confirm": "<email>" }`, suppression définitive, `204`) |
-| Notebooks | `GET` `POST` `/notebooks` · `GET` `PATCH` `DELETE` `/notebooks/:id` |
+| Profil | `GET` `PATCH` `DELETE` `/me` (`DELETE` : `{ "confirm": "<email>" }`, suppression définitive, `204`) · `GET` `/me/export` (JSON en téléchargement) |
+| Notebooks | `GET` `POST` `/notebooks` · `GET` `PATCH` `DELETE` `/notebooks/:id` (`PATCH allow_copies` : propriétaire) · `POST` `/notebooks/:id/copy` (`201`, `403 copies_disabled`, `409 max_notebooks`) |
 | Sources | `POST` `/notebooks/:id/uploads` · `GET` `POST` `/notebooks/:id/sources` · `PUT` `/notebooks/:id/selection` · `GET` `PATCH` `DELETE` `/sources/:id` |
 | Notes | `POST` `/notebooks/:id/notes` · `GET` `PATCH` `/notes/:id` · `POST` `/messages/:id/save-note` |
 | Chat | `GET` `POST` `/notebooks/:id/conversations` · `GET` `POST` (flux SSE) `DELETE` `/conversations/:id/messages` · `POST` `/messages/:id/feedback` |
 | Studio | `GET` `POST` `/notebooks/:id/artifacts` · `GET` `DELETE` `/artifacts/:id` · `PUT` `DELETE` `/artifacts/:id/progress` |
-| Partage | `GET` `POST` `/notebooks/:id/members` · `PATCH` `DELETE` `/notebook-members/:id` |
+| Partage | `GET` `POST` `/notebooks/:id/members` · `PATCH` `DELETE` `/notebook-members/:id` · `GET` `POST` `/notebooks/:id/links` · `DELETE` `/share-links/:id` |
 | Offre | `POST` `/workspaces/:id/billing` |
 | Avis | `POST` `/reports` |
 
@@ -280,7 +283,7 @@ Codes d'erreur : `401` non connecté, `403` rôle insuffisant, `404` inexistant 
 - Fichiers dans des buckets **privés**, chemins préfixés par workspace et notebook ; extraction web protégée contre le SSRF ; archives Office protégées contre les « zip bombs ».
 - Contenu des sources traité comme une **donnée** : les prompts demandent d'ignorer toute instruction qui s'y trouverait ; les sorties JSON du modèle sont validées, le Markdown est rendu sans HTML.
 - Journaux structurés sans données personnelles (adresses et secrets masqués) ; journal d'audit pour les suppressions et le partage.
-- **RGPD** : suppression du compte en libre-service (base en cascade + purge des buckets `sources`, `artifacts`, `exports`) ; une purge de fichiers qui échoue est seulement journalisée (`storage.purge_failed`) : le type de job `purge_storage` existe mais son traitement n'est pas encore écrit, la reprise est donc manuelle. Export des données non fait.
+- **RGPD** : suppression du compte en libre-service (base en cascade + purge des buckets `sources`, `artifacts`, `exports`) ; une purge de fichiers qui échoue est seulement journalisée (`storage.purge_failed`) : le type de job `purge_storage` existe mais son traitement n'est pas encore écrit, la reprise est donc manuelle. Export des données en JSON en libre-service ; il est construit en mémoire dans la requête, ce qui convient aux comptes de taille courante mais devra passer par un job (`export_account`) pour les très gros volumes.
 - Limites : taille des fichiers, nombre de mots, quotas, 20 signalements par jour.
 
 ---
@@ -293,7 +296,7 @@ Parité pondérée avec la référence fonctionnelle : **environ 67 %** ; **22/2
 | --- | --- | --- |
 | M0–M2 | Socle, ingestion, chat avec citations, notes | fait |
 | M3 | Studio texte, quotas visibles, chat avancé, résumés, avis | fait, sauf Stripe réel |
-| M4 | Partage et RGPD | en cours : partage privé, suppression de compte et pages Confidentialité / Conditions faits ; liens publics, copie et export des données à faire |
+| M4 | Partage et RGPD | en cours : partage privé, liens de partage (lecture + chat, chat seul), copie de notebook, export des données, suppression de compte et pages Confidentialité / Conditions faits ; lien public d'un artefact, recherche web et onglet Découvrir à faire |
 | M5 | Résumés audio, connecteurs (Google Drive) | à faire |
 | M6 | Présentations, infographies, recherche web, équipes | à faire |
 

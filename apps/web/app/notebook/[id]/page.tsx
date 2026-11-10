@@ -15,14 +15,14 @@ export default async function NotebookPage({ params }: { params: Promise<{ id: s
   const supabase = await createUserClient();
   const [{ data: role }, { data: nb }] = await Promise.all([
     supabase.rpc("my_notebook_role", { p_nb: id }),
-    supabase.from("notebooks").select("id, title, emoji").eq("id", id).maybeSingle(),
+    supabase.from("notebooks").select("id, title, emoji, allow_copies").eq("id", id).maybeSingle(),
   ]);
   if (!role || !nb) notFound(); // invisible = inexistant (on ne révèle rien)
 
   return (
     <div className="flex h-dvh flex-col">
       <AppHeader notebookId={id} />
-      <Workspace notebookId={id} initialTitle={nb.title} role={role as Role} />
+      <Workspace notebookId={id} initialTitle={nb.title} role={role as Role} allowCopies={nb.allow_copies} />
     </div>
   );
 }

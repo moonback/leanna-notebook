@@ -27,6 +27,7 @@ const patchSchema = z.object({
   chat_style: z.enum(["default", "learning_guide", "custom"]),
   chat_custom_prompt: z.string().trim().max(4000, "4 000 caractères maximum.").nullable(),
   response_length: z.enum(["short", "default", "long"]),
+  allow_copies: z.boolean(),
 }).partial().strict().refine((v) => Object.keys(v).length > 0, "Aucune modification.")
   .refine((v) => v.chat_style !== "custom" || Boolean(v.chat_custom_prompt), { message: "Décrivez le rôle ou le style souhaité.", path: ["chat_custom_prompt"] });
 
@@ -34,9 +35,10 @@ const patchSchema = z.object({
 export const PATCH = handle(async (req: NextRequest, { params }: Params) => {
   await requireUser();
   const { id } = await params;
-  await requireRole(id, "editor");
+  const role = await requireRole(id, "editor");
   const body = await parseBody(req, patchSchema);
-  const { data, error } = await createServiceClient().from("notebooks").update(body).eq("id", id).select("id, title, emoji, chat_style, chat_custom_prompt, response_length").single();
+  if (body.allow_copies !== undefined && role !== "owner") throw new ApiError(403, "forbidden"); // réservé au propriétaire
+  const { data, error } = await createServiceClient().from("notebooks").update(body).eq("id", id).select("id, title, emoji, chat_style, chat_custom_prompt, response_length, allow_copies").single();
   if (error) throw error;
   return NextResponse.json({ notebook: data });
 });

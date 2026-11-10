@@ -4,6 +4,7 @@ import { Share2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { Alert, Badge, Skeleton } from "@/components/ui/feedback";
+import { Switch } from "@/components/ui/controls";
 import { Dialog, DialogContent } from "@/components/ui/overlay";
 import { ListRow } from "@/components/ui/surfaces";
 import { toast } from "@/components/ui/toast";
@@ -20,7 +21,13 @@ const ERRORS: Record<string, string> = {
 };
 
 /** H01 : partage privé par email (propriétaire). Rôles appliqués côté serveur. */
-export function ShareButton({ notebookId }: { notebookId: string }) {
+export function ShareButton({ notebookId, allowCopies }: { notebookId: string; allowCopies: boolean }) {
+  const [copies, setCopies] = React.useState(allowCopies);
+  async function toggleCopies(v: boolean) {
+    setCopies(v);
+    const r = await fetch(`/api/v1/notebooks/${notebookId}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ allow_copies: v }) }).catch(() => null);
+    if (!r?.ok) { setCopies(!v); toast({ title: "Réglage non enregistré", tone: "error" }); }
+  }
   const [open, setOpen] = React.useState(false);
   const [people, setPeople] = React.useState<Person[] | null>(null);
   const [failed, setFailed] = React.useState(false);
@@ -126,6 +133,10 @@ export function ShareButton({ notebookId }: { notebookId: string }) {
               </Field>
             </div>
           )}
+          <label className="mt-5 flex items-center gap-3 text-sm">
+            <Switch checked={copies} onCheckedChange={(v) => void toggleCopies(v)} />
+            Autoriser les lecteurs à faire une copie (sources et contenus générés, sans vos conversations ni notes)
+          </label>
           {links.length > 0 && (
             <ul className="mt-3 grid gap-0.5">
               {links.map((l) => (

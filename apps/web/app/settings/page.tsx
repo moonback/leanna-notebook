@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { AppHeader } from "@/components/app/app-header";
+import { Button } from "@/components/ui/button";
 import { Badge, Progress } from "@/components/ui/feedback";
 import { Card } from "@/components/ui/surfaces";
 import { createUserClient, getUser } from "@/lib/supabase/server";
@@ -46,6 +47,13 @@ export default async function SettingsPage() {
           {personal && plans ? <PlanCard workspaceId={personal.id} current={personal.plan_id} plans={plans} /> : <p role="alert" className="text-sm text-danger">Espace de travail introuvable.</p>}
         </Card>
         {limits && usage && <UsageCard limits={limits} usage={usage} dayStart={dayStart} />}
+        <Card className="grid gap-3 p-5">
+          <h2 className="text-lg">Vos données</h2>
+          <p className="text-sm text-text-muted">
+            Téléchargez une copie de vos données (profil, notebooks, sources, conversations, contenus générés, usage) au format JSON. Les fichiers d’origine sont accessibles par des liens valables 7 jours.
+          </p>
+          <div><Button asChild variant="secondary"><a href="/api/v1/me/export" download>Exporter mes données</a></Button></div>
+        </Card>
         {user.email && (
           <Card className="grid gap-4 border-danger/40 p-5">
             <h2 className="text-lg text-danger">Zone dangereuse</h2>

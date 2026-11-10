@@ -90,6 +90,19 @@ Date : 2026-11-09.
 | Jobs | `copy_notebook`, `research` (mode rapide), `export_account`, `delete_account` ; pg_cron `cleanup_invitations` |
 | Critère de sortie | Tests pgTAP + E2E : un lien « chat seul » ne permet jamais de lire une source ou un chunk ; la révocation est immédiate ; l'export RGPD contient toutes les données de l'utilisateur ; la suppression du compte ne laisse aucun objet dans Storage |
 
+> **État au 2026-11-10 (M4 en cours)**
+>
+> | Élément | État |
+> | --- | --- |
+> | H01 partage privé, H02 lien lecture + chat, H03 lien chat seul | fait |
+> | H05 copie de notebook (`POST /notebooks/:id/copy`, option `allow_copies`, migration `20261110000000_copy_notebook.sql`) | fait ; test pgTAP `03_copy.test.sql` passé (suite complète : 44 tests) |
+> | Export RGPD (`GET /me/export`) | fait, synchrone et en JSON (au lieu du ZIP via job `export_account` prévu) ; à passer en job si les volumes grossissent |
+> | Suppression du compte (`DELETE /me`) | fait, synchrone (au lieu du job `delete_account`) avec confirmation par e-mail, au lieu de la double confirmation + ré-authentification prévue ; purge Storage ratée seulement journalisée, le job `purge_storage` n'est pas écrit |
+> | Z04 pages `/privacy` et `/terms` | faites ; restent DPA, registre des sous-traitants, rétention chez les fournisseurs d'IA, mentions légales, relecture juridique |
+> | H04 lien public d'un artefact, B17 Fast Research, onglet Découvrir (S04), `PATCH /notebooks/:id/visit`, pg_cron `cleanup_invitations` | à faire |
+>
+> Critère de sortie M4 : le critère « suppression sans objet restant dans Storage » n'est garanti qu'en l'absence d'erreur de purge ; aucun test E2E de la suppression ni de l'export n'existe encore. Annulation Stripe à brancher avec le paiement réel.
+
 ## M5 : Audio + connecteurs (3 semaines)
 
 | | |
