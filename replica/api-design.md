@@ -67,7 +67,7 @@ Les fichiers audio (MP3, WAV, M4A, AAC, OGG, FLAC, WEBM) sont ingérés via Deep
 
 Les fichiers audio sont transcrits côté worker avec Deepgram Nova-3 (`DEEPGRAM_API_KEY`, `STT_MODEL`, `STT_LANGUAGE`) ; les timestamps de chaque segment sont conservés dans `chunks.time_start_ms/time_end_ms`. D3 reste à valider par benchmark qualité/coût.
 
-Le fournisseur Fast Research est Tavily côté worker (`TAVILY_API_KEY`, configurée côté web et worker). Le serveur web ne télécharge jamais les résultats ; les URLs sélectionnées sont ensuite traitées par le pipeline d’ingestion existant, avec ses protections SSRF.
+Les fichiers audio sont transcrits côté worker avec Deepgram Nova-3 (`DEEPGRAM_API_KEY`, `STT_MODEL`, `STT_LANGUAGE`) ; les timestamps de chaque segment sont conservés dans `chunks.time_start_ms/time_end_ms`. D3 reste à valider par benchmark qualité/coût.\n\nLe fournisseur Fast Research est Tavily côté worker (`TAVILY_API_KEY`, configurée côté web et worker). Le serveur web ne télécharge jamais les résultats ; les URLs sélectionnées sont ensuite traitées par le pipeline d’ingestion existant, avec ses protections SSRF.
 
 ## F06, F07, F08, F11 : chat
 
