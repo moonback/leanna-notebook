@@ -70,6 +70,44 @@ export function Workspace({ notebookId, initialTitle, role, allowCopies }: { not
   const wideDesktop = useMediaQuery("(min-width: 1280px)");
   const [sourcesCollapsed, setSourcesCollapsed] = React.useState(false);
   const [studioCollapsed, setStudioCollapsed] = React.useState(false);
+  const [sourcesWidth, setSourcesWidth] = React.useState(300);
+  const [studioWidth, setStudioWidth] = React.useState(340);
+  const [panelWidthsLoadedFor, setPanelWidthsLoadedFor] = React.useState<string | null>(null);
+  const panelResize = React.useRef<{ side: "sources" | "studio"; startX: number; startWidth: number } | null>(null);
+
+  React.useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(`notebook-workspace-panels:${notebookId}`);
+      if (saved) {
+        const parsed = JSON.parse(saved) as { sourcesWidth?: number; studioWidth?: number };
+        if (typeof parsed.sourcesWidth === "number" && Number.isFinite(parsed.sourcesWidth)) setSourcesWidth(Math.min(520, Math.max(220, parsed.sourcesWidth)));
+        if (typeof parsed.studioWidth === "number" && Number.isFinite(parsed.studioWidth)) setStudioWidth(Math.min(560, Math.max(260, parsed.studioWidth)));
+      }
+    } catch { /* stockage local facultatif */ }
+    setPanelWidthsLoadedFor(notebookId);
+  }, [notebookId]);
+
+  React.useEffect(() => {
+    if (panelWidthsLoadedFor !== notebookId) return;
+    try {
+      window.localStorage.setItem(`notebook-workspace-panels:${notebookId}`, JSON.stringify({ sourcesWidth, studioWidth }));
+    } catch { /* stockage local facultatif */ }
+  }, [notebookId, panelWidthsLoadedFor, sourcesWidth, studioWidth]);
+
+  const beginPanelResize = (side: "sources" | "studio", event: React.PointerEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    panelResize.current = { side, startX: event.clientX, startWidth: side === "sources" ? sourcesWidth : studioWidth };
+  };
+  const movePanelResize = (event: React.PointerEvent<HTMLDivElement>) => {
+    const active = panelResize.current;
+    if (!active) return;
+    const delta = event.clientX - active.startX;
+    if (active.side === "sources") setSourcesWidth(Math.min(520, Math.max(220, active.startWidth + delta)));
+    else setStudioWidth(Math.min(560, Math.max(260, active.startWidth - delta)));
+  };
+  const endPanelResize = () => { panelResize.current = null; };
+
   const [overview, setOverview] = React.useState<Overview | null>(null);
   const loadOverview = React.useCallback(async () => {
     try {
@@ -222,9 +260,13 @@ export function Workspace({ notebookId, initialTitle, role, allowCopies }: { not
       {/* Bureau : Sources et Studio se replient indépendamment. Mobile : navigation par onglets. */}
       {role === "chat" ? <div className="min-h-0 flex-1 p-2 sm:p-3">{chatPanel}</div> : desktop ? (
         <div
-          className="grid min-h-0 min-w-0 flex-1 gap-3 p-3"
+          className="grid min-h-0 min-w-0 flex-1 gap-2 p-3"
           style={{
-            gridTemplateColumns: `${sourcesCollapsed ? "2.75rem" : "var(--panel-sources-w)"} minmax(0, 1fr) ${wideDesktop ? (studioCollapsed ? "2.75rem" : "var(--panel-studio-w)") : "0px"}`,
+            gridTemplateColumns: [
+              sourcesCollapsed ? "2.75rem" : `${sourcesWidth}px 8px`,
+              "minmax(0, 1fr)",
+              ...(wideDesktop ? [studioCollapsed ? "2.75rem" : `8px ${studioWidth}px`] : ["0px"]),
+            ].join(" "),
           }}
         >
           {sourcesCollapsed ? (
@@ -256,7 +298,53 @@ export function Workspace({ notebookId, initialTitle, role, allowCopies }: { not
             </div>
           )}
 
+          {!sourcesCollapsed && (
+            <div
+              role="separator"
+              aria-orientation="vertical"
+              aria-label="Redimensionner le panneau Sources"
+              aria-valuenow={sourcesWidth}
+              aria-valuemin={220}
+              aria-valuemax={520}
+              tabIndex={0}
+              className="w-2 cursor-col-resize touch-none rounded-full bg-border/40 outline-none transition-colors hover:bg-accent/40 focus-visible:bg-accent/50"
+              onPointerDown={(event) => beginPanelResize("sources", event)}
+              onPointerMove={movePanelResize}
+              onPointerUp={endPanelResize}
+              onPointerCancel={endPanelResize}
+              onKeyDown={(event) => {
+                if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+                  event.preventDefault();
+                  setSourcesWidth((width) => Math.min(520, Math.max(220, width + (event.key === "ArrowRight" ? 16 : -16))));
+                }
+              }}
+            />
+          )}
+
           {chatPanel}
+
+          {wideDesktop && !studioCollapsed && (
+            <div
+              role="separator"
+              aria-orientation="vertical"
+              aria-label="Redimensionner le panneau Studio"
+              aria-valuenow={studioWidth}
+              aria-valuemin={260}
+              aria-valuemax={560}
+              tabIndex={0}
+              className="w-2 cursor-col-resize touch-none rounded-full bg-border/40 outline-none transition-colors hover:bg-accent/40 focus-visible:bg-accent/50"
+              onPointerDown={(event) => beginPanelResize("studio", event)}
+              onPointerMove={movePanelResize}
+              onPointerUp={endPanelResize}
+              onPointerCancel={endPanelResize}
+              onKeyDown={(event) => {
+                if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+                  event.preventDefault();
+                  setStudioWidth((width) => Math.min(560, Math.max(260, width + (event.key === "ArrowLeft" ? 16 : -16))));
+                }
+              }}
+            />
+          )}
 
           {wideDesktop && (studioCollapsed ? (
             <Button
