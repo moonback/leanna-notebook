@@ -57,7 +57,7 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
       const [owner, repository] = parsed.pathname.split("/").filter(Boolean);
       const repoName = repository.replace(/\.git$/i, "");
       const ref = encodeURIComponent(item.branch);
-      args = { p_kind: "github", p_title: `${owner}/${repoName} · ${item.branch}`, p_origin_url: `https://github.com/${owner}/${repoName}?ref=${ref}` };
+      args = { p_kind: "github", p_title: `${owner}/${repoName} · ${item.branch}`.slice(0, 300), p_origin_url: `https://github.com/${owner}/${repoName}?ref=${ref}` };
     } else {
       const path = `${prefix}${crypto.randomUUID()}/original.txt`;
       const { error } = await db.storage.from("sources").upload(path, new Blob([item.text], { type: "text/plain" }));
