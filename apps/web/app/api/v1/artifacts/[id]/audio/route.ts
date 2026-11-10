@@ -18,7 +18,7 @@ export const GET = handle(async (_req: NextRequest, { params }: Params) => {
   if (typeof path !== "string" || !path.startsWith("audio-overviews/") || !path.endsWith(`.mp3`)) {
     throw new ApiError(404, "audio_not_found");
   }
-  const { data, error } = await db.storage.from("artifacts").createSignedUrl(path, 300);
+  const { data, error } = await db.storage.from("artifacts").createSignedUrl(path, 3600);
   if (error || !data?.signedUrl) throw new ApiError(404, "audio_not_found");
   return NextResponse.redirect(data.signedUrl, 302);
 });
