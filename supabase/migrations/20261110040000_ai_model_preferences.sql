@@ -1,7 +1,7 @@
 -- Per-user OpenRouter model selection, isolated by authenticated user.
 create table if not exists public.ai_model_preferences (
   user_id uuid not null references auth.users(id) on delete cascade,
-  feature_key text not null check (feature_key in ('chat','report','flashcards','quiz','mind_map','audio_overview','embeddings')),
+  feature_key text not null check (feature_key in ('chat','report','flashcards','quiz','mind_map','audio_overview')),
   model_id text not null check (char_length(model_id) between 3 and 200),
   updated_at timestamptz not null default now(),
   primary key (user_id, feature_key)
