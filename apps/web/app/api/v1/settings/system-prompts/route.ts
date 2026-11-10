@@ -27,7 +27,7 @@ export const PUT = handle(async (req: NextRequest) => {
     if (error) throw error;
     return NextResponse.json({ ok: true, reset: true });
   }
-  const { error } = await db.from("ai_prompt_overrides").upsert({ user_id: user.id, prompt_key: parsed.data.key, content, updated_at: new Date().toISOString() }, { onConflict: "user_id,prompt_key" });
+  const { error } = await db.from("ai_prompt_overrides").upsert({ user_id: user.id, prompt_key: parsed.key, content, updated_at: new Date().toISOString() }, { onConflict: "user_id,prompt_key" });
   if (error) throw error;
   return NextResponse.json({ ok: true });
 });
