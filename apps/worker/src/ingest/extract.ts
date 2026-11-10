@@ -7,6 +7,7 @@ import { FetchRefused, safeFetch } from "./ssrf.ts";
 import { fromEpub, fromPptx, readZip } from "./office.ts";
 import type { Transcriber } from "../ai/transcription.ts";
 import { normalize, type ChunkTimeRange } from "./chunker.ts";
+import { extractGitHubCodebase } from "./github.ts";
 
 export type Extracted = { text: string; pageStarts: number[]; pageCount: number | null; title?: string; timeRanges?: ChunkTimeRange[] };
 
@@ -44,6 +45,8 @@ function fromHtml(html: string): Extracted {
 /** Texte brut d'une source, selon son type. Les erreurs attendues sont des PermanentError (code stable). */
 export async function extract(kind: string, data: { file?: Uint8Array; url?: string; noteText?: string; mimeType?: string }, transcriber?: Transcriber | null): Promise<Extracted> {
   switch (kind) {
+    case "github":
+      return finalize({ text: await extractGitHubCodebase(data.url ?? ""), pageStarts: [], pageCount: null });
     case "audio": {
       if (!transcriber) throw new PermanentError("transcription_not_configured", "La transcription audio n’est pas configurée côté serveur.");
       if (!data.file) throw new PermanentError("file_missing");
