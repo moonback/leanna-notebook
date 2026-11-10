@@ -761,7 +761,7 @@ function AddSourcesDialog({ open, onOpenChange, notebookId, onAdded }: { open: b
               <TabsTrigger value="file"><Upload className="mr-1.5 inline size-3.5" aria-hidden />Fichier</TabsTrigger>
               <TabsTrigger value="url"><Globe className="mr-1.5 inline size-3.5" aria-hidden />Page web</TabsTrigger>
               <TabsTrigger value="text"><Type className="mr-1.5 inline size-3.5" aria-hidden />Texte</TabsTrigger>
-              <TabsTrigger value="github"><Github className="mr-1.5 inline size-3.5" aria-hidden />GitHub</TabsTrigger>\n              <TabsTrigger value="github"><Github className="mr-1.5 inline size-3.5" aria-hidden />GitHub</TabsTrigger>
+              <TabsTrigger value="github"><Github className="mr-1.5 inline size-3.5" aria-hidden />GitHub</TabsTrigger>
             </TabsList>
             <TabsContent value="file" className="pt-4">
               <Field id="files" label="Fichiers" hint="PDF, DOCX, PPTX, EPUB, TXT, MD, CSV, MP3, WAV, M4A, AAC, OGG, FLAC ou WEBM — 200 Mo maximum par fichier.">
