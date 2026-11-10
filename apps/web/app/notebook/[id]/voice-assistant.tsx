@@ -55,7 +55,7 @@ export function VoiceAssistant({ notebookId, disabled = false }: { notebookId: s
   const socket = React.useRef<WebSocket | null>(null);
   const audioContext = React.useRef<AudioContext | null>(null);
   const mediaStream = React.useRef<MediaStream | null>(null);
-  const processor = React.useRef<ScriptProcessorNode | null>(null);
+  const processor = React.useRef<AudioWorkletNode | null>(null);
   const micSource = React.useRef<MediaStreamAudioSourceNode | null>(null);
   const playbackNodes = React.useRef<Set<AudioBufferSourceNode>>(new Set());
   const nextPlaybackTime = React.useRef(0);
@@ -130,13 +130,13 @@ export function VoiceAssistant({ notebookId, disabled = false }: { notebookId: s
     if (state === "connecting" || state === "listening" || state === "speaking") { stop(); return; }
     setState("connecting");
     setStatus("Connexion sécurisée à Gemini Live…");
-    const ctx = new AudioContext();
-    audioContext.current = ctx;
-    await ctx.resume();
     setTranscript("");
     setAnswer("");
     setSources([]);
     try {
+      const ctx = new AudioContext();
+      audioContext.current = ctx;
+      await ctx.resume();
       const tokenResponse = await fetch(`/api/v1/notebooks/${notebookId}/voice-token`, {
         method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ voice: "Aoede" })
       });
@@ -174,19 +174,21 @@ export function VoiceAssistant({ notebookId, disabled = false }: { notebookId: s
 
       const stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
       mediaStream.current = stream;
+      await ctx.audioWorklet.addModule("/audio/pcm-capture.worklet.js");
       const source = ctx.createMediaStreamSource(stream);
       micSource.current = source;
-      const node = ctx.createScriptProcessor(4096, 1, 1);
+      const node = new AudioWorkletNode(ctx, "pcm-capture");
       processor.current = node;
-      node.onaudioprocess = (event) => {
+      node.port.onmessage = (event: MessageEvent<Float32Array>) => {
         if (mutedRef.current || ws.readyState !== WebSocket.OPEN) return;
-        const pcm = floatToPcm16(downsampleTo16k(event.inputBuffer.getChannelData(0), ctx.sampleRate));
+        const pcm = floatToPcm16(downsampleTo16k(event.data, ctx.sampleRate));
         ws.send(JSON.stringify({ realtimeInput: { audio: { mimeType: "audio/pcm;rate=16000", data: bytesToBase64(pcm) } } }));
       };
       source.connect(node);
       node.connect(ctx.destination);
       setState("listening");
       setStatus("Je vous écoute. Parlez naturellement.");
+      ws.onclose = () => { if (mounted.current) { stop(); setStatus("Session vocale terminée."); } };
       ws.onmessage = async (event) => {
         try {
           const msg = JSON.parse(typeof event.data === "string" ? event.data : "");
