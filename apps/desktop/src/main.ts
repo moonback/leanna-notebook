@@ -187,7 +187,7 @@ function createMainWindow(): void {
       type: "error",
       title: "Notebook ne démarre pas",
       message: "Impossible de charger l'application web locale.",
-      detail: `Vérifiez que Next.js est disponible sur ${WEB_URL}.\\n\\nDétail : ${detail}`,
+      detail: `Vérifiez que Next.js est disponible sur ${WEB_URL}.\n\nDétail : ${detail}`,
       buttons: ["Quitter"],
     });
     app.quit();
