@@ -20,6 +20,11 @@ describe("Google Drive OAuth security helpers", () => {
     expect(verifyOAuthState(`${auth.state}tampered`, auth.nonce, "user-123")).toBeNull();
   });
 
+  it("rejects weak OAuth state signing secrets", () => {
+    process.env.DRIVE_OAUTH_STATE_SECRET = "short";
+    expect(() => createOAuthState("user-123")).toThrow("DRIVE_OAUTH_STATE_SECRET_must_be_at_least_32_bytes");
+  });
+
   it("encrypts refresh tokens with authenticated encryption", () => {
     const ciphertext = encryptRefreshToken("refresh-token-secret");
     expect(ciphertext).not.toContain("refresh-token-secret");
