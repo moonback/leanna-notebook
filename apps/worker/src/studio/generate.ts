@@ -172,7 +172,7 @@ export function studioHandler(db: SupabaseClient, llm: Llm | null, speech: Speec
         ? { messages: buildAudioOverviewMessages(formatPassages(passages), language, customPrompt, (art.options ?? {}) as { format?: string; duration?: string; style?: string }), json: true }
         : buildPrompt(art.type, art.options ?? {}, customPrompt, formatPassages(passages), language);
       if (promptOverride?.content && prompt.messages[0]) {
-        prompt.messages[0].content = `${prompt.messages[0].content}\\n\\nInstructions personnalisées de l’utilisateur :\\n${promptOverride.content}`;
+        prompt.messages[0].content = `${prompt.messages[0].content}\n\nInstructions personnalisées de l’utilisateur :\n${promptOverride.content}`;
       }
       await ctx.progress(30, audioOverview ? "écriture du dialogue" : "rédaction");
       const out = await llm(prompt.messages, { json: prompt.json, model: modelPreference?.model_id ?? undefined, maxTokens: audioOverview ? ((art.options as { duration?: string } | null)?.duration === "long" ? 7000 : (art.options as { duration?: string } | null)?.duration === "short" ? 3000 : 5000) : art.type === "report" ? 6000 : 4000 });
