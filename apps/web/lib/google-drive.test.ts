@@ -24,7 +24,9 @@ describe("Google Drive OAuth security helpers", () => {
     const ciphertext = encryptRefreshToken("refresh-token-secret");
     expect(ciphertext).not.toContain("refresh-token-secret");
     expect(decryptRefreshToken(ciphertext)).toBe("refresh-token-secret");
-    expect(() => decryptRefreshToken(ciphertext.replace(/.$/, "A"))).toThrow();
+    const [iv, tag, encrypted] = ciphertext.split(".");
+    const corruptedTag = tag!.slice(0, -1) + (tag!.endsWith("A") ? "B" : "A");
+    expect(() => decryptRefreshToken([iv, corruptedTag, encrypted].join("."))).toThrow();
   });
 
   it("requests offline read-only Drive access with PKCE", () => {
@@ -32,7 +34,8 @@ describe("Google Drive OAuth security helpers", () => {
     expect(url.searchParams.get("access_type")).toBe("offline");
     expect(url.searchParams.get("code_challenge_method")).toBe("S256");
     expect(url.searchParams.get("state")).toBe("signed-state");
-    expect(url.searchParams.get("scope")).toContain("https://www.googleapis.com/auth/drive.readonly");
-    expect(url.searchParams.get("scope")).not.toContain("https://www.googleapis.com/auth/drive");
+    const scopes = url.searchParams.get("scope")?.split(" ") ?? [];
+    expect(scopes).toContain("https://www.googleapis.com/auth/drive.readonly");
+    expect(scopes).not.toContain("https://www.googleapis.com/auth/drive");
   });
 });
