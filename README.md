@@ -183,7 +183,7 @@ Les fichiers `.env*` ne sont jamais versionnés. Les clés `service_role` et Ope
 | `NEXT_PUBLIC_SUPABASE_URL` | URL de l'API Supabase (local : `http://127.0.0.1:58321`) |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Clé publique `anon` |
 | `SUPABASE_SERVICE_ROLE_KEY` | Clé serveur (écritures après contrôle du rôle) |
-| `OPENROUTER_API_KEY` | Clé OpenRouter ([openrouter.ai/keys](https://openrouter.ai/keys)) |
+| `OPENROUTER_API_KEY` | Clé OpenRouter ([openrouter.ai/keys](https://openrouter.ai/keys)) |\n| `GEMINI_API_KEY` | Clé Google AI Studio pour les conversations vocales Gemini Live (clé conservée côté serveur) |
 | `OPENROUTER_CHAT_MODEL` | Identifiant du modèle de chat sur OpenRouter |
 | `TAVILY_API_KEY` | Clé du fournisseur de recherche web Fast Research (également requise côté worker) |
 | `OPENROUTER_EMBEDDINGS_MODEL` | Modèle d'embeddings **1024 dimensions** (facultatif) |
