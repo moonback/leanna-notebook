@@ -81,6 +81,9 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
   const assistantTurn = React.useRef("");
   const turnSourceIds = React.useRef<Set<string>>(new Set());
   const turnPassages = React.useRef<Map<string, Passage>>(new Map());
+  const pendingToolCalls = React.useRef(0);
+  const turnCompletePending = React.useRef(false);
+  const turnFinalizing = React.useRef(false);
   const [muted, setMuted] = React.useState(false);
   const socket = React.useRef<WebSocket | null>(null);
   const audioContext = React.useRef<AudioContext | null>(null);
@@ -198,6 +201,9 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
       assistantTurn.current = "";
       turnSourceIds.current.clear();
       turnPassages.current.clear();
+      pendingToolCalls.current = 0;
+      turnCompletePending.current = false;
+      turnFinalizing.current = false;
       const ctx = new AudioContext();
       audioContext.current = ctx;
       await ctx.resume();
@@ -256,11 +262,42 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
       setStatus("Je vous écoute. Parlez naturellement.");
       ws.onclose = () => { if (mounted.current && !intentionalClose.current) { stop(); setStatus("Session vocale terminée."); } };
       ws.onerror = () => { if (mounted.current) setStatus("Connexion vocale instable…"); };
+      const finalizeVoiceTurn = async () => {
+        if (turnFinalizing.current || pendingToolCalls.current > 0) return;
+        turnFinalizing.current = true;
+        try {
+          const completedTurn = { user: userTurn.current.trim(), assistant: assistantTurn.current.trim(), sources: [...turnPassages.current.values()] };
+          await persistVoiceTurn();
+          if (completedTurn.user && completedTurn.assistant) setTurnHistory((history) => [...history, completedTurn]);
+          setTranscript("");
+          setAnswer("");
+          setSources([]);
+          turnPassages.current.clear();
+          turnCompletePending.current = false;
+          setState("listening");
+          setStatus("À vous de parler.");
+        } catch (error) {
+          setState("listening");
+          setStatus(error instanceof Error ? error.message : "Enregistrement de l’historique impossible.");
+        } finally {
+          turnFinalizing.current = false;
+        }
+      };
+
       ws.onmessage = async (event) => {
         try {
           const msg = parseFrame(event.data);
           if (!msg) return;
-          if (msg.toolCall) { await handleToolCall(msg); return; }
+          if (msg.toolCall) {
+            pendingToolCalls.current += 1;
+            try {
+              await handleToolCall(msg);
+            } finally {
+              pendingToolCalls.current = Math.max(0, pendingToolCalls.current - 1);
+              if (pendingToolCalls.current === 0 && turnCompletePending.current) await finalizeVoiceTurn();
+            }
+            return;
+          }
           const content = msg.serverContent;
           if (content?.interrupted) {
             playbackNodes.current.forEach((n) => { try { n.stop(); } catch {} });
@@ -286,19 +323,10 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
             }
           }
           if (content?.turnComplete) {
-            try {
-              const completedTurn = { user: userTurn.current.trim(), assistant: assistantTurn.current.trim(), sources: [...turnPassages.current.values()] };
-              await persistVoiceTurn();
-              if (completedTurn.user && completedTurn.assistant) setTurnHistory((history) => [...history, completedTurn]);
-              setTranscript("");
-              setAnswer("");
-              setSources([]);
-              turnPassages.current.clear();
-              setState("listening");
-              setStatus("À vous de parler.");
-            } catch (error) {
-              setState("listening");
-              setStatus(error instanceof Error ? error.message : "Enregistrement de l’historique impossible.");
+            if (pendingToolCalls.current > 0) {
+              turnCompletePending.current = true;
+            } else {
+              await finalizeVoiceTurn();
             }
           }
         } catch { /* ignore malformed provider frames */ }
