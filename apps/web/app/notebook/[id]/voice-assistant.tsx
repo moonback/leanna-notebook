@@ -511,9 +511,10 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
   return (
     <>
       <Button size="sm" variant="soft" disabled={disabled} onClick={() => { setExpanded(false); setOpen(true); }}>
-        <AudioLines aria-hidden /> Mode vocal
+        <AudioLines aria-hidden /> {state === "listening" || state === "speaking" || state === "connecting" ? "Mode vocal actif" : "Mode vocal"}
       </Button>
-      <Dialog open={open} onOpenChange={(value) => { setOpen(value); if (!value) { setExpanded(false); stop(); } }}>
+      {/* Fermer ou réduire le panneau masque uniquement l'interface. Seul « Terminer » coupe les sessions Live et le microphone. */}
+      <Dialog open={open} onOpenChange={(value) => { setOpen(value); if (!value) setExpanded(false); }}>
         <DialogContent
           title="Studio vocal"
           description="Échangez avec Leanna et Roxane autour des sources de votre notebook."
