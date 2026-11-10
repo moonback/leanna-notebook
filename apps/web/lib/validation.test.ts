@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { credentialsSchema, fieldErrors, profilePatchSchema, safeNext } from "./validation";
+import { credentialsSchema, fieldErrors, profilePatchSchema, safeNext, sourceItemSchema } from "./validation";
 
 describe("credentialsSchema", () => {
   it("normalise l'email", () => {
@@ -32,5 +32,18 @@ describe("safeNext", () => {
     expect(safeNext("/\\evil.example")).toBe("/");
     expect(safeNext("https://evil.example")).toBe("/");
     expect(safeNext(null)).toBe("/");
+  });
+});
+
+describe("GitHub source validation", () => {
+  it("accepts a public repository URL and an explicit branch", () => {
+    expect(sourceItemSchema.safeParse({ type: "github", url: "https://github.com/acme/project", branch: "main" }).success).toBe(true);
+    expect(sourceItemSchema.safeParse({ type: "github", url: "https://github.com/acme/project", branch: "feature/new-parser" }).success).toBe(true);
+  });
+
+  it("rejects non-GitHub hosts, nested paths and invalid branch names", () => {
+    expect(sourceItemSchema.safeParse({ type: "github", url: "https://github.evil.test/acme/project", branch: "main" }).success).toBe(false);
+    expect(sourceItemSchema.safeParse({ type: "github", url: "https://github.com/acme/project/tree/main", branch: "main" }).success).toBe(false);
+    expect(sourceItemSchema.safeParse({ type: "github", url: "https://github.com/acme/project", branch: "../main" }).success).toBe(false);
   });
 });
