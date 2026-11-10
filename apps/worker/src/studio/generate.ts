@@ -37,6 +37,7 @@ const mapSchema = z.object({ root: nodeSchema });
 
 const COUNT = { fewer: 8, standard: 15, more: 25 } as const;
 const TEMPLATES: Record<string, string> = {
+  custom: "Rapport personnalisé : suis précisément les consignes de personnalisation de l’utilisateur et organise le contenu de façon claire.",
   briefing: "Note de synthèse pour un décideur : contexte, points clés, chiffres, risques, recommandations.",
   study_guide: "Guide d'étude : notions clés définies, résumé par thème, 5 questions de révision avec réponses, glossaire.",
   faq: "FAQ : les 8 à 12 questions les plus utiles, chacune avec une réponse courte et sourcée.",
