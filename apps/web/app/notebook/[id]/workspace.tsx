@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import { createPortal } from "react-dom";
-import { AlertTriangle, ArrowUp, AudioLines, Music, BookmarkPlus, Eraser, Settings2, ThumbsDown, ThumbsUp, FileText, Globe, Inbox, Lock, NotebookPen, Pencil, Plus, Square, Sparkles, Trash2, Type, Upload, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from "lucide-react";
+import { AlertTriangle, ArrowUp, AudioLines, Music, BookmarkPlus, Eraser, Settings2, ThumbsDown, ThumbsUp, FileText, Globe, Inbox, Lock, NotebookPen, Pencil, Plus, Square, Sparkles, Trash2, Type, Upload, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Github } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Textarea } from "@/components/ui/field";
 import { Alert, Badge, EmptyState, Progress, Skeleton } from "@/components/ui/feedback";
@@ -697,6 +697,8 @@ function AddSourcesDialog({ open, onOpenChange, notebookId, onAdded }: { open: b
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string>();
   const [url, setUrl] = React.useState("");
+  const [githubUrl, setGithubUrl] = React.useState("");
+  const [githubBranch, setGithubBranch] = React.useState("main");
   const [paste, setPaste] = React.useState({ title: "", text: "" });
   const fileRef = React.useRef<HTMLInputElement>(null);
 
@@ -736,7 +738,7 @@ function AddSourcesDialog({ open, onOpenChange, notebookId, onAdded }: { open: b
         await post([{ type: "text", title: paste.title, text: paste.text }]);
       }
       toast({ title: "Source ajoutée", description: "Le traitement continue en arrière-plan.", tone: "success" });
-      setUrl(""); setPaste({ title: "", text: "" }); if (fileRef.current) fileRef.current.value = "";
+      setUrl(""); setGithubUrl(""); setGithubBranch("main"); setPaste({ title: "", text: "" }); if (fileRef.current) fileRef.current.value = "";
       onAdded(); onOpenChange(false);
     } catch (err) { setError(err instanceof Error ? err.message : "Ajout impossible."); }
     finally { setBusy(false); }
@@ -750,7 +752,7 @@ function AddSourcesDialog({ open, onOpenChange, notebookId, onAdded }: { open: b
             <TabsList aria-label="Type de source">
               <TabsTrigger value="file"><Upload className="mr-1.5 inline size-3.5" aria-hidden />Fichier</TabsTrigger>
               <TabsTrigger value="url"><Globe className="mr-1.5 inline size-3.5" aria-hidden />Page web</TabsTrigger>
-              <TabsTrigger value="text"><Type className="mr-1.5 inline size-3.5" aria-hidden />Texte</TabsTrigger>
+              <TabsTrigger value="text"><Type className="mr-1.5 inline size-3.5" aria-hidden />Texte</TabsTrigger>\n              <TabsTrigger value="github"><Github className="mr-1.5 inline size-3.5" aria-hidden />GitHub</TabsTrigger>
             </TabsList>
             <TabsContent value="file" className="pt-4">
               <Field id="files" label="Fichiers" hint="PDF, DOCX, PPTX, EPUB, TXT, MD, CSV, MP3, WAV, M4A, AAC, OGG, FLAC ou WEBM — 200 Mo maximum par fichier.">
@@ -762,7 +764,7 @@ function AddSourcesDialog({ open, onOpenChange, notebookId, onAdded }: { open: b
                 <Textarea value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://…" />
               </Field>
             </TabsContent>
-            <TabsContent value="text" className="grid gap-3 pt-4">
+            <TabsContent value="github" className="grid gap-3 pt-4">\n              <Field id="github-url" label="Dépôt GitHub" hint="Dépôts publics uniquement pour cette première version. Les secrets et fichiers binaires sont ignorés.">\n                <Input value={githubUrl} onChange={(e) => setGithubUrl(e.target.value)} placeholder="https://github.com/organisation/projet" />\n              </Field>\n              <Field id="github-branch" label="Branche" hint="La branche à capturer (par défaut : main).">\n                <Input value={githubBranch} maxLength={200} onChange={(e) => setGithubBranch(e.target.value)} placeholder="main" />\n              </Field>\n              <p className="text-xs text-text-muted">Le code sera indexé comme une source unique. Les fichiers sont présentés avec leur chemin et leurs numéros de ligne pour faciliter les citations.</p>\n            </TabsContent>\n            <TabsContent value="text" className="grid gap-3 pt-4">
               <Field id="paste-title" label="Titre"><Input value={paste.title} maxLength={300} onChange={(e) => setPaste({ ...paste, title: e.target.value })} /></Field>
               <Field id="paste-text" label="Texte"><Textarea value={paste.text} onChange={(e) => setPaste({ ...paste, text: e.target.value })} className="min-h-40" /></Field>
             </TabsContent>
