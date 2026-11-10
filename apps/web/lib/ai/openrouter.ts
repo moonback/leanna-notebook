@@ -32,9 +32,9 @@ export type ChatMessage = { role: "system" | "user" | "assistant"; content: stri
 export type ChatUsage = { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number; cost?: number };
 
 /** Vecteur de la question (null si aucun modèle d'embeddings configuré : recherche plein texte seule). */
-export async function embedQuery(text: string, opts: { model?: string } = {}): Promise<{ vector: number[]; model: string } | null> {
+export async function embedQuery(text: string): Promise<{ vector: number[]; model: string } | null> {
   const { key, embedModel } = config();
-  const selectedModel = opts.model ?? embedModel;
+  const selectedModel = embedModel;
   if (!selectedModel) return null;
   const res = await fetch(`${BASE}/embeddings`, {
     method: "POST", headers: headers(key),
