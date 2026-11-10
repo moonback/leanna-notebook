@@ -8,6 +8,7 @@ import { fromEpub, fromPptx, readZip } from "./office.ts";
 import type { Transcriber } from "../ai/transcription.ts";
 import { normalize, type ChunkTimeRange } from "./chunker.ts";
 import { ocrWithGemini } from "../ai/ocr.ts";
+import { spawn } from "node:child_process";
 
 export type Extracted = { text: string; pageStarts: number[]; pageCount: number | null; title?: string; timeRanges?: ChunkTimeRange[] };
 
@@ -43,6 +44,20 @@ function fromHtml(html: string): Extracted {
 }
 
 /** Texte brut d'une source, selon son type. Les erreurs attendues sont des PermanentError (code stable). */
+
+function extractVideoAudio(video: Uint8Array): Promise<Uint8Array> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(process.env.FFMPEG_PATH || "ffmpeg", ["-nostdin", "-i", "pipe:0", "-vn", "-ac", "1", "-ar", "16000", "-f", "mp3", "pipe:1"], { stdio: ["pipe", "pipe", "pipe"] });
+    const chunks: Buffer[] = [];
+    let total = 0;
+    const timer = setTimeout(() => { child.kill("SIGKILL"); reject(new PermanentError("video_transcode_unavailable")); }, 600000);
+    child.stdout.on("data", (part: Buffer) => { total += part.length; if (total > 200 * 1024 * 1024) { child.kill("SIGKILL"); reject(new PermanentError("archive_too_large")); } else chunks.push(part); });
+    child.on("error", () => { clearTimeout(timer); reject(new PermanentError("video_transcode_unavailable", "FFmpeg est absent du worker.")); });
+    child.on("close", (code) => { clearTimeout(timer); if (code !== 0 || !total) reject(new PermanentError("video_transcode_unavailable")); else resolve(new Uint8Array(Buffer.concat(chunks))); });
+    child.stdin.end(Buffer.from(video));
+  });
+}
+
 export async function extract(kind: string, data: { file?: Uint8Array; url?: string; noteText?: string; mimeType?: string }, transcriber?: Transcriber | null): Promise<Extracted> {
   switch (kind) {
     case "audio": {
@@ -60,6 +75,13 @@ export async function extract(kind: string, data: { file?: Uint8Array; url?: str
         return clean;
       }).join("\n\n") : normalize(transcript.text);
       return finalize({ text, pageStarts: [], pageCount: null, timeRanges });
+    }
+    case "video": {
+      if (!data.file) throw new PermanentError("file_missing");
+      if (!transcriber) throw new PermanentError("transcription_not_configured");
+      const audio = await extractVideoAudio(data.file);
+      const transcript = await transcriber.transcribe(audio, "audio/mpeg");
+      return finalize({ text: normalize(transcript.text), pageStarts: [], pageCount: null });
     }
     case "image": {
       if (!data.file) throw new PermanentError("file_missing");
