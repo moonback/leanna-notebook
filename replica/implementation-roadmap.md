@@ -103,7 +103,7 @@ Date : 2026-11-09.
 > | Z04 pages `/privacy` et `/terms` | faites ; restent DPA, registre des sous-traitants, rétention chez les fournisseurs d'IA, mentions légales, relecture juridique |
 > | B17 Fast Research | implémentation ajoutée sur `feat/m4-public-artifacts-research` : job avec quota atomique, worker Tavily, progression, 5 résultats maximum, sélection et import via `add_source` / `ingest_source` ; tests et validation runtime à faire |
 > | S04 Découvrir | interface galerie, recherche locale, ouverture en lecture seule et copie conditionnelle implémentées sur la branche ; migration et tests pgTAP ajoutés, validation runtime à faire |
-> | pg_cron `cleanup_invitations` | à faire |
+> | pg_cron `cleanup_invitations` | fonction et planification quotidienne ajoutés ; invitations en attente expirent après 30 jours ; test pgTAP ajouté, validation runtime à faire |
 >
 > Critère de sortie M4 : le critère « suppression sans objet restant dans Storage » n'est garanti qu'en l'absence d'erreur de purge ; aucun test E2E de la suppression ni de l'export n'existe encore. Annulation Stripe à brancher avec le paiement réel.
 
