@@ -14,7 +14,7 @@ export function GoogleDriveSettings() {
     if (!response.ok) throw new Error("Impossible de lire l'état Google Drive.");
     setStatus(await response.json() as Status);
   }, []);
-  React.useEffect(() => { void refresh().catch((e) => setError(e.message)); }, [refresh]);
+  React.useEffect(() => { void refresh().catch((e) => setError(e instanceof Error ? e.message : "Erreur inconnue.")); }, [refresh]);
   const disconnect = async () => {
     setBusy(true); setError(null);
     try {
