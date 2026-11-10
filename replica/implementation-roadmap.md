@@ -116,7 +116,7 @@ Date : 2026-11-09.
 > | B06 import audio | Première tranche implémentée : formats MP3/WAV/M4A/AAC/OGG/FLAC/WEBM acceptés, upload privé Supabase, job d'ingestion, transcription Deepgram Nova-3, segmentation en chunks et stockage des timestamps millisecondes. |
 > | Adaptateur STT | Interface isolée dans `apps/worker/src/ai/transcription.ts` ; clé uniquement côté worker (`DEEPGRAM_API_KEY`). Modèle et langue configurables. |
 > | Tests | Tests unitaires ajoutés pour l'adaptateur et l'association des timestamps aux chunks ; non exécutés à ce stade. |
-> | Reste B06 | Benchmark français (qualité, latence, coût/minute), lecteur audio S15, navigation transcript → position audio, tests d'intégration réels. |
+> | Reste B06 | Benchmark français (qualité, latence, coût/minute), lecteur source simple (contrôles audio dans la visionneuse) ajouté ; restent le lecteur S15 des Audio Overviews, la navigation transcript → position audio et les tests d'intégration réels. |
 > | B08 Google Drive | Pas encore implémenté : OAuth, sélecteur, import Docs/Slides/Sheets et synchronisation restent à faire. |
 > | G01 Audio Overview | Pas encore implémenté : script dialogué, TTS segmenté, ffmpeg, cache/idempotence et lecteur restent à faire. |
 >
