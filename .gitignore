@@ -6,3 +6,7 @@ supabase/.temp
 capture/
 replica/screens/*.png
 .leanna
+apps/desktop/dist
+apps/desktop/release
+.Leanna-audit.log
+.project-knowledge.json

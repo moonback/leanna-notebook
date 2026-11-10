@@ -1,44 +1,33 @@
 # Leanna Notebook Desktop
 
-Premier socle Electron de développement pour le monorepo Leanna Notebook.
+Application Electron pour le SaaS Leanna Notebook. Le client Windows charge l'application via HTTPS ; Supabase, l'authentification et le worker restent côté serveur.
 
-## Prérequis
+## Développement local
 
-- Node.js et pnpm (version déclarée par le projet).
-- Windows, macOS ou Linux pour le développement sur la plateforme correspondante.
-- Accès réseau au téléchargement des binaires Electron lors de la première installation.
-
-Le workspace autorise explicitement le script d'installation d'Electron dans `pnpm-workspace.yaml` (`allowBuilds.electron: true`). Ce script télécharge le binaire natif correspondant à la plateforme et à l'architecture. Ne pas définir `ELECTRON_SKIP_BINARY_DOWNLOAD` si le binaire doit être installé.
-
-## Lancer
-
-Depuis la racine du dépôt :
-
-```bash
+```powershell
 pnpm install
+pnpm desktop:doctor
 pnpm desktop:dev
 ```
 
-La commande compile le processus Electron, démarre Next.js sur `127.0.0.1:3000`, attend sa disponibilité puis ouvre la fenêtre desktop.
+## Packaging Windows
 
-Si le package npm Electron est présent mais que son binaire natif manque, relancer l'installation du workspace après récupération de la configuration :
+Après déploiement de l'application web, ouvrez PowerShell à la racine :
 
-```bash
-pnpm install
-pnpm --filter @notebook/desktop rebuild electron
-pnpm --dir apps/desktop exec electron --version
+```powershell
+$env:LEANNA_WEB_URL = "https://votre-domaine-public"
+pnpm desktop:dist:win
 ```
+
+L'installateur NSIS x64 est généré dans `apps/desktop/release/`. Il permet de choisir le dossier d'installation et crée des raccourcis dans le menu Démarrer et sur le Bureau.
+
+La commande exige une origine HTTPS (sans chemin, query, fragment ni identifiants). Seule cette URL publique est intégrée au build. Aucun secret Supabase, Gemini ou worker n'est embarqué. Le client desktop n'est pas hors ligne : le SaaS, Supabase et le worker doivent être disponibles.
+
+L'installateur n'est pas encore signé ; Windows peut afficher SmartScreen. La signature, l'icône de marque, les mises à jour automatiques et les liens profonds OAuth restent à traiter.
 
 ## Sécurité
 
-- `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`.
-- Le renderer n'accède jamais directement à Node.js.
-- Le preload expose une API étroite et typée via `contextBridge`.
-- Les dialogues natifs sont déclenchés par IPC et vérifient le processus émetteur.
-- La navigation interne reste limitée à l'origine Next configurée.
-- Les liens externes HTTPS sont ouverts dans le navigateur système.
-- Aucun secret Supabase, Gemini ou worker n'est embarqué dans Electron.
-
-## Périmètre actuel
-
-Cette tranche fournit le shell Electron de développement, les dialogues de fichiers et le contrat IPC. Elle ne constitue pas encore un installateur autonome : le serveur Next.js standalone, les callbacks OAuth/deep links, les mises à jour et les signatures seront ajoutés après validation de ce socle.
+- `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`, `webSecurity: true`.
+- Le preload expose une API étroite via `contextBridge`.
+- Les dialogues IPC vérifient le processus émetteur.
+- La navigation interne est limitée à l'origine configurée ; les liens externes HTTPS sont ouverts dans le navigateur système.
