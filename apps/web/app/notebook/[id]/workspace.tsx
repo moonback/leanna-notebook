@@ -1,5 +1,6 @@
 "use client";
 import * as React from "react";
+import { createPortal } from "react-dom";
 import { AlertTriangle, ArrowUp, AudioLines, Music, BookmarkPlus, Eraser, Settings2, ThumbsDown, ThumbsUp, FileText, Globe, Inbox, Lock, NotebookPen, Pencil, Plus, Square, Sparkles, Trash2, Type, Upload, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Textarea } from "@/components/ui/field";
