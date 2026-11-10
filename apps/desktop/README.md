@@ -24,7 +24,7 @@ pnpm desktop:dev
 
 `pnpm desktop:test` compile le processus Electron puis exécute les tests Node.js des validations de sécurité (URL d'application, liens externes et filtres de fichiers).
 
-La commande compile le processus Electron, démarre Next.js sur `127.0.0.1:3000`, attend sa disponibilité puis ouvre la fenêtre desktop. Le port est explicite : si un autre service l'utilise, Next.js doit signaler le conflit au lieu de basculer silencieusement sur un autre port. Si l'URL locale ne répond pas, Electron affiche maintenant un diagnostic natif.
+La commande vérifie d'abord que `127.0.0.1:3000` est libre, compile Electron, démarre Next.js, attend au maximum 60 secondes sa disponibilité puis ouvre la fenêtre desktop. Si le port est déjà utilisé, le lancement s'arrête avec une instruction claire au lieu de risquer d'ouvrir un autre service local.
 
 Si le package npm Electron est présent mais que son binaire natif manque, relancer l'installation du workspace après récupération de la configuration :
 
