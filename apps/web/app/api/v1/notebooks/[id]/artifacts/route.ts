@@ -24,7 +24,7 @@ export const GET = handle(async (_req: NextRequest, { params }: Params) => {
   await requireRole(id, "viewer");
   const supabase = await createUserClient();
   const [{ data: arts, error }, { data: reads }] = await Promise.all([
-    supabase.from("artifacts").select("id, type, title, status, error_code, options, created_at").eq("notebook_id", id).order("created_at", { ascending: false }),
+    supabase.from("artifacts").select("id, type, title, status, error_code, options, custom_prompt, created_at").eq("notebook_id", id).order("created_at", { ascending: false }),
     supabase.from("artifact_reads").select("artifact_id").eq("user_id", user.id),
   ]);
   if (error) throw error;
