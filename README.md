@@ -30,6 +30,7 @@ Application SaaS multi-utilisateur (Next.js + Supabase + worker Node), conçue p
 ### Notebooks et sources
 - Tableau de bord : tous / les miens / partagés avec moi, recherche, renommer, supprimer (fichiers purgés du stockage).
 - Import de sources : **PDF, DOCX, PPTX, EPUB, TXT, Markdown, CSV** et **audio MP3/WAV/M4A/AAC/OGG/FLAC/WEBM** (200 Mo max), **page web** (protection SSRF), **texte collé**, **notes**.
+- **Codebase GitHub** : import d’un dépôt public par URL et branche, capture figée sur un commit, indexation des fichiers texte dans le même pipeline RAG, avec chemins et numéros de ligne conservés. Les dépendances, artefacts générés, binaires, fichiers de configuration sensibles et contenus détectés comme secrets sont exclus. Limites : 400 fichiers, 256 Ko par fichier, 8 Mo de texte indexé ; dépôts privés et synchronisation incrémentale à venir.
 - Traitement en arrière-plan avec progression visible ; messages d’erreur explicites. Les fichiers audio sont transcrits par Deepgram Nova-3 ; les passages gardent leurs horodatages et la visionneuse permet de lire l’original.
 - Sélection des sources interrogées, renommage, suppression.
 - **Guide de source** : résumé et thèmes clés en tête de la visionneuse (cliquer un thème pose la question au chat).
