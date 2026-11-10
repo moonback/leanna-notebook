@@ -15,8 +15,7 @@ const errors: Record<string, string> = {
   quota_monthly_exceeded: "Crédits mensuels épuisés.",
 };
 
-export function FastResearch({ notebookId, onImported }: { notebookId: string; onImported: () => void }) {
-  const [open, setOpen] = React.useState(false);
+export function FastResearch({ notebookId, onImported, open, onOpenChange: setOpen }: { notebookId: string; onImported: () => void; open: boolean; onOpenChange: (open: boolean) => void }) {
   const [query, setQuery] = React.useState("");
   const [jobId, setJobId] = React.useState<string | null>(null);
   const [results, setResults] = React.useState<Result[]>([]);
@@ -91,7 +90,6 @@ export function FastResearch({ notebookId, onImported }: { notebookId: string; o
 
   return (
     <>
-      <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>Recherche web</Button>
       <Dialog open={open} onOpenChange={(v) => { if (!busy) setOpen(v); }}>
         <DialogContent title="Recherche web rapide" description="Trouvez des pages pertinentes, puis choisissez celles à ajouter aux sources du notebook." size="lg">
           <form onSubmit={search} className="flex items-end gap-2">

@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import { createPortal } from "react-dom";
-import { AlertTriangle, ArrowUp, AudioLines, BookmarkPlus, Eraser, Settings2, ThumbsDown, ThumbsUp, FileText, Globe, Inbox, Lock, NotebookPen, Pencil, Plus, Square, Sparkles, Trash2, Type, Upload, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from "lucide-react";
+import { AlertTriangle, ArrowUp, AudioLines, BookmarkPlus, Eraser, Settings2, ThumbsDown, ThumbsUp, FileText, Globe, Inbox, Lock, NotebookPen, Pencil, Plus, Square, Sparkles, Trash2, Type, Upload, Search, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Textarea } from "@/components/ui/field";
 import { Alert, Badge, EmptyState, Progress, Skeleton } from "@/components/ui/feedback";
@@ -62,6 +62,7 @@ export function Workspace({ notebookId, initialTitle, role, allowCopies }: { not
   const [deselected, setDeselected] = React.useState<Set<string>>(new Set());
   const [loadError, setLoadError] = React.useState(false);
   const [adding, setAdding] = React.useState(false);
+  const [researching, setResearching] = React.useState(false);
   const [viewer, setViewer] = React.useState<{ sourceId: string; range?: [number, number]; timeStartMs?: number } | null>(null);
   const [noteEditor, setNoteEditor] = React.useState<{ id?: string } | null>(null);
   const [renaming, setRenaming] = React.useState<Source | null>(null);
@@ -187,7 +188,7 @@ export function Workspace({ notebookId, initialTitle, role, allowCopies }: { not
   const allSelected = ready.length > 0 && selectedCount === ready.length;
 
   const sourcesPanel = (
-    <Panel id="sources" title="Sources" className="h-full" actions={canEdit && <span className="flex flex-wrap items-center gap-1"><FastResearch notebookId={notebookId} onImported={() => void load()} /><Button size="sm" variant="ghost" onClick={() => setNoteEditor({})}><NotebookPen aria-hidden /> Note</Button><Button size="sm" variant="soft" onClick={() => setAdding(true)}><Plus aria-hidden /> Ajouter</Button></span>}>
+    <Panel id="sources" title="Sources" className="h-full" actions={canEdit && <span className="flex flex-wrap items-center gap-1"><Button size="sm" variant="soft" onClick={() => setAdding(true)}><Plus aria-hidden /> Ajouter</Button></span>}>
       {loadError ? (
         <div className="p-4"><Alert tone="danger" title="Sources indisponibles" action={<Button size="sm" variant="secondary" onClick={load}>Réessayer</Button>} /></div>
       ) : sources === null ? (
@@ -403,7 +404,8 @@ export function Workspace({ notebookId, initialTitle, role, allowCopies }: { not
         </Tabs>
       )}
 
-      <AddSourcesDialog open={adding} onOpenChange={setAdding} notebookId={notebookId} onAdded={() => void load()} />
+      <AddSourcesDialog open={adding} onOpenChange={setAdding} notebookId={notebookId} onAdded={() => void load()} onWebSearch={() => { setAdding(false); setResearching(true); }} onNote={() => { setAdding(false); setNoteEditor({}); }} />
+      <FastResearch notebookId={notebookId} open={researching} onOpenChange={setResearching} onImported={() => void load()} />
       <SourceViewer state={viewer} onClose={() => setViewer(null)} onAsk={ask} />
       <RenameSourceDialog source={renaming} onClose={() => setRenaming(null)} onRename={renameSource} />
       <NoteEditor state={noteEditor} notebookId={notebookId} canEdit={canEdit} onClose={() => setNoteEditor(null)} onSaved={() => void load()} />
@@ -698,7 +700,7 @@ function ChatSettingsDialog({ open, onClose, notebookId }: { open: boolean; onCl
 
 /* --------------------------------------------------------- Ajout source ---- */
 
-function AddSourcesDialog({ open, onOpenChange, notebookId, onAdded }: { open: boolean; onOpenChange: (o: boolean) => void; notebookId: string; onAdded: () => void }) {
+function AddSourcesDialog({ open, onOpenChange, notebookId, onAdded, onWebSearch, onNote }: { open: boolean; onOpenChange: (o: boolean) => void; notebookId: string; onAdded: () => void; onWebSearch: () => void; onNote: () => void }) {
   const [tab, setTab] = React.useState("file");
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string>();
@@ -751,6 +753,10 @@ function AddSourcesDialog({ open, onOpenChange, notebookId, onAdded }: { open: b
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent title="Ajouter des sources" description="Les réponses s’appuieront uniquement sur ces documents.">
+        <div className="grid grid-cols-2 gap-2">
+          <Button type="button" variant="secondary" onClick={onWebSearch}><Search aria-hidden /> Recherche web</Button>
+          <Button type="button" variant="secondary" onClick={onNote}><NotebookPen aria-hidden /> Note</Button>
+        </div>
         <form onSubmit={submit} className="grid gap-4">
           <Tabs value={tab} onValueChange={setTab}>
             <TabsList aria-label="Type de source">
