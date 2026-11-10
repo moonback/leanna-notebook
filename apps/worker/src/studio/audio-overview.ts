@@ -65,9 +65,9 @@ export function buildAudioOverviewMessages(passages: string, language: string, c
         "Découpe le dialogue en répliques équilibrées de 2 à 5 phrases. Introduction claire, développement structuré et conclusion utile.",
         "Réponds uniquement en JSON : { title: string, segments: [{ speaker: 'host'|'guest', text: string }] }.",
         custom ? `Consigne éditoriale de l'utilisateur : ${custom}` : "",
-      ].filter(Boolean).join("\\n"),
+      ].filter(Boolean).join("\n"),
     },
-    { role: "user" as const, content: `<sources>\\n${passages}\\n</sources>` },
+    { role: "user" as const, content: `<sources>\n${passages}\n</sources>` },
   ];
 }
 
