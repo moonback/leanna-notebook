@@ -29,8 +29,8 @@ Application SaaS multi-utilisateur (Next.js + Supabase + worker Node), conçue p
 
 ### Notebooks et sources
 - Tableau de bord : tous / les miens / partagés avec moi, recherche, renommer, supprimer (fichiers purgés du stockage).
-- Import de sources : **PDF, DOCX, PPTX, EPUB, TXT, Markdown, CSV** (200 Mo max), **page web** (protection SSRF), **texte collé**, **notes**.
-- Traitement en arrière-plan avec progression visible ; messages d'erreur explicites (PDF protégé, PDF scanné sans texte, page payante, fichier corrompu…).
+- Import de sources : **PDF, DOCX, PPTX, EPUB, TXT, Markdown, CSV** et **audio MP3/WAV/M4A/AAC/OGG/FLAC/WEBM** (200 Mo max), **page web** (protection SSRF), **texte collé**, **notes**.
+- Traitement en arrière-plan avec progression visible ; messages d’erreur explicites. Les fichiers audio sont transcrits par Deepgram Nova-3 ; les passages gardent leurs horodatages et la visionneuse permet de lire l’original.
 - Sélection des sources interrogées, renommage, suppression.
 - **Guide de source** : résumé et thèmes clés en tête de la visionneuse (cliquer un thème pose la question au chat).
 
@@ -113,7 +113,7 @@ apps/
     src/ingest/           Extraction, découpage, protection SSRF
     src/research/        Recherche web Fast Research (Tavily)
     src/studio/           Génération Studio, guides de source, résumés
-    src/ai/               Clients OpenRouter (génération, embeddings)
+    src/ai/               Clients OpenRouter (génération, embeddings), adaptateur STT Deepgram
 packages/
   core/                   Citations partagées
 supabase/
@@ -202,6 +202,8 @@ Les deux variables `NEXT_PUBLIC_LEGAL_*` sont à renseigner **avant toute mise e
 | `EMBEDDINGS_PROVIDER` | `openrouter` (défaut), `voyage` ou `mistral` |
 | `EMBEDDINGS_MODEL`, `EMBEDDINGS_API_KEY` | Modèle et clé d'embeddings (1024 dimensions) |
 | `OPENROUTER_API_KEY`, `OPENROUTER_CHAT_MODEL` | Génération du Studio, guides et résumés |
+| `DEEPGRAM_API_KEY` | Transcription des sources audio B06 (facultatif pour les autres sources) |
+| `STT_MODEL`, `STT_LANGUAGE` | Modèle STT (`nova-3`) et langue (`multi`) |
 | `OPENROUTER_BASE_URL` | Facultatif, comme côté web |
 
 Le web et le worker doivent utiliser **le même modèle d'embeddings**, sinon la recherche vectorielle compare des vecteurs incompatibles.
@@ -245,7 +247,7 @@ pnpm db:test
 
 ### Ingestion
 1. Le navigateur envoie le fichier au stockage, puis l'API enregistre la source et son job `ingest_source` **dans la même transaction**.
-2. Le worker extrait le texte (PDF, Office, EPUB, page web lisible), le normalise, le découpe en passages avec leurs positions exactes, calcule les embeddings si configurés et indexe le plein texte dans la langue détectée.
+2. Le worker extrait le texte (PDF, Office, EPUB, page web lisible) ou transcrit l’audio via Deepgram. Pour l’audio, les utterances sont converties en texte et leurs offsets temporels en millisecondes sont propagés aux chunks ; le worker normalise, découpe, calcule les embeddings si configurés et indexe le plein texte.
 3. Le statut de la source (`pending` → `processing` → `ready` / `failed` avec code d'erreur) est persistant ; l'interface l'affiche en direct.
 4. Une fois la source prête : guide de source et résumé du notebook (différé de 20 s pour regrouper les imports), sans consommer de quota.
 

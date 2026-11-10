@@ -7,6 +7,7 @@ import { llmFromEnv } from "./ai/llm.ts";
 import { studioHandler } from "./studio/generate.ts";
 import { guideHandler, overviewHandler } from "./studio/summaries.ts";
 import { researchHandler } from "./research/handler.ts";
+import { transcriberFromEnv } from "./ai/transcription.ts";
 
 const url = process.env.SUPABASE_URL;
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -22,8 +23,10 @@ if (!embedder) console.warn("EMBEDDINGS_* non configuré : indexation en plein t
 
 // Un handler par type de job réellement implémenté ; les autres types ne sont pas réclamés.
 const llm = llmFromEnv();
+const transcriber = transcriberFromEnv();
+if (!transcriber) console.warn("DEEPGRAM_API_KEY absent : import audio désactivé (les autres sources restent disponibles).");
 const handlers: Partial<Record<JobKind, Handler>> = {
-  ingest_source: ingestHandler(db, embedder, { summaries: Boolean(llm) }),
+  ingest_source: ingestHandler(db, embedder, { summaries: Boolean(llm), transcriber }),
   research: researchHandler(db, process.env.TAVILY_API_KEY),
   generate_artifact: studioHandler(db, llm),
   ...(llm ? { source_guide: guideHandler(db, llm), notebook_overview: overviewHandler(db, llm) } : {}),

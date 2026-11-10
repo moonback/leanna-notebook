@@ -5,8 +5,10 @@ import { parseHTML } from "linkedom";
 import { PermanentError } from "../worker.ts";
 import { FetchRefused, safeFetch } from "./ssrf.ts";
 import { fromEpub, fromPptx, readZip } from "./office.ts";
+import type { Transcriber } from "../ai/transcription.ts";
+import { normalize, type ChunkTimeRange } from "./chunker.ts";
 
-export type Extracted = { text: string; pageStarts: number[]; pageCount: number | null; title?: string };
+export type Extracted = { text: string; pageStarts: number[]; pageCount: number | null; title?: string; timeRanges?: ChunkTimeRange[] };
 
 const MAX_WORDS = 500_000;
 
@@ -40,8 +42,24 @@ function fromHtml(html: string): Extracted {
 }
 
 /** Texte brut d'une source, selon son type. Les erreurs attendues sont des PermanentError (code stable). */
-export async function extract(kind: string, data: { file?: Uint8Array; url?: string; noteText?: string }): Promise<Extracted> {
+export async function extract(kind: string, data: { file?: Uint8Array; url?: string; noteText?: string; mimeType?: string }, transcriber?: Transcriber | null): Promise<Extracted> {
   switch (kind) {
+    case "audio": {
+      if (!transcriber) throw new PermanentError("transcription_not_configured", "La transcription audio n’est pas configurée côté serveur.");
+      if (!data.file) throw new PermanentError("file_missing");
+      const transcript = await transcriber.transcribe(data.file, data.mimeType ?? "application/octet-stream");
+      let offset = 0;
+      const timeRanges: ChunkTimeRange[] = [];
+      const text = transcript.segments.length ? transcript.segments.map((segment, index) => {
+        const clean = normalize(segment.text);
+        const start = offset;
+        offset += clean.length;
+        timeRanges.push({ char_start: start, char_end: offset, start_ms: segment.start_ms, end_ms: segment.end_ms });
+        if (index < transcript.segments.length - 1) offset += 2;
+        return clean;
+      }).join("\n\n") : normalize(transcript.text);
+      return finalize({ text, pageStarts: [], pageCount: null, timeRanges });
+    }
     case "note":
       return finalize({ text: data.noteText ?? "", pageStarts: [], pageCount: null });
     case "txt": case "md": case "csv": case "text":

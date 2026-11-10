@@ -39,7 +39,7 @@ Date : 2026-11-09. Les références **Fxx** renvoient à [user-flows.md](user-fl
 | méthode et chemin | rôle | qui | entrée | sortie |
 | --- | --- | --- | --- | --- |
 | POST `/api/v1/notebooks` | Créer un notebook (A03) | auth | `{workspaceId?, title?}` | `201 {notebook}`. 409 `max_notebooks` au-delà du plafond |
-| POST `/api/v1/notebooks/:id/uploads` | Obtenir une URL d'upload signée (10 min) | editor+ | `{filename, size, mimeType}` | `{uploadUrl, storagePath}`. 413 si > 200 Mo |
+| POST `/api/v1/notebooks/:id/uploads` | Obtenir une URL d'upload signée (10 min) | editor+ | `{filename, size, mimeType}` | `{uploadUrl, storagePath}`. 413 si > 200 Mo ; audio accepté : MP3/WAV/M4A/AAC/OGG/FLAC/WEBM |
 | POST `/api/v1/notebooks/:id/sources` | Créer une ou plusieurs sources et lancer l'ingestion (B01–B04, B08) | editor+ | `{items:[{type:"upload",storagePath,title} \| {type:"url",url} \| {type:"text",title,text} \| {type:"gdrive",fileId}]}` (≤ 50 par appel) | `202 {sources:[{id,status:"pending"}], jobIds}`. 409 `max_sources` |
 | GET `/api/v1/notebooks/:id/sources` | Lister les sources, labels et sélection personnelle | viewer+ | — | `{sources[], labels[], deselected[]}` |
 | POST `/api/v1/sources/:id/retry` | Relancer une ingestion en échec | editor+ | — | `202 {jobId}` |
@@ -62,6 +62,8 @@ La galerie ne liste jamais les notebooks privés. Le flag `is_featured` est rés
 | GET `/api/v1/research/:jobId` | Progression et jusqu’à cinq résultats (`title`, `url`, `why`, `domain`) | editor+ | — | `{job, query, results[], searchedAt}` |
 | POST `/api/v1/research/:jobId/import` | Importer une sélection de 1 à 5 URLs issues du job | editor+ | `{urls[]}` | `202 {sources[], skipped}` ; chaque source passe dans `ingest_source` |
 | POST `/api/v1/jobs/:id/cancel` | Annuler la recherche (ou tout autre job) | auteur ou editor+ | — | 202 |
+
+Les fichiers audio sont transcrits côté worker avec Deepgram Nova-3 (`DEEPGRAM_API_KEY`, `STT_MODEL`, `STT_LANGUAGE`) ; les timestamps de chaque segment sont conservés dans `chunks.time_start_ms/time_end_ms`. D3 reste à valider par benchmark qualité/coût.
 
 Le fournisseur Fast Research est Tavily côté worker (`TAVILY_API_KEY`, configurée côté web et worker). Le serveur web ne télécharge jamais les résultats ; les URLs sélectionnées sont ensuite traitées par le pipeline d’ingestion existant, avec ses protections SSRF.
 

@@ -1,6 +1,6 @@
 "use client";
 import * as React from "react";
-import { AlertTriangle, ArrowUp, BookmarkPlus, Eraser, Settings2, ThumbsDown, ThumbsUp, FileText, Globe, Inbox, Lock, NotebookPen, Pencil, Plus, Square, Sparkles, Trash2, Type, Upload } from "lucide-react";
+import { AlertTriangle, ArrowUp, Music, BookmarkPlus, Eraser, Settings2, ThumbsDown, ThumbsUp, FileText, Globe, Inbox, Lock, NotebookPen, Pencil, Plus, Square, Sparkles, Trash2, Type, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Textarea } from "@/components/ui/field";
 import { Alert, Badge, EmptyState, Progress, Skeleton } from "@/components/ui/feedback";
@@ -30,13 +30,16 @@ const ERRORS: Record<string, string> = {
   paywall: "Page réservée aux abonnés : contenu inaccessible.",
   url_refused: "Adresse refusée ou injoignable.",
   unsupported_type: "Type de fichier non pris en charge.",
+  transcription_not_configured: "La transcription audio n’est pas configurée côté serveur.",
+  transcription_config: "Le service de transcription audio est mal configuré.",
+  no_speech: "Aucune parole exploitable détectée dans ce fichier audio.",
   embeddings_config: "Indexation impossible : configuration des embeddings invalide.",
   file_missing: "Fichier introuvable : réimportez-le.",
   temporary_error: "Erreur temporaire : nouvelle tentative en cours.",
   lease_expired: "Le traitement a été interrompu. Supprimez puis réimportez la source.",
   archive_too_large: "Fichier compressé trop volumineux une fois décompressé.",
 };
-const KIND_ICON: Record<string, React.ReactNode> = { web: <Globe />, text: <Type />, note: <NotebookPen /> };
+const KIND_ICON: Record<string, React.ReactNode> = { web: <Globe />, text: <Type />, note: <NotebookPen />, audio: <AudioLines /> };
 const busyStatus = (s: string) => s === "pending" || s === "processing";
 
 /** Vrai si la requête média correspond (suit le redimensionnement). Rendu serveur : vue bureau. */
@@ -541,7 +544,7 @@ function AddSourcesDialog({ open, onOpenChange, notebookId, onAdded }: { open: b
         for (const f of files) {
           const r = await fetch(`/api/v1/notebooks/${notebookId}/uploads`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ filename: f.name, size: f.size }) });
           const j = await r.json().catch(() => ({}));
-          if (r.status === 415) throw new Error(`« ${f.name} » : format non pris en charge (PDF, DOCX, PPTX, EPUB, TXT, MD, CSV).`);
+          if (r.status === 415) throw new Error(`« ${f.name} » : format non pris en charge (PDF, DOCX, PPTX, EPUB, TXT, MD, CSV, MP3, WAV, M4A, AAC, OGG, FLAC, WEBM).`);
           if (r.status === 422) throw new Error(`« ${f.name} » : fichier trop volumineux (200 Mo maximum).`);
           if (!r.ok) throw new Error("Préparation de l’envoi impossible.");
           const up = await fetch(j.uploadUrl, { method: "PUT", headers: { "content-type": j.contentType }, body: f });
@@ -575,8 +578,8 @@ function AddSourcesDialog({ open, onOpenChange, notebookId, onAdded }: { open: b
               <TabsTrigger value="text"><Type className="mr-1.5 inline size-3.5" aria-hidden />Texte</TabsTrigger>
             </TabsList>
             <TabsContent value="file" className="pt-4">
-              <Field id="files" label="Fichiers" hint="PDF, DOCX, PPTX, EPUB, TXT, MD ou CSV — 200 Mo maximum par fichier.">
-                <input ref={fileRef} type="file" multiple accept=".pdf,.docx,.pptx,.epub,.txt,.md,.csv" className="block w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-accent-soft file:px-3 file:py-2 file:text-sm file:font-medium file:text-on-accent-soft" />
+              <Field id="files" label="Fichiers" hint="PDF, DOCX, PPTX, EPUB, TXT, MD, CSV, MP3, WAV, M4A, AAC, OGG, FLAC ou WEBM — 200 Mo maximum par fichier.">
+                <input ref={fileRef} type="file" multiple accept=".pdf,.docx,.pptx,.epub,.txt,.md,.csv,.mp3,.wav,.m4a,.aac,.ogg,.flac,.webm" className="block w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-accent-soft file:px-3 file:py-2 file:text-sm file:font-medium file:text-on-accent-soft" />
               </Field>
             </TabsContent>
             <TabsContent value="url" className="pt-4">
@@ -603,7 +606,7 @@ function AddSourcesDialog({ open, onOpenChange, notebookId, onAdded }: { open: b
 /* --------------------------------------------------------- Visionneuse ---- */
 
 function SourceViewer({ state, onClose, onAsk }: { state: { sourceId: string; range?: [number, number] } | null; onClose: () => void; onAsk: (text: string) => void }) {
-  const [source, setSource] = React.useState<{ title: string; extracted_text: string | null; guide: { summary: string; topics: string[] } | null } | null>(null);
+  const [source, setSource] = React.useState<{ title: string; kind: string; extracted_text: string | null; guide: { summary: string; topics: string[] } | null } | null>(null);
   const [failed, setFailed] = React.useState(false);
   const mark = React.useRef<HTMLElement>(null);
   React.useEffect(() => {
@@ -623,6 +626,7 @@ function SourceViewer({ state, onClose, onAsk }: { state: { sourceId: string; ra
             <div className="grid gap-2" aria-busy="true"><Skeleton className="h-4" /><Skeleton className="h-4 w-5/6" /><Skeleton className="h-4 w-4/6" /></div>
           ) : (
             <>
+            {source.kind === "audio" && <audio controls preload="metadata" className="mb-5 w-full" src={`/api/v1/sources/${state?.sourceId}/file`} />}
             {source.guide && (
               <section aria-label="Guide de la source" className="mb-5 grid gap-3 rounded-lg border bg-surface-raised p-4">
                 <h3 className="text-sm font-medium text-text-muted">Guide de la source</h3>
