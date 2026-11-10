@@ -396,7 +396,7 @@ async function resetProgress(id: string) {
 }
 
 function ArtifactViewer({ id, canShare, onClose, sourceTitle, onOpenCitation, onAsk }: { id: string | null; canShare: boolean; onClose: () => void; sourceTitle: (id: string) => string | undefined; onOpenCitation?: (c: Cite) => void; onAsk: (t: string) => void }) {
-  const [data, setData] = React.useState<{ artifact: { id: string; type: ArtType; title: string | null; content: Content; custom_prompt: string | null }; citations: Cite[]; progress: Progress[] } | null>(null);
+  const [data, setData] = React.useState<{ artifact: { id: string; type: ArtType; title: string | null; content: Content; options: Record<string, string> | null; custom_prompt: string | null }; citations: Cite[]; progress: Progress[] } | null>(null);
   const [failed, setFailed] = React.useState(false);
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
   const [playbackRate, setPlaybackRate] = React.useState("1");
@@ -415,7 +415,7 @@ function ArtifactViewer({ id, canShare, onClose, sourceTitle, onOpenCitation, on
           {art?.custom_prompt && !art.custom_prompt.startsWith(AUDIO_OVERVIEW_MARKER) && <p className="mb-4 rounded-md bg-surface px-3 py-2 text-xs text-text-muted"><span className="font-medium">Consignes de génération :</span> {art.custom_prompt}</p>}
           {failed ? <Alert tone="danger" title="Contenu indisponible" />
             : !art ? <div className="grid gap-2" aria-busy="true" aria-label="Chargement"><Skeleton className="h-5 w-2/3" /><Skeleton className="h-4" /><Skeleton className="h-4 w-5/6" /></div>
-             : art.type === "infographic" ? <InfographicView markdown={art.content.markdown ?? ""} citations={data!.citations} sourceTitle={sourceTitle} onOpen={onOpenCitation ? (c) => { onClose(); onOpenCitation(c); } : undefined} />
+             : art.type === "infographic" ? <InfographicView markdown={art.content.markdown ?? ""} options={art.options ?? {}} citations={data!.citations} sourceTitle={sourceTitle} onOpen={onOpenCitation ? (c) => { onClose(); onOpenCitation(c); } : undefined} />
              : art.type === "diagram" ? <DiagramEditor markdown={art.content.markdown ?? ""} />
              : art.type === "report" || art.type === "audio" || ["timeline", "comparison", "glossary", "faq", "editorial", "study_plan"].includes(art.type) ? <div className="grid gap-4">{art.content.audio_path && <div className="grid gap-2 rounded-lg border border-border p-3"><audio ref={audioRef} controls preload="metadata" className="w-full" src={`/api/v1/artifacts/${art.id}/audio`} /><div className="flex flex-wrap items-center justify-between gap-2"><div className="flex flex-wrap items-center gap-3 text-xs text-text-muted">{typeof art.content.estimated_duration_seconds === "number" && <span>Durée estimée : {Math.floor(art.content.estimated_duration_seconds / 60)} min</span>}{typeof art.content.tts_characters === "number" && <span>{art.content.tts_characters.toLocaleString("fr-FR")} caractères TTS</span>}{typeof art.content.segment_count === "number" && <span>{art.content.segment_count} répliques</span>}</div><label className="flex items-center gap-2 text-xs text-text-muted">Vitesse <select aria-label="Vitesse de lecture" className="h-8 rounded-md border border-border-input bg-surface-raised px-2 text-sm text-text" value={playbackRate} onChange={(e) => setPlaybackRate(e.target.value)}>{["0.75", "1", "1.25", "1.5", "1.75", "2"].map((v) => <option key={v} value={v}>{v}×</option>)}</select></label><a className="inline-flex items-center gap-2 text-sm font-medium text-accent hover:underline" href={`/api/v1/artifacts/${art.id}/audio?download=1`}><Download aria-hidden size={16} /> Télécharger le MP3</a></div></div>}<Markdown text={art.content.markdown ?? ""} citations={data!.citations} sourceTitle={sourceTitle} onOpen={onOpenCitation ? (c) => { onClose(); onOpenCitation(c); } : undefined} /></div>
             : art.type === "flashcards" ? <Flashcards id={art.id} title={art.title || "fiches"} cards={art.content.cards ?? []} progress={data!.progress} />
@@ -428,7 +428,7 @@ function ArtifactViewer({ id, canShare, onClose, sourceTitle, onOpenCitation, on
   );
 }
 
-function InfographicView({ markdown, citations, sourceTitle, onOpen }: { markdown: string; citations: Cite[]; sourceTitle: (id: string) => string | undefined; onOpen?: (c: Cite) => void }) {
+function InfographicView({ markdown, options, citations, sourceTitle, onOpen }: { markdown: string; options: Record<string, string>; citations: Cite[]; sourceTitle: (id: string) => string | undefined; onOpen?: (c: Cite) => void }) {
   const lines = markdown.split(/\r?\n/);
   const title = lines.find((line) => /^#\s+/.test(line))?.replace(/^#\s+/, "") ?? "Synthèse visuelle";
   const stats = [...markdown.matchAll(/(?:^|\n)[-*]\s+([^:\n]{2,60}):\s*([^\n]{1,70})/g)].slice(0, 4).map((m) => ({ label: m[1].replace(/\*\*/g, ""), value: m[2].replace(/\[(\d+)\]/g, "") }));
@@ -442,6 +442,19 @@ function InfographicView({ markdown, citations, sourceTitle, onOpen }: { markdow
   }
   const cards = sections.filter((x) => x.items.length).slice(0, 6);
   const cols = cards.length > 3 ? 3 : Math.max(1, cards.length);
+  const palettes: Record<string, { accent: string; soft: string }> = {
+    auto: { accent: "#2563eb", soft: "#dbeafe" }, kawaii: { accent: "#db6b9a", soft: "#fce7f3" },
+    claymation: { accent: "#b96b43", soft: "#f4dfd0" }, sketchnote: { accent: "#2563a6", soft: "#e0efff" },
+    anime: { accent: "#7c3aed", soft: "#ede9fe" }, editorial: { accent: "#1f2937", soft: "#e5e7eb" },
+    storyboard: { accent: "#0f766e", soft: "#ccfbf1" }, bentogrid: { accent: "#4f46e5", soft: "#e0e7ff" },
+    bricks: { accent: "#c2410c", soft: "#ffedd5" }, scientific: { accent: "#0e7490", soft: "#cffafe" },
+    professional: { accent: "#174b75", soft: "#dceaf4" },
+  };
+  const palette = palettes[options.visualStyle ?? "auto"] ?? palettes.auto;
+  const orientation = options.orientation ?? "landscape";
+  const canvasSize = orientation === "portrait" ? { width: 620, height: 960 } : orientation === "square" ? { width: 800, height: 800 } : { width: 960, height: 620 };
+  const detailLabels: Record<string, string> = { concise: "Concis", standard: "Standard", detailed: "Détaillé", very_detailed: "Très détaillé" };
+  const styleLabels: Record<string, string> = { auto: "Automatique", kawaii: "Kawaii", claymation: "Pâte à modeler", sketchnote: "Croquis", anime: "Anime", editorial: "Éditorial", storyboard: "Éducatif", bentogrid: "Grille Bento", bricks: "Briques", scientific: "Scientifique", professional: "Professionnel" };
   const downloadSvg = () => {
     const svg = document.getElementById("studio-infographic-preview");
     if (!svg) return;
@@ -449,15 +462,15 @@ function InfographicView({ markdown, citations, sourceTitle, onOpen }: { markdow
     const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = "infographie-studio.svg"; a.click(); URL.revokeObjectURL(url);
   };
   return <div className="grid gap-3">
-    <div className="flex justify-end"><Button size="sm" variant="secondary" onClick={downloadSvg}><Download aria-hidden size={15} /> Exporter en SVG</Button></div>
-    <div className="overflow-hidden rounded-xl border border-border bg-surface">
-      <svg id="studio-infographic-preview" viewBox="0 0 960 620" role="img" aria-label={title} className="h-auto w-full">
-        <defs><linearGradient id="studioInfographicBg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="var(--color-accent, #0f4c8a)" stopOpacity=".16" /><stop offset="100%" stopColor="var(--color-surface, #f3f1ec)" /></linearGradient></defs>
-        <rect width="960" height="620" rx="22" fill="url(#studioInfographicBg)" />
+    <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-xs text-text-muted">{orientation === "portrait" ? "Portrait" : orientation === "square" ? "Carré" : "Paysage"} · {styleLabels[options.visualStyle ?? "auto"] ?? "Automatique"} · {detailLabels[options.detailLevel ?? "standard"] ?? "Standard"}</p><Button size="sm" variant="secondary" onClick={downloadSvg}><Download aria-hidden size={15} /> Exporter en SVG</Button></div>
+    <div className="mx-auto overflow-hidden rounded-xl border border-border bg-surface" style={{ width: "100%", maxWidth: orientation === "portrait" ? "420px" : "100%" }}>
+      <svg id="studio-infographic-preview" width={canvasSize.width} height={canvasSize.height} viewBox="0 0 960 620" preserveAspectRatio="xMidYMid meet" role="img" aria-label={title} className="h-auto w-full" style={{ "--infographic-accent": palette.accent, "--infographic-soft": palette.soft } as React.CSSProperties}>
+        <defs><linearGradient id="studioInfographicBg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="var(--infographic-accent)" stopOpacity=".16" /><stop offset="100%" stopColor="var(--color-surface, #f3f1ec)" /></linearGradient></defs>
+        <rect width="960" height="620" rx="22" fill="var(--infographic-soft)" />
         <text x="48" y="64" fontSize="29" fontWeight="700" fill="currentColor">{title.slice(0, 58)}</text>
         <text x="48" y="94" fontSize="13" fill="currentColor" opacity=".62">SYNTHÈSE EXTRAITE DES SOURCES DU NOTEBOOK</text>
-        {stats.map((stat, i) => { const w = 864 / stats.length - 14; return <g key={i} transform={"translate(" + (48 + i * (864 / stats.length)) + ",124)"}><rect width={w} height="94" rx="12" fill="var(--color-surface, #f3f1ec)" stroke="var(--color-border, #e2ded5)" /><text x="14" y="30" fontSize="12" fill="currentColor" opacity=".65">{stat.label.slice(0, 24)}</text><text x="14" y="65" fontSize="23" fontWeight="700" fill="var(--color-accent, #0f4c8a)">{stat.value.slice(0, 18)}</text></g>; })}
-        {cards.map((card, i) => { const w = 864 / cols - 14; const x = 48 + (i % cols) * (864 / cols); const y = 246 + Math.floor(i / cols) * 164; return <g key={i} transform={"translate(" + x + "," + y + ")"}><rect width={w} height="146" rx="12" fill="var(--color-surface, #f3f1ec)" stroke="var(--color-border, #e2ded5)" /><circle cx="22" cy="24" r="11" fill="var(--color-accent, #0f4c8a)" opacity=".18" /><text x="22" y="28" textAnchor="middle" fontSize="11" fontWeight="700" fill="var(--color-accent, #0f4c8a)">{i + 1}</text><text x="42" y="29" fontSize="15" fontWeight="700" fill="currentColor">{card.title.slice(0, 28)}</text>{card.items.map((item, j) => <g key={j}><circle cx="18" cy={58 + j * 20} r="3" fill="var(--color-accent, #0f4c8a)" /><text x="30" y={62 + j * 20} fontSize="11.5" fill="currentColor">{item.slice(0, Math.floor((w - 48) / 7))}</text></g>)}</g>; })}
+        {stats.map((stat, i) => { const w = 864 / stats.length - 14; return <g key={i} transform={"translate(" + (48 + i * (864 / stats.length)) + ",124)"}><rect width={w} height="94" rx="12" fill="var(--color-surface, #f3f1ec)" stroke="var(--color-border, #e2ded5)" /><text x="14" y="30" fontSize="12" fill="currentColor" opacity=".65">{stat.label.slice(0, 24)}</text><text x="14" y="65" fontSize="23" fontWeight="700" fill="var(--infographic-accent)">{stat.value.slice(0, 18)}</text></g>; })}
+        {cards.map((card, i) => { const w = 864 / cols - 14; const x = 48 + (i % cols) * (864 / cols); const y = 246 + Math.floor(i / cols) * 164; return <g key={i} transform={"translate(" + x + "," + y + ")"}><rect width={w} height="146" rx="12" fill="var(--color-surface, #f3f1ec)" stroke="var(--color-border, #e2ded5)" /><circle cx="22" cy="24" r="11" fill="var(--infographic-accent)" opacity=".18" /><text x="22" y="28" textAnchor="middle" fontSize="11" fontWeight="700" fill="var(--infographic-accent)">{i + 1}</text><text x="42" y="29" fontSize="15" fontWeight="700" fill="currentColor">{card.title.slice(0, 28)}</text>{card.items.map((item, j) => <g key={j}><circle cx="18" cy={58 + j * 20} r="3" fill="var(--infographic-accent)" /><text x="30" y={62 + j * 20} fontSize="11.5" fill="currentColor">{item.slice(0, Math.floor((w - 48) / 7))}</text></g>)}</g>; })}
         <text x="48" y="590" fontSize="11" fill="currentColor" opacity=".55">Détails et références vérifiées conservés sous le visuel.</text>
       </svg>
     </div>
