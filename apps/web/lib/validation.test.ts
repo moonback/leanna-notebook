@@ -19,6 +19,15 @@ describe("profilePatchSchema", () => {
   it("refuse les colonnes hors liste blanche", () => {
     expect(profilePatchSchema.safeParse({ adult_verified_at: "2026-01-01" }).success).toBe(false);
   });
+  it("accepte un prompt vocal personnalisé et la restauration par null", () => {
+    expect(profilePatchSchema.parse({ voice_system_prompt: "Tu es Leanna." })).toEqual({ voice_system_prompt: "Tu es Leanna." });
+    expect(profilePatchSchema.parse({ voice_system_prompt: null })).toEqual({ voice_system_prompt: null });
+  });
+  it("limite la taille du prompt vocal et refuse une chaîne vide", () => {
+    expect(profilePatchSchema.safeParse({ voice_system_prompt: " " }).success).toBe(false);
+    expect(profilePatchSchema.safeParse({ voice_system_prompt: "x".repeat(20_001) }).success).toBe(false);
+    expect(profilePatchSchema.safeParse({ voice_system_prompt: "x".repeat(20_000) }).success).toBe(true);
+  });
   it("refuse un corps vide et une langue inconnue", () => {
     expect(profilePatchSchema.safeParse({}).success).toBe(false);
     expect(profilePatchSchema.safeParse({ output_language: "xx" }).success).toBe(false);
