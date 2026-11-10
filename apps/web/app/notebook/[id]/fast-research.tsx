@@ -21,12 +21,14 @@ export function FastResearch({ notebookId, onImported }: { notebookId: string; o
   const [jobId, setJobId] = React.useState<string | null>(null);
   const [results, setResults] = React.useState<Result[]>([]);
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
-  const [busy, setBusy] = React.useState(false);
+  const [searching, setSearching] = React.useState(false);
+  const [importing, setImporting] = React.useState(false);
+  const busy = searching || importing;
   const [stage, setStage] = React.useState("");
   const [error, setError] = React.useState("");
 
   React.useEffect(() => {
-    if (!open || !jobId || !busy) return;
+    if (!open || !jobId || !searching) return;
     let stopped = false;
     let timer: ReturnType<typeof setTimeout>;
     const poll = async () => {
@@ -50,16 +52,16 @@ export function FastResearch({ notebookId, onImported }: { notebookId: string; o
         }
         timer = setTimeout(poll, 1800);
       } catch (e) {
-        if (!stopped) { setError(e instanceof Error ? e.message : "Recherche indisponible."); setBusy(false); }
+        if (!stopped) { setError(e instanceof Error ? e.message : "Recherche indisponible."); setSearching(false); }
       }
     };
     void poll();
     return () => { stopped = true; clearTimeout(timer); };
-  }, [open, jobId, busy]);
+  }, [open, jobId, searching]);
 
   async function search(e: React.FormEvent) {
     e.preventDefault();
-    setBusy(true); setError(""); setResults([]); setSelected(new Set()); setJobId(null);
+    setSearching(true); setError(""); setResults([]); setSelected(new Set()); setJobId(null);
     try {
       const r = await fetch(`/api/v1/notebooks/${notebookId}/research`, {
         method: "POST", headers: { "content-type": "application/json", "idempotency-key": crypto.randomUUID() },
@@ -84,7 +86,7 @@ export function FastResearch({ notebookId, onImported }: { notebookId: string; o
       toast({ title: "Sources ajoutées", description: `${j.sources.length} source(s) en cours d’indexation.`, tone: "success" });
       onImported(); setOpen(false); setJobId(null); setResults([]); setQuery("");
     } catch (e) { setError(e instanceof Error ? e.message : "Import impossible."); }
-    finally { setBusy(false); }
+    finally { setImporting(false); }
   }
 
   return (
@@ -98,7 +100,7 @@ export function FastResearch({ notebookId, onImported }: { notebookId: string; o
                 <Input value={query} maxLength={300} onChange={(e) => setQuery(e.target.value)} placeholder="Ex. : dernières avancées de l’énergie solaire" disabled={busy} />
               </Field>
             </div>
-            <Button type="submit" disabled={busy || query.trim().length < 3} loading={busy && !jobId}>Rechercher</Button>
+            <Button type="submit" disabled={busy || query.trim().length < 3} loading={searching && !jobId}>Rechercher</Button>
           </form>
           {busy && <p className="text-sm text-text-muted" role="status">{stage || "Recherche en cours…"}</p>}
           {error && <Alert tone="danger" title={error} />}
@@ -120,7 +122,7 @@ export function FastResearch({ notebookId, onImported }: { notebookId: string; o
           )}
           <div className="flex justify-end gap-2">
             <Button type="button" variant="secondary" disabled={busy} onClick={() => setOpen(false)}>Fermer</Button>
-            <Button type="button" disabled={busy || selected.size === 0} loading={busy && Boolean(jobId)} onClick={() => void importSelected()}>Importer la sélection ({selected.size})</Button>
+            <Button type="button" disabled={busy || selected.size === 0} loading={importing} onClick={() => void importSelected()}>Importer la sélection ({selected.size})</Button>
           </div>
         </DialogContent>
       </Dialog>
