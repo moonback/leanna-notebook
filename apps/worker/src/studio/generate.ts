@@ -140,7 +140,7 @@ export function studioHandler(db: SupabaseClient, llm: Llm | null, speech: Speec
       const [{ data: profile }, { data: modelPreference }] = await Promise.all([
         db.from("profiles").select("output_language").eq("id", art.created_by).maybeSingle(),
         db.from("ai_model_preferences").select("model_id").eq("user_id", art.created_by)
-          .eq("feature_key", art.type === "audio" ? "audio_overview" : art.type).maybeSingle(),
+          .eq("feature_key", art.type === "audio" || (art.type === "report" && isAudioOverviewPrompt(art.custom_prompt)) ? "audio_overview" : art.type).maybeSingle(),
       ]);
       const language = (art.options as { language?: string })?.language ?? profile?.output_language ?? "fr";
       const audioOverview = art.type === "audio" || (art.type === "report" && isAudioOverviewPrompt(art.custom_prompt));
