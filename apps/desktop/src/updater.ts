@@ -69,7 +69,9 @@ export function initializeAutoUpdater(getWindow: () => BrowserWindow | null): vo
   });
 
   autoUpdater.on("download-progress", (progress) => {
-    notify(getWindow(), "downloading", {
+    const window = getWindow();
+    if (window && !window.isDestroyed()) window.setProgressBar(progress.percent / 100);
+    notify(window, "downloading", {
       percent: Math.round(progress.percent),
       transferred: progress.transferred,
       total: progress.total,
@@ -78,6 +80,8 @@ export function initializeAutoUpdater(getWindow: () => BrowserWindow | null): vo
 
   autoUpdater.on("update-downloaded", async (info: UpdateInfo) => {
     downloading = false;
+    const progressWindow = getWindow();
+    if (progressWindow && !progressWindow.isDestroyed()) progressWindow.setProgressBar(-1);
     notify(getWindow(), "downloaded", { version: info.version });
     const window = getWindow();
     if (!window || window.isDestroyed()) return;
@@ -94,6 +98,8 @@ export function initializeAutoUpdater(getWindow: () => BrowserWindow | null): vo
   });
 
   autoUpdater.on("error", (error) => {
+    const progressWindow = getWindow();
+    if (progressWindow && !progressWindow.isDestroyed()) progressWindow.setProgressBar(-1);
     checking = false;
     downloading = false;
     notify(getWindow(), "error", { message: error.message });
