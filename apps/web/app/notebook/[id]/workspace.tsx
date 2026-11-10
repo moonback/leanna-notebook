@@ -626,6 +626,7 @@ function SourceViewer({ state, onClose, onAsk }: { state: { sourceId: string; ra
             <div className="grid gap-2" aria-busy="true"><Skeleton className="h-4" /><Skeleton className="h-4 w-5/6" /><Skeleton className="h-4 w-4/6" /></div>
           ) : (
             <>
+            {source.kind === "audio" && <audio controls preload="metadata" className="mb-5 w-full" src={`/api/v1/sources/${state?.sourceId}/file`} />}
             {source.guide && (
               <section aria-label="Guide de la source" className="mb-5 grid gap-3 rounded-lg border bg-surface-raised p-4">
                 <h3 className="text-sm font-medium text-text-muted">Guide de la source</h3>
