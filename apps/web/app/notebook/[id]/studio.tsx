@@ -186,7 +186,8 @@ function CreateDialog({ type, notebookId, sourceIds, onClose, onGenerate }: { ty
   const [aiModels, setAiModels] = React.useState<AiReportModel[]>([]);
   const [aiModelsLoading, setAiModelsLoading] = React.useState(false);
   const [aiModelsError, setAiModelsError] = React.useState(false);
-  const [selectedAiModel, setSelectedAiModel] = React.useState<string | null>(null);\n  const styleCarouselRef = React.useRef<HTMLDivElement | null>(null);
+  const [selectedAiModel, setSelectedAiModel] = React.useState<string | null>(null);
+  const styleCarouselRef = React.useRef<HTMLDivElement | null>(null);
 
   const sourceKey = sourceIds.join(",");
   const aiModelsCache = React.useRef<{ notebookId: string; sourceIds: Set<string>; suggestions: AiReportModel[] } | null>(null);
