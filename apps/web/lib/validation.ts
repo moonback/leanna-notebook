@@ -50,7 +50,7 @@ export const uploadRequestSchema = z.object({
 export const sourceItemSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("upload"), storagePath: z.string().min(1).max(500), title: z.string().trim().min(1).max(300) }).strict(),
   z.object({ type: z.literal("url"), url: z.string().trim().url("Adresse invalide.").max(2048).refine((u) => /^https?:\/\//i.test(u), "Seuls http et https sont acceptés.") }).strict(),
-  z.object({ type: z.literal("text"), title: z.string().trim().min(1, "Titre requis.").max(300), text: z.string().min(1, "Texte vide.").max(3_500_000, "Texte trop long (500 000 mots maximum).") }).strict(),
+  z.object({ type: z.literal("github"), url: z.string().trim().url().max(300).refine((value) => { try { const u = new URL(value); return u.protocol === "https:" && u.hostname === "github.com" && /^\\/[^/]+\\/[^/]+\\/?$/.test(u.pathname); } catch { return false; } }, "Indiquez l’URL d’un dépôt GitHub public."), branch: z.string().trim().min(1).max(200).regex(/^[A-Za-z0-9._/-]+$/, "Nom de branche invalide.") }).strict(),\n  z.object({ type: z.literal("text"), title: z.string().trim().min(1, "Titre requis.").max(300), text: z.string().min(1, "Texte vide.").max(3_500_000, "Texte trop long (500 000 mots maximum).") }).strict(),
 ]);
 export const sourcesCreateSchema = z.object({ items: z.array(sourceItemSchema).min(1).max(50) }).strict();
 
