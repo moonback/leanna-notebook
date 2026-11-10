@@ -44,7 +44,8 @@ grant execute on function public.cleanup_invitations() to service_role;
 do $$
 declare v_job record;
 begin
-  if exists (select 1 from pg_available_extensions where name = 'pg_cron') then
+  if exists (select 1 from pg_available_extensions where name = 'pg_cron')
+     and position('pg_cron' in current_setting('shared_preload_libraries')) > 0 then
     execute 'create extension if not exists pg_cron';
     if to_regnamespace('cron') is not null then
       for v_job in execute 'select jobid from cron.job where jobname = ''cleanup_invitations''' loop
