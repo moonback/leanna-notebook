@@ -214,6 +214,16 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
           if (message?.error) { window.clearTimeout(timeout); reject(new Error(message.error.message ?? "Erreur de configuration de Roxane.")); }
           if (message?.setupComplete) {
             window.clearTimeout(timeout);
+            connection.onclose = () => {
+              if (roxaneSocket.current === connection) {
+                roxaneSocket.current = null;
+                if (roxaneEnabledRef.current) {
+                  roxaneEnabledRef.current = false;
+                  setRoxaneEnabled(false);
+                  setStatus("La connexion de Roxane a été interrompue. Leanna reste disponible.");
+                }
+              }
+            };
             connection.onmessage = async (nextEvent) => {
               try {
                 const nextMessage = parseFrame(nextEvent.data); if (!nextMessage?.serverContent) return;
