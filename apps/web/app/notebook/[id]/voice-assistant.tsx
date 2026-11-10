@@ -130,6 +130,9 @@ export function VoiceAssistant({ notebookId, disabled = false }: { notebookId: s
     if (state === "connecting" || state === "listening" || state === "speaking") { stop(); return; }
     setState("connecting");
     setStatus("Connexion sécurisée à Gemini Live…");
+    const ctx = new AudioContext();
+    audioContext.current = ctx;
+    await ctx.resume();
     setTranscript("");
     setAnswer("");
     setSources([]);
@@ -171,9 +174,6 @@ export function VoiceAssistant({ notebookId, disabled = false }: { notebookId: s
 
       const stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
       mediaStream.current = stream;
-      const ctx = new AudioContext();
-      audioContext.current = ctx;
-      await ctx.resume();
       const source = ctx.createMediaStreamSource(stream);
       micSource.current = source;
       const node = ctx.createScriptProcessor(4096, 1, 1);
@@ -250,7 +250,7 @@ export function VoiceAssistant({ notebookId, disabled = false }: { notebookId: s
                 ) : (
                   <>
                     <Button variant="secondary" onClick={toggleMute}><span className="sr-only">{muted ? "Activer" : "Couper"} le microphone</span>{muted ? <MicOff /> : <Mic />}{muted ? "Activer le micro" : "Couper le micro"}</Button>
-                    <Button variant="danger" onClick={stop}><PhoneOff aria-hidden /> Terminer</Button>
+                    <Button variant="secondary" onClick={stop}><PhoneOff aria-hidden /> Terminer</Button>
                   </>
                 )}
               </div>
