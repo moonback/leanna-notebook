@@ -72,7 +72,7 @@ export function Workspace({ notebookId, initialTitle, role, allowCopies }: { not
   const [studioCollapsed, setStudioCollapsed] = React.useState(false);
   const [sourcesWidth, setSourcesWidth] = React.useState(300);
   const [studioWidth, setStudioWidth] = React.useState(340);
-  const [panelWidthsLoaded, setPanelWidthsLoaded] = React.useState(false);
+  const [panelWidthsLoadedFor, setPanelWidthsLoadedFor] = React.useState<string | null>(null);
   const panelResize = React.useRef<{ side: "sources" | "studio"; startX: number; startWidth: number } | null>(null);
 
   React.useEffect(() => {
@@ -84,15 +84,15 @@ export function Workspace({ notebookId, initialTitle, role, allowCopies }: { not
         if (typeof parsed.studioWidth === "number" && Number.isFinite(parsed.studioWidth)) setStudioWidth(Math.min(560, Math.max(260, parsed.studioWidth)));
       }
     } catch { /* stockage local facultatif */ }
-    setPanelWidthsLoaded(true);
+    setPanelWidthsLoadedFor(notebookId);
   }, [notebookId]);
 
   React.useEffect(() => {
-    if (!panelWidthsLoaded) return;
+    if (panelWidthsLoadedFor !== notebookId) return;
     try {
       window.localStorage.setItem(`notebook-workspace-panels:${notebookId}`, JSON.stringify({ sourcesWidth, studioWidth }));
     } catch { /* stockage local facultatif */ }
-  }, [notebookId, panelWidthsLoaded, sourcesWidth, studioWidth]);
+  }, [notebookId, panelWidthsLoadedFor, sourcesWidth, studioWidth]);
 
   const beginPanelResize = (side: "sources" | "studio", event: React.PointerEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -307,7 +307,7 @@ export function Workspace({ notebookId, initialTitle, role, allowCopies }: { not
               aria-valuemin={220}
               aria-valuemax={520}
               tabIndex={0}
-              className="w-2 cursor-col-resize touch-none rounded-full outline-none transition-colors hover:bg-accent/30 focus-visible:bg-accent/40"
+              className="w-2 cursor-col-resize touch-none rounded-full bg-border/40 outline-none transition-colors hover:bg-accent/40 focus-visible:bg-accent/50"
               onPointerDown={(event) => beginPanelResize("sources", event)}
               onPointerMove={movePanelResize}
               onPointerUp={endPanelResize}
@@ -332,7 +332,7 @@ export function Workspace({ notebookId, initialTitle, role, allowCopies }: { not
               aria-valuemin={260}
               aria-valuemax={560}
               tabIndex={0}
-              className="w-2 cursor-col-resize touch-none rounded-full outline-none transition-colors hover:bg-accent/30 focus-visible:bg-accent/40"
+              className="w-2 cursor-col-resize touch-none rounded-full bg-border/40 outline-none transition-colors hover:bg-accent/40 focus-visible:bg-accent/50"
               onPointerDown={(event) => beginPanelResize("studio", event)}
               onPointerMove={movePanelResize}
               onPointerUp={endPanelResize}
