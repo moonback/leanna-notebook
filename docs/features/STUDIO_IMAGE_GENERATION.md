@@ -169,3 +169,7 @@ Le worker et l’application serveur doivent disposer de `OPENROUTER_API_KEY`. L
 ### Déploiement et vérifications restantes
 
 Appliquer les migrations `20261111020000_studio_image_generation.sql` et `20261111030000_image_generation_credits.sql`, puis redémarrer le worker et vérifier que la clé OpenRouter autorise le modèle image sélectionné. Les tests automatisés, le typecheck et un appel réel au fournisseur restent à exécuter dans l’environnement du projet ; ils ne sont pas déclarés comme validés par cette PR.
+
+### Suggestions visuelles contextuelles
+
+Le dialogue de création analyse maintenant les extraits des sources sélectionnées (ou toutes les sources prêtes si cette portée est choisie) et propose quatre concepts d'images distincts. Chaque suggestion comprend un titre, une justification liée au contenu et un prompt prêt à l'emploi. Un clic sur une suggestion remplit le champ de description ; l'utilisateur peut ensuite la modifier librement avant génération. L'analyse est servie par `POST /api/v1/notebooks/[id]/artifacts/image-suggestions` via le modèle de conversation OpenRouter et n'entraîne pas de génération d'image ni de réservation des crédits image.
