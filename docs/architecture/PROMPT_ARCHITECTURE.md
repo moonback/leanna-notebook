@@ -59,3 +59,13 @@ Ne pas confondre ordre des messages et sécurité réelle : le modèle peut se t
 ## Limites de l'audit
 
 Cette architecture décrit les chemins inspectés. Elle ne constitue pas encore une cartographie exhaustive de tous les appels LLM du dépôt. Le code search GitHub n'était pas indexé ; un audit local du dépôt reste nécessaire pour confirmer les consommateurs indirects et les appels hors catalogue.
+
+### Suggestions et génération d'images
+
+- Les suggestions d'images séparent désormais le message système de direction artistique des extraits transmis dans le message utilisateur.
+- Le worker de génération d'image assemble un brief visuel, une consigne utilisateur et un contexte documentaire plafonné ; les contrôles de type, taille, stockage et versionnement sont applicatifs.
+- Ces deux chemins sont hors des 18 clés du catalogue et doivent avoir leurs propres fixtures d'injection documentaire et tests de fidélité factuelle.
+
+### Personnalisation vocale
+
+L'override de persona est maintenant injecté comme préférence complémentaire délimitée. Les déclarations d'outils et les règles persona restent dans la couche système principale.
