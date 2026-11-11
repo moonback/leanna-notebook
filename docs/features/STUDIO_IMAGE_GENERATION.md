@@ -148,3 +148,24 @@ Les erreurs doivent être formulées sans exposer les détails internes : modèl
 8. Un utilisateur sans rôle éditeur ne peut pas générer ni supprimer.
 9. Une génération échouée ne consomme pas définitivement les crédits internes.
 10. La bibliothèque ne duplique pas les fonctionnalités de navigation et de stockage déjà présentes dans le Studio.
+
+## État d’implémentation — 11 novembre 2026
+
+Le socle de génération est maintenant intégré sur la branche `feat/studio-ai-image-generation` :
+
+- type d’artefact Studio `image`, avec le même cycle de job et de crédits que les autres artefacts ;
+- catalogue dynamique des modèles disponibles via `GET /api/v1/ai/image-models` ;
+- sélection du modèle dans le dialogue Studio ; modèle par défaut `google/gemini-3.1-flash-image` (Nano Banana 2), surcharge possible avec `OPENROUTER_IMAGE_MODEL` ;
+- génération asynchrone dans le worker via l’Images API OpenRouter ;
+- édition non destructive d’une image existante : l’image originale est transmise comme référence, et une nouvelle création est reliée par `artifacts.parent_id` ;
+- stockage binaire dans le bucket privé `artifacts`, table `artifact_image_versions`, URL signée temporaire et suppression des assets avec l’artefact ;
+- validation du MIME par signature binaire et plafond de 20 Mo ;
+- coût utilisateur interne configuré à 5 crédits et plafond journalier à 10 générations par workspace ; le coût fournisseur USD est conservé séparément lorsque OpenRouter le renvoie.
+
+### Configuration
+
+Le worker et l’application serveur doivent disposer de `OPENROUTER_API_KEY`. Le modèle peut être forcé avec `OPENROUTER_IMAGE_MODEL`. Sans surcharge, Nano Banana 2 est utilisé. Aucune clé OpenRouter n’est exposée au navigateur.
+
+### Déploiement et vérifications restantes
+
+Appliquer les migrations `20261111020000_studio_image_generation.sql` et `20261111030000_image_generation_credits.sql`, puis redémarrer le worker et vérifier que la clé OpenRouter autorise le modèle image sélectionné. Les tests automatisés, le typecheck et un appel réel au fournisseur restent à exécuter dans l’environnement du projet ; ils ne sont pas déclarés comme validés par cette PR.
