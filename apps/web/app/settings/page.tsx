@@ -10,6 +10,7 @@ import { DeleteAccount } from "./delete-account";
 import { PlanCard } from "./plan-card";
 import { SettingsTabs } from "./settings-tabs";
 import { OpenRouterSettings } from "./openrouter-settings";
+import { ImageGenerationSettings } from "./image-generation-settings";
 import { SystemPromptsSettings } from "./system-prompts";
 
 export const metadata: Metadata = { title: "Réglages · Notebook" };
@@ -71,7 +72,7 @@ export default async function SettingsPage() {
             {
               id: "ai",
               label: "Intelligence artificielle",
-              content: <OpenRouterSettings />,
+              content: <div className="grid gap-5"><OpenRouterSettings /><ImageGenerationSettings /></div>,
             },
             {
               id: "prompts",
