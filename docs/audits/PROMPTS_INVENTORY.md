@@ -55,3 +55,14 @@ Source : `apps/web/lib/ai/prompt-catalog.ts`. 18 clés sont déclarées.
 ## Limites de couverture
 
 L'index de recherche de code GitHub était indisponible pour ce dépôt pendant l'audit. Les fichiers listés ici ont été récupérés directement par chemin. Les chaînes de prompt dispersées dans d'autres routes, agents, tests, migrations ou fichiers non référencés doivent encore être recherchées depuis un clone local. Le total « 18 » désigne uniquement les clés du catalogue utilisateur, pas le nombre total de fragments de prompt du code.
+
+## Appels IA complémentaires repérés dans l'arbre du dépôt
+
+L'exploration de l'arbre Git (260 fichiers) a permis d'identifier deux chemins supplémentaires hors catalogue :
+
+| Élément | Emplacement | Instructions et données | Sortie / garde-fous |
+|---|---|---|---|
+| Suggestions d'images | `apps/web/app/api/v1/notebooks/[id]/artifacts/image-suggestions/route.ts` | Prompt de direction artistique, exactement 3 à 5 suggestions, extraits documentaires plafonnés à 18 000 caractères | JSON demandé, parsing + Zod, normalisation et plafonnement du nombre de suggestions |
+| Génération d'image | `apps/worker/src/studio/image-generation.ts` | Brief utilisateur + contexte documentaire tronqué à 7 500 caractères, référence image facultative | API image OpenRouter, contrôle MIME/taille, stockage et versionnement |
+
+Les suggestions d'images utilisent maintenant un message système dédié et un message utilisateur séparé pour les extraits. La génération d'image reste un endpoint multimodal distinct et ne fait pas partie des 18 clés du catalogue.
