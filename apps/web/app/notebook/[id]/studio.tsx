@@ -234,7 +234,7 @@ function CreateDialog({ type, notebookId, sourceIds, referenceImageId, onClose, 
     if (!imagePreferences.enabled || !imagePreferences.autoSuggestions) { setImageSuggestions([]); setImageSuggestionsLoading(false); return; }
     let active = true;
     setImageSuggestions([]);
-    setImageSuggestionsError(false);
+    setImageSuggestionsError("");
     setImageSuggestionsLoading(true);
     fetch(`/api/v1/notebooks/${notebookId}/artifacts/image-suggestions`, {
       method: "POST",
