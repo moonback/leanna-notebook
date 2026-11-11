@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import { createPortal } from "react-dom";
-import { AlertTriangle, ArrowUp, AudioLines, BookmarkPlus, Eraser, Settings2, ThumbsDown, ThumbsUp, FileText, Globe, Inbox, Lock, NotebookPen, Pencil, Plus, Square, Sparkles, Trash2, Type, Upload, Search, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from "lucide-react";
+import { AlertTriangle, ArrowUp, AudioLines, BookmarkPlus, Eraser, Settings2, ThumbsDown, ThumbsUp, FileText, Globe, Inbox, Lock, NotebookPen, Pencil, Plus, Square, Sparkles, Trash2, Type, Upload, Search, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, FolderOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Textarea } from "@/components/ui/field";
 import { Alert, Badge, EmptyState, Progress, Skeleton } from "@/components/ui/feedback";
@@ -706,7 +706,20 @@ function AddSourcesDialog({ open, onOpenChange, notebookId, onAdded, onWebSearch
   const [error, setError] = React.useState<string>();
   const [url, setUrl] = React.useState("");
   const [paste, setPaste] = React.useState({ title: "", text: "" });
+  const [selectedFiles, setSelectedFiles] = React.useState<File[]>([]);
+  const [progress, setProgress] = React.useState<{ done: number; total: number } | null>(null);
+  const [dragging, setDragging] = React.useState(false);
   const fileRef = React.useRef<HTMLInputElement>(null);
+  const folderRef = React.useRef<HTMLInputElement>(null);
+  const ACCEPT = ".pdf,.docx,.pptx,.epub,.txt,.md,.csv,.mp3,.wav,.m4a,.aac,.ogg,.flac,.webm";
+  const supportedExtensions = new Set(["pdf", "docx", "pptx", "epub", "txt", "md", "csv", "mp3", "wav", "m4a", "aac", "ogg", "flac", "webm"]);
+  const folderFiles = selectedFiles.map((file) => {
+    const relativePath = (file as File & { webkitRelativePath?: string }).webkitRelativePath || file.name;
+    const extension = file.name.toLowerCase().split(".").pop() ?? "";
+    return { file, relativePath, compatible: supportedExtensions.has(extension), withinLimit: file.size > 0 && file.size <= 200 * 1024 * 1024 };
+  });
+  const compatibleFiles = folderFiles.filter((entry) => entry.compatible && entry.withinLimit);
+  const ignoredFiles = folderFiles.length - compatibleFiles.length;
 
   async function post(items: object[]) {
     const res = await fetch(`/api/v1/notebooks/${notebookId}/sources`, { method: "POST", headers: { "content-type": "application/json", "idempotency-key": crypto.randomUUID() }, body: JSON.stringify({ items }) });
@@ -718,56 +731,144 @@ function AddSourcesDialog({ open, onOpenChange, notebookId, onAdded, onWebSearch
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    setBusy(true); setError(undefined);
+    setBusy(true); setError(undefined); setProgress(null);
+    let keepDialogOpen = false;
     try {
       if (tab === "file") {
-        const files = [...(fileRef.current?.files ?? [])];
-        if (!files.length) throw new Error("Choisissez au moins un fichier.");
-        const items = [];
-        for (const f of files) {
-          const r = await fetch(`/api/v1/notebooks/${notebookId}/uploads`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ filename: f.name, size: f.size }) });
-          const j = await r.json().catch(() => ({}));
-          if (r.status === 415) throw new Error(`« ${f.name} » : format non pris en charge (PDF, DOCX, PPTX, EPUB, TXT, MD, CSV, MP3, WAV, M4A, AAC, OGG, FLAC, WEBM).`);
-          if (r.status === 422) throw new Error(`« ${f.name} » : fichier trop volumineux (200 Mo maximum).`);
-          if (!r.ok) throw new Error("Préparation de l’envoi impossible.");
-          const up = await fetch(j.uploadUrl, { method: "PUT", headers: { "content-type": j.contentType }, body: f });
-          if (!up.ok) throw new Error(`Envoi de « ${f.name} » échoué.`);
-          items.push({ type: "upload", storagePath: j.storagePath, title: f.name.slice(0, 300) });
+        if (!compatibleFiles.length) throw new Error("Sélectionnez un dossier contenant au moins un document compatible (200 Mo maximum par fichier).");
+        let batch: object[] = [];
+        let imported = 0;
+        const failures: string[] = [];
+        setProgress({ done: 0, total: compatibleFiles.length });
+        for (const [index, entry] of compatibleFiles.entries()) {
+          const { file, relativePath } = entry;
+          try {
+            const r = await fetch(`/api/v1/notebooks/${notebookId}/uploads`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ filename: file.name, size: file.size }) });
+            const j = await r.json().catch(() => ({}));
+            if (!r.ok) throw new Error(r.status === 415 ? "format refusé" : r.status === 422 ? "fichier trop volumineux" : "préparation de l’envoi impossible");
+            const up = await fetch(j.uploadUrl, { method: "PUT", headers: { "content-type": j.contentType }, body: file });
+            if (!up.ok) throw new Error("envoi échoué");
+            batch.push({ type: "upload", storagePath: j.storagePath, title: relativePath.slice(0, 300) });
+          } catch (uploadError) {
+            failures.push(`${relativePath} : ${uploadError instanceof Error ? uploadError.message : "erreur inconnue"}`);
+          }
+          if (batch.length === 50 || index === compatibleFiles.length - 1) {
+            if (batch.length) {
+              await post(batch);
+              imported += batch.length;
+              batch = [];
+            }
+          }
+          setProgress({ done: index + 1, total: compatibleFiles.length });
         }
-        await post(items);
+        if (!imported) throw new Error(failures[0] ?? "Aucun document n’a pu être importé.");
+        const skipped = ignoredFiles + failures.length;
+        toast({
+          title: `${imported} document${imported > 1 ? "s" : ""} ajouté${imported > 1 ? "s" : ""}`,
+          description: skipped ? `${skipped} fichier(s) ignoré(s) ou en erreur. Le traitement continue en arrière-plan.` : "Tous les documents compatibles ont été envoyés. Le traitement continue en arrière-plan.",
+          tone: failures.length ? "error" : "success",
+        });
+        if (failures.length) {
+          keepDialogOpen = true;
+          setError(`Import partiel : ${failures.slice(0, 5).join(" · ")}${failures.length > 5 ? ` · et ${failures.length - 5} autre(s)` : ""}`);
+        }
       } else if (tab === "url") {
         const urls = url.split(/\s+/).filter(Boolean);
         if (!urls.length) throw new Error("Collez au moins une adresse.");
         await post(urls.map((u) => ({ type: "url", url: u })));
+        toast({ title: "Sources ajoutées", description: "Le traitement continue en arrière-plan.", tone: "success" });
       } else {
         if (!paste.title.trim() || !paste.text.trim()) throw new Error("Titre et texte sont requis.");
         await post([{ type: "text", title: paste.title, text: paste.text }]);
+        toast({ title: "Source ajoutée", description: "Le traitement continue en arrière-plan.", tone: "success" });
       }
-      toast({ title: "Source ajoutée", description: "Le traitement continue en arrière-plan.", tone: "success" });
-      setUrl(""); setPaste({ title: "", text: "" }); if (fileRef.current) fileRef.current.value = "";
-      onAdded(); onOpenChange(false);
+      setUrl(""); setPaste({ title: "", text: "" }); setSelectedFiles([]); if (fileRef.current) fileRef.current.value = ""; if (folderRef.current) folderRef.current.value = "";
+      onAdded();
+      if (!keepDialogOpen) onOpenChange(false);
     } catch (err) { setError(err instanceof Error ? err.message : "Ajout impossible."); }
-    finally { setBusy(false); }
+    finally { setBusy(false); setProgress(null); }
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(next) => { if (!busy) onOpenChange(next); }}>
       <DialogContent title="Ajouter des sources" description="Les réponses s’appuieront uniquement sur ces documents.">
-        <div className="grid grid-cols-2 gap-2">
-          <Button type="button" variant="secondary" onClick={onWebSearch}><Search aria-hidden /> Recherche web</Button>
-          <Button type="button" variant="secondary" onClick={onNote}><NotebookPen aria-hidden /> Note</Button>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <button type="button" onClick={onWebSearch} className="flex items-start gap-3 rounded-xl border border-border bg-surface p-3 text-left transition-colors hover:bg-surface-raised focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+            <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-accent-soft text-on-accent-soft"><Search className="size-4" aria-hidden /></span>
+            <span className="grid gap-0.5"><span className="text-sm font-medium">Recherche web</span><span className="text-xs text-text-muted">Trouvez et importez des sources en ligne.</span></span>
+          </button>
+          <button type="button" onClick={onNote} className="flex items-start gap-3 rounded-xl border border-border bg-surface p-3 text-left transition-colors hover:bg-surface-raised focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+            <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-accent-soft text-on-accent-soft"><NotebookPen className="size-4" aria-hidden /></span>
+            <span className="grid gap-0.5"><span className="text-sm font-medium">Note</span><span className="text-xs text-text-muted">Rédigez une note utilisée comme source.</span></span>
+          </button>
         </div>
+        <div className="flex items-center gap-3 text-xs uppercase tracking-wide text-text-muted" aria-hidden><span className="h-px flex-1 bg-border" />ou importer<span className="h-px flex-1 bg-border" /></div>
         <form onSubmit={submit} className="grid gap-4">
           <Tabs value={tab} onValueChange={setTab}>
             <TabsList aria-label="Type de source">
-              <TabsTrigger value="file"><Upload className="mr-1.5 inline size-3.5" aria-hidden />Fichier</TabsTrigger>
+              <TabsTrigger value="file"><Upload className="mr-1.5 inline size-3.5" aria-hidden />Fichier / dossier</TabsTrigger>
               <TabsTrigger value="url"><Globe className="mr-1.5 inline size-3.5" aria-hidden />Page web</TabsTrigger>
               <TabsTrigger value="text"><Type className="mr-1.5 inline size-3.5" aria-hidden />Texte</TabsTrigger>
             </TabsList>
-            <TabsContent value="file" className="pt-4">
-              <Field id="files" label="Fichiers" hint="PDF, DOCX, PPTX, EPUB, TXT, MD, CSV, MP3, WAV, M4A, AAC, OGG, FLAC ou WEBM — 200 Mo maximum par fichier.">
-                <input ref={fileRef} type="file" multiple accept=".pdf,.docx,.pptx,.epub,.txt,.md,.csv,.mp3,.wav,.m4a,.aac,.ogg,.flac,.webm" className="block w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-accent-soft file:px-3 file:py-2 file:text-sm file:font-medium file:text-on-accent-soft" />
-              </Field>
+            <TabsContent value="file" className="grid gap-3 pt-4">
+              <input ref={fileRef} type="file" multiple accept={ACCEPT} className="sr-only" tabIndex={-1} aria-label="Sélectionner des fichiers" onChange={(event) => { setSelectedFiles(Array.from(event.currentTarget.files ?? [])); setError(undefined); }} />
+              <input
+                ref={folderRef}
+                type="file"
+                multiple
+                accept={ACCEPT}
+                className="sr-only"
+                tabIndex={-1}
+                aria-label="Sélectionner un dossier"
+                {...({ webkitdirectory: "", directory: "" } as React.InputHTMLAttributes<HTMLInputElement>)}
+                onChange={(event) => { setSelectedFiles(Array.from(event.currentTarget.files ?? [])); setError(undefined); }}
+              />
+              <div
+                onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+                onDragLeave={() => setDragging(false)}
+                onDrop={(e) => { e.preventDefault(); setDragging(false); const dropped = Array.from(e.dataTransfer.files); if (dropped.length) { setSelectedFiles(dropped); setError(undefined); } }}
+                className={cn("grid justify-items-center gap-3 rounded-xl border-2 border-dashed px-4 py-8 text-center transition-colors", dragging ? "border-accent bg-accent-soft" : "border-border bg-surface")}
+              >
+                <span className="grid size-11 place-items-center rounded-full bg-accent-soft text-on-accent-soft"><Upload className="size-5" aria-hidden /></span>
+                <div className="grid gap-1">
+                  <p className="text-sm font-medium">Glissez vos fichiers ici</p>
+                  <p className="text-xs text-text-muted">200 Mo maximum par fichier</p>
+                </div>
+                <div className="flex flex-wrap justify-center gap-2">
+                  <Button type="button" variant="secondary" size="sm" onClick={() => fileRef.current?.click()}><FileText aria-hidden /> Choisir des fichiers</Button>
+                  <Button type="button" variant="secondary" size="sm" onClick={() => folderRef.current?.click()}><FolderOpen aria-hidden /> Choisir un dossier</Button>
+                </div>
+                <div className="flex flex-wrap justify-center gap-1.5" aria-label="Formats compatibles">
+                  {["PDF", "DOCX", "PPTX", "EPUB", "TXT", "MD", "CSV", "Audio"].map((f) => <Badge key={f}>{f}</Badge>)}
+                </div>
+              </div>
+              {selectedFiles.length > 0 && (
+                <div className="rounded-lg border bg-surface p-3 text-sm">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex min-w-0 items-center gap-2 font-medium"><FolderOpen className="size-4 shrink-0" aria-hidden /><span className="truncate">{(selectedFiles[0] as File & { webkitRelativePath?: string }).webkitRelativePath?.split("/")[0] || `${selectedFiles.length} fichier(s) sélectionné(s)`}</span></div>
+                    <Button type="button" variant="ghost" size="sm" disabled={busy} onClick={() => { setSelectedFiles([]); if (fileRef.current) fileRef.current.value = ""; if (folderRef.current) folderRef.current.value = ""; }}>Effacer</Button>
+                  </div>
+                  <ul className="mt-2 grid max-h-32 gap-1 overflow-y-auto">
+                    {folderFiles.slice(0, 50).map((entry) => (
+                      <li key={entry.relativePath} className={cn("flex items-center justify-between gap-3 text-xs", entry.compatible && entry.withinLimit ? "text-text" : "text-text-muted line-through")}>
+                        <span className="truncate">{entry.relativePath}</span>
+                        <span className="shrink-0 text-text-muted">{(entry.file.size / 1048576).toFixed(1)} Mo</span>
+                      </li>
+                    ))}
+                    {folderFiles.length > 50 && <li className="text-xs text-text-muted">… et {folderFiles.length - 50} autre(s)</li>}
+                  </ul>
+                  <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-text-muted">
+                    <span>{compatibleFiles.length} document(s) compatible(s)</span>
+                    {ignoredFiles > 0 && <span>{ignoredFiles} fichier(s) ignoré(s)</span>}
+                  </div>
+                  {progress && (
+                    <div className="mt-3 grid gap-1">
+                      <div className="flex justify-between text-xs text-text-muted"><span>Envoi des documents</span><span>{progress.done}/{progress.total}</span></div>
+                      <Progress label="Envoi des documents" value={progress.total ? progress.done / progress.total * 100 : 0} />
+                    </div>
+                  )}
+                </div>
+              )}
             </TabsContent>
             <TabsContent value="url" className="pt-4">
               <Field id="urls" label="Adresses web" hint="Une par ligne. Seul le texte principal de la page est importé.">
@@ -781,8 +882,8 @@ function AddSourcesDialog({ open, onOpenChange, notebookId, onAdded, onWebSearch
           </Tabs>
           {error && <Alert tone="danger" title={error} />}
           <div className="flex justify-end gap-2">
-            <DialogClose asChild><Button type="button" variant="secondary">Annuler</Button></DialogClose>
-            <Button type="submit" loading={busy}>Ajouter</Button>
+            <DialogClose asChild><Button type="button" variant="secondary" disabled={busy}>Annuler</Button></DialogClose>
+            <Button type="submit" loading={busy} disabled={busy}>{tab === "file" ? "Importer" : "Ajouter"}</Button>
           </div>
         </form>
       </DialogContent>
