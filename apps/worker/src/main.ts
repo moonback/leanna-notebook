@@ -1,6 +1,6 @@
 import { hostname } from "node:os";
 import { createClient } from "@supabase/supabase-js";
-import { runOnce, type Handler, type JobKind } from "./worker.ts";
+import { runOnce, PermanentError, type Handler, type JobKind } from "./worker.ts";
 import { embedderFromEnv } from "./ai/embeddings.ts";
 import { ingestHandler } from "./ingest/handler.ts";
 import { llmFromEnv } from "./ai/llm.ts";
@@ -39,7 +39,9 @@ const handlers: Partial<Record<JobKind, Handler>> = {
         await db.from("artifacts").update({ status: "generating", error_code: null }).eq("id", artifact.id);
         try { return await generateImageArtifact(db, artifact, ctx); }
         catch (error) {
-          if (error instanceof Error) await db.from("artifacts").update({ status: "failed", error_code: error.name === "PermanentError" ? "image_generation_failed" : "image_generation_failed" }).eq("id", artifact.id);
+          if (error instanceof PermanentError || job.attempts >= job.max_attempts) {
+            await db.from("artifacts").update({ status: "failed", error_code: error instanceof PermanentError ? error.code : "image_generation_failed" }).eq("id", artifact.id);
+          }
           throw error;
         }
       }
