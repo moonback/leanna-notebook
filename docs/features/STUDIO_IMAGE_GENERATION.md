@@ -173,3 +173,17 @@ Appliquer les migrations `20261111020000_studio_image_generation.sql` et `202611
 ### Suggestions visuelles contextuelles
 
 Le dialogue de création analyse maintenant les extraits des sources sélectionnées (ou toutes les sources prêtes si cette portée est choisie) et propose quatre concepts d'images distincts. Chaque suggestion comprend un titre, une justification liée au contenu et un prompt prêt à l'emploi. Un clic sur une suggestion remplit le champ de description ; l'utilisateur peut ensuite la modifier librement avant génération. L'analyse est servie par `POST /api/v1/notebooks/[id]/artifacts/image-suggestions` via le modèle de conversation OpenRouter et n'entraîne pas de génération d'image ni de réservation des crédits image.
+
+
+## 11. Préférences utilisateur
+
+Les paramètres de génération d'images sont regroupés dans **Réglages → Intelligence artificielle → Génération d’images**.
+
+Chaque utilisateur peut :
+- activer ou désactiver la génération d'images ;
+- activer/désactiver les suggestions contextuelles automatiques ;
+- choisir le modèle image par défaut parmi le catalogue OpenRouter ;
+- définir l'orientation par défaut (paysage, portrait ou carré) ;
+- choisir le nombre de suggestions contextuelles (3, 4 ou 5).
+
+Les préférences sont enregistrées dans `ai_image_preferences`. Le Studio les charge à l'ouverture du formulaire ; le serveur les applique également lors de la création d'un artefact afin qu'une requête directe ne puisse pas contourner la désactivation. La désactivation des suggestions n'empêche pas une création d'image avec un prompt saisi manuellement.
