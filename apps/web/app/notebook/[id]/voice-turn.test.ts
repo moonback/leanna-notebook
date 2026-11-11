@@ -124,8 +124,8 @@ describe("waitForAudioPlaybackDrain", () => {
   });
 
   it("returns immediately when no audio is pending", async () => {
-    const wait = vi.fn(async () => undefined);
-    await expect(waitForAudioPlaybackDrain(() => false, wait)).resolves.toBeUndefined();
-    expect(wait).not.toHaveBeenCalled();
+    let called = false;
+    await expect(waitForAudioPlaybackDrain(() => false, async () => { called = true; })).resolves.toBeUndefined();
+    expect(called).toBe(false);
   });
 });
