@@ -41,7 +41,7 @@ const ERRORS: Record<string, string> = {
   audio_tts_config: "La configuration du fournisseur de voix est invalide.",
   audio_voices_invalid: "Configurez deux identifiants de voix différents.",
   audio_ffmpeg_not_installed: "ffmpeg est absent du PATH du worker. Installez-le puis redémarrez le worker.",
-  image_provider_rejected: "Le modèle image a refusé la requête ou n’est pas disponible.", image_generation_failed: "La génération de l’image a échoué. Les crédits sont restitués.", invalid_image_response: "Le fournisseur n’a pas renvoyé une image valide.", image_too_large: "L’image dépasse la limite de 20 Mo.",
+  image_generation_disabled: "La génération d’images est désactivée dans Réglages → Intelligence artificielle.", image_provider_rejected: "Le modèle image a refusé la requête ou n’est pas disponible.", image_generation_failed: "La génération de l’image a échoué. Les crédits sont restitués.", invalid_image_response: "Le fournisseur n’a pas renvoyé une image valide.", image_too_large: "L’image dépasse la limite de 20 Mo.",
 };
 const busy = (s: string) => s === "queued" || s === "scheduled" || s === "generating";
 const AUDIO_OVERVIEW_MARKER = "[[NOTEBOOK_AUDIO_OVERVIEW_V1]]";
@@ -201,6 +201,7 @@ function CreateDialog({ type, notebookId, sourceIds, referenceImageId, onClose, 
 
   React.useEffect(() => {
     if (type !== "image") return;
+    setImagePreferences(null);
     let active = true;
     fetch("/api/v1/ai/image-preferences", { cache: "no-store" }).then(async (response) => {
       if (!response.ok) throw new Error("image_preferences_unavailable");
