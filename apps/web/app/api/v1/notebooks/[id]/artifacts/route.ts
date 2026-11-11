@@ -57,6 +57,16 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
   await requireRole(id, "editor");
   const body = await parseBody(req, createSchema);
   if (!process.env.OPENROUTER_API_KEY || (body.type !== "image" && !process.env.OPENROUTER_CHAT_MODEL)) throw new ApiError(503, "ai_not_configured");
+  if (body.type === "image") {
+    const selectedModel = body.options.modelId || process.env.OPENROUTER_IMAGE_MODEL || "google/gemini-3.1-flash-image";
+    const catalogResponse = await fetch("https://openrouter.ai/api/v1/images/models", {
+      headers: { authorization: "Bearer " + process.env.OPENROUTER_API_KEY, "X-Title": "Leanna Notebook" },
+      next: { revalidate: 1800 },
+    });
+    if (!catalogResponse.ok) throw new ApiError(502, "image_model_catalog_unavailable");
+    const catalog = await catalogResponse.json() as { data?: { id?: string }[] };
+    if (!(catalog.data ?? []).some((model) => model.id === selectedModel)) throw new ApiError(422, "unsupported_image_model");
+  }
   let referenceImageId: string | null = null;
   if (body.type === "image" && body.options.referenceArtifactId) {
     const { data: reference } = await createServiceClient().from("artifacts").select("id").eq("id", body.options.referenceArtifactId).eq("notebook_id", id).eq("type", "image").eq("status", "ready").maybeSingle();
