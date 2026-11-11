@@ -14,6 +14,14 @@ export function shouldInviteRoxane(turnNumber: number): boolean {
   return Number.isInteger(turnNumber) && turnNumber > 2;
 }
 
+/** Waits for scheduled audio buffers to finish before another speaker takes the microphone. */
+export async function waitForAudioPlaybackDrain(
+  hasPendingAudio: () => boolean,
+  waitForNextCheck: () => Promise<void>
+): Promise<void> {
+  while (hasPendingAudio()) await waitForNextCheck();
+}
+
 /** Keeps citations scoped to one Gemini Live turn and deduplicates exact source ranges. */
 export class VoiceTurnCitationStore {
   private readonly passages = new Map<string, NumberedVoicePassage>();
