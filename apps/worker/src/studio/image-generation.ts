@@ -19,9 +19,9 @@ export async function generateImageArtifact(db: SupabaseClient, art: ImageArtifa
   const key = process.env.OPENROUTER_API_KEY;
   if (!key) throw new PermanentError("ai_not_configured");
   const model = String(art.options?.modelId || process.env.OPENROUTER_IMAGE_MODEL || "google/gemini-3.1-flash-image");
-  const { data: sources, error: sourceError } = await db.from("sources").select("id,title,extracted_text")
-    .eq("notebook_id", art.notebook_id).eq("status", "ready")
-    .in("id", art.source_ids?.length ? art.source_ids : ["00000000-0000-0000-0000-000000000000"]);
+  let sourceQuery = db.from("sources").select("id,title,extracted_text").eq("notebook_id", art.notebook_id).eq("status", "ready");
+  if (art.source_ids?.length) sourceQuery = sourceQuery.in("id", art.source_ids);
+  const { data: sources, error: sourceError } = await sourceQuery;
   if (sourceError) throw sourceError;
   if (!sources?.length) throw new PermanentError("no_sources");
   await ctx.progress(18, "préparation du brief visuel");
