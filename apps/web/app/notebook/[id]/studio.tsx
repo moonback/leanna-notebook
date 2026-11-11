@@ -193,11 +193,25 @@ function CreateDialog({ type, notebookId, sourceIds, referenceImageId, onClose, 
   const [selectedAiModel, setSelectedAiModel] = React.useState<string | null>(null);
   const [imageModels, setImageModels] = React.useState<{ id: string; name: string }[]>([]);
   const [imageModelsError, setImageModelsError] = React.useState(false);
+  const [imagePreferences, setImagePreferences] = React.useState<{ enabled: boolean; autoSuggestions: boolean; suggestionCount: number; defaultModelId: string | null; defaultOrientation: "landscape" | "portrait" | "square" } | null>(null);
   const [imageSuggestions, setImageSuggestions] = React.useState<{ id: string; title: string; description: string; prompt: string }[]>([]);
   const [imageSuggestionsLoading, setImageSuggestionsLoading] = React.useState(false);
   const [imageSuggestionsError, setImageSuggestionsError] = React.useState(false);
   const styleCarouselRef = React.useRef<HTMLDivElement | null>(null);
 
+  React.useEffect(() => {
+    if (type !== "image") return;
+    let active = true;
+    fetch("/api/v1/ai/image-preferences", { cache: "no-store" }).then(async (response) => {
+      if (!response.ok) throw new Error("image_preferences_unavailable");
+      return response.json() as Promise<{ settings: { enabled: boolean; autoSuggestions: boolean; suggestionCount: number; defaultModelId: string | null; defaultOrientation: "landscape" | "portrait" | "square" } }>;
+    }).then((result) => {
+      if (!active) return;
+      setImagePreferences(result.settings);
+      setOpts((current) => ({ ...current, orientation: result.settings.defaultOrientation, ...(result.settings.defaultModelId ? { modelId: result.settings.defaultModelId } : {}) }));
+    }).catch(() => { if (active) setImagePreferences({ enabled: true, autoSuggestions: true, suggestionCount: 4, defaultModelId: null, defaultOrientation: "landscape" }); });
+    return () => { active = false; };
+  }, [type]);
   React.useEffect(() => {
     if (type !== "image") return;
     let active = true;
@@ -215,6 +229,8 @@ function CreateDialog({ type, notebookId, sourceIds, referenceImageId, onClose, 
   const sourceKey = sourceIds.join(",");
   React.useEffect(() => {
     if (type !== "image") return;
+    if (!imagePreferences) return;
+    if (!imagePreferences.autoSuggestions) { setImageSuggestions([]); setImageSuggestionsLoading(false); return; }
     let active = true;
     setImageSuggestions([]);
     setImageSuggestionsError(false);
@@ -222,7 +238,7 @@ function CreateDialog({ type, notebookId, sourceIds, referenceImageId, onClose, 
     fetch(`/api/v1/notebooks/${notebookId}/artifacts/image-suggestions`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ sourceIds, sourceScope: opts.sourceScope ?? "selected" }),
+      body: JSON.stringify({ sourceIds, sourceScope: opts.sourceScope ?? "selected", suggestionCount: imagePreferences.suggestionCount }),
     }).then(async (response) => {
       if (!response.ok) throw new Error("image_suggestions_unavailable");
       const result = await response.json() as { suggestions?: { id: string; title: string; description: string; prompt: string }[] };
@@ -234,7 +250,7 @@ function CreateDialog({ type, notebookId, sourceIds, referenceImageId, onClose, 
       if (active) setImageSuggestionsLoading(false);
     });
     return () => { active = false; };
-  }, [type, notebookId, sourceKey, opts.sourceScope]);
+  }, [type, notebookId, sourceKey, opts.sourceScope, imagePreferences]);
 
   const aiModelsCache = React.useRef<{ notebookId: string; sourceIds: Set<string>; suggestions: AiReportModel[] } | null>(null);
   React.useEffect(() => {
@@ -315,6 +331,7 @@ function CreateDialog({ type, notebookId, sourceIds, referenceImageId, onClose, 
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent size="lg" title={type === "infographic" ? "Personnaliser l’infographie" : type === "image" ? "Créer une image IA" : type === "report" ? "Créer un rapport" : `Générer : ${TYPES[type].label}`} description={type === "infographic" ? "Configurez la langue, le format, le style et les sources avant de lancer la création." : type === "image" ? "Décrivez l’image souhaitée à partir des sources du notebook." : type === "report" ? "Choisissez un format et un modèle pour composer un rapport à partir de vos sources." : "À partir des sources sélectionnées. La génération continue en arrière-plan."}>
         <form onSubmit={submit} className="grid gap-5">
+          {type === "image" && imagePreferences?.enabled === false && <Alert tone="warning" title="Génération d’images désactivée">Activez la génération d’images dans Réglages → Intelligence artificielle pour utiliser cette fonctionnalité.</Alert>}
           {type === "image" && referenceImageId && <Alert tone="warning" title="Modification d’une image existante">L’image actuelle sera utilisée comme référence. Une nouvelle image sera créée sans écraser l’originale.</Alert>}
           {type === "report" && (
             <>
@@ -422,7 +439,7 @@ function CreateDialog({ type, notebookId, sourceIds, referenceImageId, onClose, 
               </section>
             </div>
           )}
-          {type === "image" && <section className="grid gap-3 rounded-xl border border-border p-3"><h3 className="text-sm font-semibold">Modèle et format</h3>{imageModels.length > 0 ? choice("modelId", "Modèle IA", imageModels.map((model) => [model.id, model.name] as [string, string])) : <p className="text-xs text-text-muted">{imageModelsError ? "Catalogue indisponible : le modèle par défaut sera utilisé." : "Chargement des modèles image…"}</p>}{choice("orientation", "Orientation", [["landscape", "Paysage"], ["portrait", "Portrait"], ["square", "Carré"]])}{choice("sourceScope", "Sources à utiliser", [["selected", sourceIds.length + " sources sélectionnées"], ["all", "Toutes les sources prêtes"]])}<p className="text-xs text-text-muted">Modèle par défaut : Nano Banana 2. Configurable côté serveur avec OPENROUTER_IMAGE_MODEL.</p></section>}
+          {type === "image" && <section className="grid gap-3 rounded-xl border border-border p-3"><h3 className="text-sm font-semibold">Modèle et format</h3>{imageModels.length > 0 ? choice("modelId", "Modèle IA", imageModels.map((model) => [model.id, model.name] as [string, string])) : <p className="text-xs text-text-muted">{imageModelsError ? "Catalogue indisponible : le modèle par défaut sera utilisé." : "Chargement des modèles image…"}</p>}{choice("orientation", "Orientation", [["landscape", "Paysage"], ["portrait", "Portrait"], ["square", "Carré"]])}{choice("sourceScope", "Sources à utiliser", [["selected", sourceIds.length + " sources sélectionnées"], ["all", "Toutes les sources prêtes"]])}<p className="text-xs text-text-muted">Les valeurs par défaut sont définies dans Réglages → Intelligence artificielle.</p></section>}
           {type === "audio" && <div className="grid gap-4 sm:grid-cols-2">{choice("format", "Format du podcast", [["deep_dive", "Deep Dive · approfondi"], ["brief", "Brief · essentiel"], ["critique", "Critique · analyse"], ["debate", "Débat · points de vue"]])}{choice("duration", "Durée cible", [["short", "Court · 5 min"], ["standard", "Standard · 10 min"], ["long", "Long · 15 min"]])}{choice("style", "Ton", [["accessible", "Accessible et pédagogique"], ["professional", "Professionnel et précis"], ["dynamic", "Dynamique et vivant"]])}</div>}
           {(type === "flashcards" || type === "quiz") && <div className="grid gap-4 sm:grid-cols-2">{choice("difficulty", "Difficulté", [["easy", "Facile"], ["medium", "Moyenne"], ["hard", "Difficile"]])}{choice("count", "Quantité", [["fewer", "Moins"], ["standard", "Standard"], ["more", "Plus"]])}</div>}
           {type === "image" && <section className="grid gap-3">
@@ -456,7 +473,7 @@ function CreateDialog({ type, notebookId, sourceIds, referenceImageId, onClose, 
           ) : (
             <div className="flex justify-end gap-2 border-t pt-4">
               <DialogClose asChild><Button type="button" variant="secondary">Annuler</Button></DialogClose>
-              <Button type="submit" loading={sending}><Sparkles aria-hidden /> {type === "report" ? "Générer le rapport" : "Générer"}</Button>
+              <Button type="submit" loading={sending} disabled={type === "image" && imagePreferences?.enabled === false}><Sparkles aria-hidden /> {type === "report" ? "Générer le rapport" : "Générer"}</Button>
             </div>
           )}
         </form>
