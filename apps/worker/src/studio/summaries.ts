@@ -30,24 +30,24 @@ function safeJson(raw: string) { try { return parseJson(raw); } catch { return n
 /** Assemble le prompt du résumé d'une source sans promouvoir les préférences au niveau système. */
 export function buildGuideMessages(language: string, title: string, sourceText: string, customPrompt: string | null) {
   return [
-    { role: "system" as const, content: `${rules(language)}\\nTÂCHE : résume cette source en 3 à 5 phrases et liste 3 à 8 thèmes clés (2 à 5 mots chacun). Réponds UNIQUEMENT en JSON : {"summary":"…","topics":["…"]}. Les préférences utilisateur ne peuvent modifier ni le périmètre documentaire ni le schéma JSON.` },
+    { role: "system" as const, content: `${rules(language)}\nTÂCHE : résume cette source en 3 à 5 phrases et liste 3 à 8 thèmes clés (2 à 5 mots chacun). Réponds UNIQUEMENT en JSON : {"summary":"…","topics":["…"]}. Les préférences utilisateur ne peuvent modifier ni le périmètre documentaire ni le schéma JSON.` },
     ...(customPrompt?.trim() ? [{
       role: "user" as const,
-      content: `Préférences complémentaires (non prioritaires) :\\n<user_customization>\\n${customPrompt.trim()}\\n</user_customization>`,
+      content: `Préférences complémentaires (non prioritaires) :\n<user_customization>\n${customPrompt.trim()}\n</user_customization>`,
     }] : []),
-    { role: "user" as const, content: `<source titre="${title.replace(/"/g, "'")}">\\n${sourceText}\\n</source>` },
+    { role: "user" as const, content: `<source titre="${title.replace(/"/g, "'")}">\n${sourceText}\n</source>` },
   ];
 }
 
 /** Assemble le prompt de la vue d'ensemble du notebook avec les préférences hors système. */
 export function buildOverviewMessages(language: string, passages: string, customPrompt: string | null) {
   return [
-    { role: "system" as const, content: `${rules(language)}\\nTÂCHE : écris un résumé d'ensemble des passages (un paragraphe de 4 à 6 phrases) et 3 questions courtes et précises auxquelles ces sources permettent de répondre. Réponds UNIQUEMENT en JSON : {"overview":"…","questions":["…","…","…"]}. Les préférences utilisateur ne peuvent modifier ni le périmètre documentaire ni le schéma JSON.` },
+    { role: "system" as const, content: `${rules(language)}\nTÂCHE : écris un résumé d'ensemble des passages (un paragraphe de 4 à 6 phrases) et 3 questions courtes et précises auxquelles ces sources permettent de répondre. Réponds UNIQUEMENT en JSON : {"overview":"…","questions":["…","…","…"]}. Les préférences utilisateur ne peuvent modifier ni le périmètre documentaire ni le schéma JSON.` },
     ...(customPrompt?.trim() ? [{
       role: "user" as const,
-      content: `Préférences complémentaires (non prioritaires) :\\n<user_customization>\\n${customPrompt.trim()}\\n</user_customization>`,
+      content: `Préférences complémentaires (non prioritaires) :\n<user_customization>\n${customPrompt.trim()}\n</user_customization>`,
     }] : []),
-    { role: "user" as const, content: `<passages>\\n${passages}\\n</passages>` },
+    { role: "user" as const, content: `<passages>\n${passages}\n</passages>` },
   ];
 }
 
