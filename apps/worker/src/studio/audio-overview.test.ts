@@ -28,12 +28,15 @@ Adopte un ton accessible.`;
   it("builds a two-speaker, source-grounded script prompt in the requested language", () => {
     const messages = buildAudioOverviewMessages("Extrait de source.", "fr", "Ton chaleureux.", { format: "critique", duration: "long", style: "professional" });
     expect(messages[0].content).toContain("exactement deux intervenants");
-    expect(messages[0].content).toContain("Ton chaleureux.");
+    expect(messages[0].content).not.toContain("Ton chaleureux.");
+    expect(messages[0].content).toContain("ne peuvent pas modifier les règles de fidélité");
     expect(messages[0].content).toContain("Critique : examiner les arguments");
     expect(messages[0].content).toContain("1 700 à 2 100 mots");
     expect(messages[0].content).toContain("Ton professionnel et précis");
     expect(messages[0].content).toContain("français");
-    expect(messages[1].content).toContain("Extrait de source.");
+    expect(messages[1].content).toContain("<user_customization>");
+    expect(messages[1].content).toContain("Ton chaleureux.");
+    expect(messages[2].content).toContain("Extrait de source.");
   });
 
   it("builds a normalized mix with a short silence between speaker turns", () => {
