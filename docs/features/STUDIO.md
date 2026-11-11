@@ -1,6 +1,6 @@
 # Studio
 
-Le Studio permet de créer des artefacts sourcés à partir des sources du notebook. La route de création accepte actuellement 13 types.
+Le Studio permet de créer des artefacts sourcés à partir des sources du notebook. La route de création accepte les 23 formats documentaires et pédagogiques du Studio, ainsi que le type d'image IA lorsqu'il est activé.
 
 ## Formats exposés par l'interface et l'API
 
@@ -19,8 +19,22 @@ Le Studio permet de créer des artefacts sourcés à partir des sources du noteb
 | `diagram` | Diagramme Mermaid |
 | `editorial` | Article, newsletter ou contenu éditorial |
 | `study_plan` | Plan d'étude |
+| `one_pager` | Synthèse exécutive d'une page |
+| `swot` | Matrice Forces / Faiblesses / Opportunités / Menaces |
+| `decision_tree` | Arbre de décision et critères de choix |
+| `memo` | Fiche mémo de mémorisation rapide |
+| `raci` | Matrice des responsabilités RACI |
+| `case_study` | Étude de cas structurée |
+| `literature_review` | Revue critique et croisée des sources |
+| `presentation_script` | Script oral organisé slide par slide |
+| `roadmap` | Feuille de route avec phases et jalons |
+| `troubleshooting` | Guide de diagnostic et de dépannage rapide |
 
 Les types sont déclarés dans `apps/web/app/notebook/[id]/studio.tsx` et acceptés par le schéma Zod de `apps/web/app/api/v1/notebooks/[id]/artifacts/route.ts`.
+
+## Nouveaux formats documentaires
+
+Les dix formats ajoutés sont des artefacts Markdown sourcés, générés par des instructions spécialisées dans le worker. Les tableaux (SWOT, RACI et revue de littérature) utilisent le rendu Markdown existant ; l'arbre de décision peut inclure un diagramme Mermaid. Les rôles, dates, échéances, causes et recommandations absents du corpus doivent être explicitement signalés comme inconnus ou à définir, jamais inventés.
 
 ## Génération
 
