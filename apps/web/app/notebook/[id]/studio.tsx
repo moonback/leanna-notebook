@@ -1,6 +1,6 @@
 "use client";
 import * as React from "react";
-import { AudioLines, BookOpen, Check, ChevronDown, ChevronRight, Download, Layers, ListChecks, Network, RotateCcw, Sparkles, Trash2, X, Clock3, Table2, BookText, CircleHelp, Workflow, Newspaper, CalendarDays, BarChart3 } from "lucide-react";
+import { AudioLines, BookOpen, Check, ChevronDown, ChevronRight, Download, Layers, ListChecks, Network, RotateCcw, Sparkles, Trash2, X, Clock3, Table2, BookText, CircleHelp, Workflow, Newspaper, CalendarDays, BarChart3, FilePlus2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, Textarea } from "@/components/ui/field";
 import { Alert, Badge, EmptyState, Progress, Skeleton } from "@/components/ui/feedback";
@@ -46,8 +46,8 @@ const AUDIO_OVERVIEW_MARKER = "[[NOTEBOOK_AUDIO_OVERVIEW_V1]]";
 const label = (a: Art) => a.title || TYPES[a.type].label;
 const fmt = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
-export function Studio({ notebookId, canEdit, sourceIds, sourceTitle, onOpenCitation, onAsk }: {
-  notebookId: string; canEdit: boolean; sourceIds: string[];
+export function Studio({ notebookId, canEdit, sourceIds, sourceTitle, onOpenCitation, onAsk, onImported }: {
+  notebookId: string; canEdit: boolean; sourceIds: string[]; onImported?: () => void;
   sourceTitle: (id: string) => string | undefined; onOpenCitation?: (c: Cite) => void; onAsk: (text: string) => void;
 }) {
   const [arts, setArts] = React.useState<Art[] | null>(null);
@@ -154,6 +154,7 @@ export function Studio({ notebookId, canEdit, sourceIds, sourceTitle, onOpenCita
                     {a.unread && <span role="img" aria-label="Non lu" className="size-2 rounded-pill bg-accent" />}
                     {busy(a.status) && <Badge tone="accent">{a.progress ? `${a.progress} %` : "En cours"}</Badge>}
                     {a.status === "failed" && canEdit && <Button size="icon-sm" variant="ghost" aria-label={`Relancer ${label(a)}`} onClick={() => void generate(a.type, a.options ?? {}, a.custom_prompt ?? undefined)}><RotateCcw aria-hidden /></Button>}
+                    {canEdit && a.status === "ready" && <Button size="icon-sm" variant="ghost" aria-label={`Importer ${label(a)} comme source`} title="Importer comme source" onClick={() => void importAsSource(a.id, onImported)}><FilePlus2 aria-hidden /></Button>}
                     {canEdit && !busy(a.status) && <Button size="icon-sm" variant="ghost" aria-label={`Supprimer ${label(a)}`} onClick={() => void remove(a)}><Trash2 aria-hidden /></Button>}
                   </span>
                 }
@@ -164,7 +165,7 @@ export function Studio({ notebookId, canEdit, sourceIds, sourceTitle, onOpenCita
         </ul>
       )}
       <CreateDialog type={creating} notebookId={notebookId} sourceIds={sourceIds} onClose={() => setCreating(null)} onGenerate={generate} />
-      <ArtifactViewer id={open} canShare={canEdit} onClose={() => setOpen(null)} sourceTitle={sourceTitle} onOpenCitation={onOpenCitation} onAsk={(t) => { setOpen(null); onAsk(t); }} />
+      <ArtifactViewer id={open} canShare={canEdit} onImported={onImported} onClose={() => setOpen(null)} sourceTitle={sourceTitle} onOpenCitation={onOpenCitation} onAsk={(t) => { setOpen(null); onAsk(t); }} />
     </Panel>
   );
 }
@@ -418,7 +419,7 @@ async function resetProgress(id: string) {
   if (!r?.ok) toast({ title: "Remise à zéro non enregistrée", tone: "error" });
 }
 
-function ArtifactViewer({ id, canShare, onClose, sourceTitle, onOpenCitation, onAsk }: { id: string | null; canShare: boolean; onClose: () => void; sourceTitle: (id: string) => string | undefined; onOpenCitation?: (c: Cite) => void; onAsk: (t: string) => void }) {
+function ArtifactViewer({ id, canShare, onImported, onClose, sourceTitle, onOpenCitation, onAsk }: { id: string | null; canShare: boolean; onImported?: () => void; onClose: () => void; sourceTitle: (id: string) => string | undefined; onOpenCitation?: (c: Cite) => void; onAsk: (t: string) => void }) {
   const [data, setData] = React.useState<{ artifact: { id: string; type: ArtType; title: string | null; content: Content; options: Record<string, string> | null; custom_prompt: string | null }; citations: Cite[]; progress: Progress[] } | null>(null);
   const [failed, setFailed] = React.useState(false);
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
@@ -433,6 +434,7 @@ function ArtifactViewer({ id, canShare, onClose, sourceTitle, onOpenCitation, on
   return (
     <Dialog open={Boolean(id)} onOpenChange={(o) => !o && onClose()}>
       <DialogContent size="lg" title={art ? (art.title || TYPES[art.type].label) : "Contenu du Studio"}>
+        {id && canShare && <ImportAsSourceButton artifactId={id} disabled={!art} onImported={onImported} />}
         {id && canShare && <ArtifactShareButton artifactId={id} disabled={!art} />}
         <div className="max-h-[70dvh] overflow-y-auto pr-1">
           {art?.custom_prompt && !art.custom_prompt.startsWith(AUDIO_OVERVIEW_MARKER) && <p className="mb-4 rounded-md bg-surface px-3 py-2 text-xs text-text-muted"><span className="font-medium">Consignes de génération :</span> {art.custom_prompt}</p>}
@@ -448,6 +450,38 @@ function ArtifactViewer({ id, canShare, onClose, sourceTitle, onOpenCitation, on
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/** Importe un contenu généré comme source (note) du carnet, pour pouvoir le sélectionner et le citer. */
+async function importAsSource(artifactId: string, onImported?: () => void): Promise<boolean> {
+  try {
+    const r = await fetch(`/api/v1/artifacts/${artifactId}/import-source`, { method: "POST" });
+    if (r.ok || r.status === 409) {
+      onImported?.();
+      toast(r.ok ? { title: "Importé dans les sources", description: "Il sera indexé puis utilisable dans le chat et le Studio.", tone: "success" } : { title: "Déjà importé dans les sources" });
+      return true;
+    }
+    toast({ title: "Import impossible", description: r.status === 422 ? "Ce contenu n’a pas de texte exploitable." : "Réessayez dans un instant.", tone: "error" });
+  } catch { toast({ title: "Import impossible", tone: "error" }); }
+  return false;
+}
+
+function ImportAsSourceButton({ artifactId, disabled, onImported }: { artifactId: string; disabled: boolean; onImported?: () => void }) {
+  const [loading, setLoading] = React.useState(false);
+  const [done, setDone] = React.useState(false);
+  React.useEffect(() => setDone(false), [artifactId]);
+  async function run() {
+    setLoading(true);
+    setDone(await importAsSource(artifactId, onImported));
+    setLoading(false);
+  }
+  return (
+    <div className="mb-2 flex justify-end">
+      <Button size="sm" variant="secondary" disabled={disabled || loading || done} loading={loading} onClick={() => void run()}>
+        {done ? <Check aria-hidden /> : <FilePlus2 aria-hidden />} {done ? "Importé dans les sources" : "Importer comme source"}
+      </Button>
+    </div>
   );
 }
 
