@@ -129,3 +129,7 @@ L'arbre Git du commit audité contient 260 fichiers et a été énuméré. Les c
 ### Limite résiduelle du gestionnaire de prompts
 
 Le catalogue expose des textes par défaut pour Studio, mais les chemins d'exécution utilisent leurs propres templates dans `generate.ts` / `audio-overview.ts`. Le texte du catalogue est lu comme override personnalisé ; il ne constitue pas à lui seul le prompt réellement exécuté. L'interface doit donc présenter explicitement la composition effective (template applicatif + override + options + règles + sources) afin d'éviter de laisser croire que l'éditeur affiche l'intégralité du prompt runtime.
+
+### Seconde passe — Studio, Audio Overview et résumés
+
+Les personnalisations Studio et Audio Overview ainsi que les overrides des résumés sont désormais transmis comme messages utilisateur complémentaires ; les règles de tâche et de format restent au niveau système. Les tests unitaires existants de génération Studio et Audio Overview ont été adaptés pour contrôler cette séparation. Un import de test contenant un retour à la ligne échappé littéralement a également été corrigé. Aucun test n'a été exécuté à distance.
