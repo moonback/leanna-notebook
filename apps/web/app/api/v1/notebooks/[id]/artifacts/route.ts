@@ -23,6 +23,7 @@ const createSchema = z.object({
     sourceScope: z.enum(["selected", "all"]).optional(),
     modelId: z.string().trim().min(3).max(200).optional(),
     aspectRatio: z.enum(["1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16"]).optional(),
+    referenceArtifactId: z.string().uuid().optional(),
   }).strict().default({}),
   customPrompt: z.string().trim().max(4000, "4 000 caractères maximum.").optional(),
   sourceIds: z.array(z.string().uuid()).max(600).optional(),
@@ -62,6 +63,12 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
     p_source_ids: body.sourceIds ?? [], p_idempotency_key: idem ? `${user.id}:${id}:${idem}` : null,
   });
   if (error) throw error;
+  if (body.type === "image" && body.options.referenceArtifactId) {
+    const { data: reference } = await createServiceClient().from("artifacts").select("id").eq("id", body.options.referenceArtifactId).eq("notebook_id", id).eq("type", "image").eq("status", "ready").maybeSingle();
+    if (!reference) throw new ApiError(422, "invalid_image_reference");
+    const { error: parentError } = await createServiceClient().from("artifacts").update({ parent_id: reference.id }).eq("id", data as string);
+    if (parentError) throw parentError;
+  }
   log.info("artifact.requested", { notebook_id: id, artifact_id: data as string, type: body.type });
   return NextResponse.json({ artifact: { id: data, type: body.type, status: "queued" } }, { status: 202 });
 });
