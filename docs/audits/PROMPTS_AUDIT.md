@@ -94,3 +94,21 @@ Aucun score numérique avant/après n'est publié : il n'existe pas de benchmark
 
 - Chat : maintien du prompt de référence lorsqu'un override existe ; encadrement de la personnalisation comme préférence complémentaire et non prioritaire.
 - Les autres constats restent des recommandations à traiter après couverture locale complète et tests de non-régression.
+
+### P1 — Personnalisation vocale insuffisamment hiérarchisée
+
+**Fichier :** `apps/web/app/api/v1/notebooks/[id]/voice-token/route.ts`.  
+**Constat initial :** l'override vocal était concaténé directement après le prompt persona, sans délimitation ni rappel explicite de priorité.  
+**Correction sur cette branche :** l'override est désormais encadré comme personnalisation complémentaire, explicitement subordonnée au persona, à l'ancrage documentaire, à l'utilisation des outils et aux contraintes de sécurité/confidentialité.  
+**À valider :** tests de composition et essais Gemini Live réels non exécutés.
+
+### P1 — Suggestions d'images : instructions et documents dans le même message utilisateur
+
+**Fichier :** `apps/web/app/api/v1/notebooks/[id]/artifacts/image-suggestions/route.ts`.  
+**Constat initial :** les consignes de direction artistique et les extraits documentaires étaient concaténés dans un seul message `user`. La défense contre l'injection documentaire reposait donc sur une instruction incluse dans ce même message.  
+**Correction sur cette branche :** consignes et schéma JSON déplacés dans un message `system` dédié ; extraits transmis séparément dans un message `user` délimité. La validation Zod et la normalisation restent inchangées.  
+**À valider :** tests d'injection documentaire, modèles compatibles JSON mode et sorties invalides non exécutés.
+
+### Limite de couverture mise à jour
+
+L'arbre Git du commit audité contient 260 fichiers et a été énuméré. Les chemins image et voix supplémentaires ont été inspectés. Cela améliore la couverture par rapport au seul catalogue, mais ne prouve pas que chaque appel LLM ou chaque chaîne inline de tous les fichiers TypeScript/JavaScript a été analysé : la recherche de code GitHub reste indisponible et aucun clone local n'a été utilisé.
