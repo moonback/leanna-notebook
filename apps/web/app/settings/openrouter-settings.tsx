@@ -86,11 +86,11 @@ export function OpenRouterSettings() {
           </div>
           <div className="flex shrink-0 items-center gap-2 rounded-full border border-border/70 bg-surface/70 px-3 py-1.5 text-xs text-text-muted"><span className="size-2 rounded-full bg-success" /> Catalogue OpenRouter</div>
         </div>
-        <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3">
-          <div className="rounded-xl border border-border/70 bg-background/60 p-3"><p className="text-2xl font-semibold tabular-nums">{AI_FEATURES.length}</p><p className="mt-0.5 text-xs text-text-muted">Fonctionnalités</p></div>
-          <div className="rounded-xl border border-border/70 bg-background/60 p-3"><p className="text-2xl font-semibold tabular-nums">{selectedCount}<span className="text-sm font-normal text-text-muted">/{AI_FEATURES.length}</span></p><p className="mt-0.5 text-xs text-text-muted">Modèles configurés</p></div>
-          <div className="col-span-2 rounded-xl border border-border/70 bg-background/60 p-3 sm:col-span-1"><p className="text-2xl font-semibold tabular-nums">{freeCount.toLocaleString("fr-FR")}</p><p className="mt-0.5 text-xs text-text-muted">Modèles gratuits au catalogue</p></div>
-        </div>
+        <dl className="mt-5 grid grid-cols-3 divide-x divide-border/60 overflow-hidden rounded-xl border border-border/70 bg-background/60">
+          <div className="px-4 py-3"><dd className="text-2xl font-semibold tabular-nums">{AI_FEATURES.length}</dd><dt className="mt-0.5 text-xs text-text-muted">Fonctionnalités</dt></div>
+          <div className="px-4 py-3"><dd className="text-2xl font-semibold tabular-nums">{selectedCount}<span className="text-sm font-normal text-text-muted">/{AI_FEATURES.length}</span></dd><dt className="mt-0.5 text-xs text-text-muted">Configurés</dt></div>
+          <div className="px-4 py-3"><dd className="text-2xl font-semibold tabular-nums">{freeCount.toLocaleString("fr-FR")}</dd><dt className="mt-0.5 text-xs text-text-muted">Modèles gratuits</dt></div>
+        </dl>
       </Card>
 
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -103,21 +103,21 @@ export function OpenRouterSettings() {
       </div>
 
       {loading ? <Card className="grid gap-3 p-6"><div className="h-4 w-40 animate-pulse rounded bg-border" /><div className="h-10 animate-pulse rounded-lg bg-border/70" /><div className="h-24 animate-pulse rounded-lg bg-border/50" /><p className="text-xs text-text-muted">Récupération des modèles et de leurs tarifs…</p></Card> : error && !models.length ? <Card className="border border-danger/30 p-5"><p role="alert" className="text-sm text-danger">{error}</p></Card> : (
-        <div className="grid gap-3">
+        <div className="grid gap-4 lg:grid-cols-2">
           {AI_FEATURES.map((feature, index) => {
             const compatible = modelsForFeature(feature.id);
             const allCompatible = models.filter((model) => model.compatibleFeatures.includes(feature.id));
             const selected = allCompatible.find((model) => model.id === preferences[feature.id]);
             const free = selected?.isFree === true;
             return (
-              <Card key={feature.id} className="grid gap-4 border border-border/70 p-4 transition-colors hover:border-border sm:p-5">
+              <Card key={feature.id} className="flex min-w-0 flex-col gap-4 border border-border/70 p-4 transition-colors hover:border-border sm:p-5">
                 <div className="flex items-start gap-3">
                   <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-primary/15 bg-primary/10 text-sm font-semibold text-primary">{String(index + 1).padStart(2, "0")}</div>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2"><h4 className="font-semibold">{feature.label}</h4>{selected && <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${free ? "bg-success/10 text-success" : selected.isFree === false ? "bg-warning/10 text-warning" : "bg-surface text-text-muted"}`}><span className="size-1.5 rounded-full bg-current" />{priceLabel(selected)}</span>}</div>
                     <p className="mt-0.5 text-xs leading-5 text-text-muted">{feature.description}</p>
                   </div>
-                  <div className="hidden rounded-lg border border-border/60 px-2.5 py-1 text-[11px] text-text-subtle sm:block">{allCompatible.length} compatibles</div>
+                  <div className="shrink-0 whitespace-nowrap rounded-full border border-border/60 px-2.5 py-1 text-[11px] text-text-subtle">{allCompatible.length} compatibles</div>
                 </div>
 
                 <div className="grid gap-2">
@@ -129,17 +129,19 @@ export function OpenRouterSettings() {
                 </div>
 
                 {selected ? (
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                    <div className="rounded-lg bg-background/70 p-3"><p className="text-[11px] text-text-subtle">Entrée / 1 M tokens</p><p className="mt-1 text-sm font-semibold tabular-nums">{money(selected.promptPrice)}</p></div>
-                    <div className="rounded-lg bg-background/70 p-3"><p className="text-[11px] text-text-subtle">Sortie / 1 M tokens</p><p className="mt-1 text-sm font-semibold tabular-nums">{money(selected.completionPrice)}</p></div>
-                    <div className="rounded-lg bg-background/70 p-3"><p className="text-[11px] text-text-subtle">Fenêtre de contexte</p><p className="mt-1 text-sm font-semibold tabular-nums">{contextLabel(selected.contextLength)}</p></div>
-                    <div className="rounded-lg bg-background/70 p-3"><p className="text-[11px] text-text-subtle">Compatibilité</p><p className="mt-1 text-sm font-semibold">Texte ↔ texte</p></div>
-                  </div>
+                  <dl className="grid grid-cols-3 divide-x divide-border/60 overflow-hidden rounded-xl border border-border/60 bg-background/60">
+                    <div className="min-w-0 px-3 py-2.5"><dt className="text-[11px] text-text-subtle">Entrée / 1 M</dt><dd className="mt-0.5 truncate text-sm font-semibold tabular-nums">{money(selected.promptPrice)}</dd></div>
+                    <div className="min-w-0 px-3 py-2.5"><dt className="text-[11px] text-text-subtle">Sortie / 1 M</dt><dd className="mt-0.5 truncate text-sm font-semibold tabular-nums">{money(selected.completionPrice)}</dd></div>
+                    <div className="min-w-0 px-3 py-2.5"><dt className="text-[11px] text-text-subtle">Contexte</dt><dd className="mt-0.5 truncate text-sm font-semibold tabular-nums">{contextLabel(selected.contextLength)}</dd></div>
+                  </dl>
                 ) : <p className="rounded-lg border border-dashed border-border p-3 text-xs text-text-muted">{allCompatible.length ? "Aucun résultat pour cette recherche. Effacez le filtre pour revoir les modèles." : "Aucun modèle ne déclare actuellement les modalités texte en entrée et en sortie."}</p>}
 
-                {selected && <div className="flex flex-col gap-1 border-t border-border/60 pt-3 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="min-w-0 break-all text-[11px] text-text-subtle">{selected.id}</p>
-                  <p className="shrink-0 text-[11px] text-text-muted">Entrée : {selected.inputModalities.join(", ") || "—"} · Sortie : {selected.outputModalities.join(", ") || "—"}</p>
+                {selected && <div className="mt-auto grid gap-1.5 border-t border-border/60 pt-3">
+                  <p className="min-w-0 truncate font-mono text-[11px] text-text-subtle" title={selected.id}>{selected.id}</p>
+                  <div className="flex flex-wrap gap-1.5 text-[11px] text-text-muted">
+                    <span className="rounded-md bg-surface px-1.5 py-0.5">Entrée : {selected.inputModalities.join(", ") || "—"}</span>
+                    <span className="rounded-md bg-surface px-1.5 py-0.5">Sortie : {selected.outputModalities.join(", ") || "—"}</span>
+                  </div>
                 </div>}
               </Card>
             );

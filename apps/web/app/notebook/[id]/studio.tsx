@@ -489,7 +489,6 @@ function CreateDialog({ type, notebookId, sourceIds, referenceImageId, onClose, 
               </section>
             </div>
           )}
-          {type === "image" && <section className="grid gap-3 rounded-xl border border-border p-3"><h3 className="text-sm font-semibold">Format</h3>{choice("orientation", "Orientation", [["landscape", "Paysage"], ["portrait", "Portrait"], ["square", "Carré"]])}{choice("sourceScope", "Sources à utiliser", [["selected", sourceIds.length + " sources sélectionnées"], ["all", "Toutes les sources prêtes"]])}<p className="text-xs text-text-muted">Les valeurs par défaut sont définies dans Réglages → Intelligence artificielle.</p></section>}
           {type === "audio" && <div className="grid gap-4 sm:grid-cols-2">{choice("format", "Format du podcast", [["deep_dive", "Deep Dive · approfondi"], ["brief", "Brief · essentiel"], ["critique", "Critique · analyse"], ["debate", "Débat · points de vue"]])}{choice("duration", "Durée cible", [["short", "Court · 5 min"], ["standard", "Standard · 10 min"], ["long", "Long · 15 min"]])}{choice("style", "Ton", [["accessible", "Accessible et pédagogique"], ["professional", "Professionnel et précis"], ["dynamic", "Dynamique et vivant"]])}</div>}
           {(type === "flashcards" || type === "quiz") && <div className="grid gap-4 sm:grid-cols-2">{choice("difficulty", "Difficulté", [["easy", "Facile"], ["medium", "Moyenne"], ["hard", "Difficile"]])}{choice("count", "Quantité", [["fewer", "Moins"], ["standard", "Standard"], ["more", "Plus"]])}</div>}
           {type === "image" && <section className="grid gap-3">
@@ -501,15 +500,48 @@ function CreateDialog({ type, notebookId, sourceIds, referenceImageId, onClose, 
             {imageSuggestions.length > 0 ? <div className="grid gap-2 sm:grid-cols-2">
               {imageSuggestions.map((suggestion) => <button key={suggestion.id} type="button" onClick={() => setPrompt(suggestion.prompt)}
                 className={cn("grid gap-1.5 rounded-xl border p-3 text-left transition-colors hover:border-accent hover:bg-accent-soft/40", prompt === suggestion.prompt ? "border-accent bg-accent-soft" : "border-border bg-surface")}>
-                <span className="text-sm font-medium">{suggestion.title}</span>
-                <span className="text-xs leading-5 text-text-muted">{suggestion.description}</span>
-                <span className="mt-1 text-xs font-medium text-accent">Utiliser cette idée</span>
+                <span className="flex items-start justify-between gap-2 text-sm font-medium"><span className="line-clamp-2">{suggestion.title}</span>{prompt === suggestion.prompt && <Check className="mt-0.5 size-4 shrink-0 text-accent" aria-label="Sélectionnée" />}</span>
+                <span className="line-clamp-3 text-xs leading-5 text-text-muted">{suggestion.description}</span>
+                <span className="mt-1 text-xs font-medium text-accent">{prompt === suggestion.prompt ? "Idée utilisée" : "Utiliser cette idée"}</span>
               </button>)}
             </div> : imageSuggestionsLoading ? <div className="h-16 animate-pulse rounded-xl bg-surface-raised" /> : <p className="rounded-lg bg-surface-raised p-3 text-xs text-text-muted">{imageSuggestionsError ? ({ openrouter_not_configured: "Clé API OpenRouter absente côté serveur.", chat_model_not_configured: "Aucun modèle de conversation n’est configuré. Choisissez-en un dans Réglages → Intelligence artificielle.", openrouter_invalid_key: "La clé API OpenRouter est invalide.", openrouter_insufficient_credits: "Votre compte OpenRouter n’a plus de crédits.", openrouter_chat_model_unavailable: "Le modèle de conversation sélectionné n’est pas disponible sur OpenRouter.", openrouter_rate_limited: "OpenRouter limite temporairement les requêtes. Réessayez dans quelques instants.", image_suggestions_disabled: "Les suggestions automatiques sont désactivées dans Réglages → Intelligence artificielle → Génération d’images.", no_ready_sources: "Aucune source prête sélectionnée. Sélectionnez des sources ou choisissez « Toutes les sources prêtes ».", no_source_content: "Les sources sélectionnées ne contiennent pas encore de texte exploitable.", image_suggestions_provider_error: "OpenRouter a rencontré une erreur. Vérifiez les journaux serveur pour le détail." } as Record<string, string>)[imageSuggestionsError] ?? "Suggestions indisponibles. Vérifiez votre configuration OpenRouter et les sources, ou rédigez votre propre description." : "Ajoutez ou sélectionnez des sources prêtes pour obtenir des idées visuelles adaptées."}</p>}
           </section>}
           <Field id="opt-prompt" label={type === "image" ? "Décrivez l’image à générer" : type === "infographic" ? "Décrivez l’infographie que vous souhaitez créer" : type === "report" ? "Personnaliser le modèle (facultatif)" : "Consignes (facultatif)"} hint={type === "image" ? "Choisissez une idée proposée ou décrivez votre propre image." : type === "infographic" ? undefined : type === "report" ? "Public visé, ton, plan souhaité, longueur ou éléments à mettre en avant…" : "Public visé, angle, thèmes à privilégier…"}>
             <Textarea value={prompt} maxLength={4000} onChange={(e) => setPrompt(e.target.value)} placeholder={type === "image" ? "Choisissez une idée ci-dessus ou décrivez l’image souhaitée…" : type === "infographic" ? "Indiquez le style, la couleur ou le thème principal : « Utilise un thème de couleurs bleu et mets en avant les… »" : type === "report" ? "Ex. : rédiger pour une direction, avec une synthèse exécutive et des recommandations concrètes." : "Ex. : pour un public débutant, insister sur la sécurité."} />
           </Field>
+          {type === "image" && <section className="grid gap-4 rounded-xl border border-border bg-surface-raised/40 p-4" aria-label="Réglages de l’image">
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-sm font-semibold">Réglages de l’image</h3>
+              <span className="text-xs tabular-nums text-text-subtle">{prompt.length} / 4000</span>
+            </div>
+            <div className="grid gap-2">
+              <span id="orientation-label" className="text-sm font-medium">Orientation</span>
+              <div role="radiogroup" aria-labelledby="orientation-label" className="grid grid-cols-3 gap-2">
+                {([["landscape", "Paysage", "h-5 w-8"], ["portrait", "Portrait", "h-8 w-5"], ["square", "Carré", "size-6"]] as const).map(([value, text, shape]) => {
+                  const active = (opts.orientation ?? "landscape") === value;
+                  return (
+                    <button key={value} type="button" role="radio" aria-checked={active} onClick={() => setOpts((current) => ({ ...current, orientation: value }))}
+                      className={cn("flex h-20 flex-col items-center justify-center gap-1.5 rounded-xl border text-xs font-medium transition-colors", active ? "border-accent bg-accent-soft text-text ring-1 ring-accent" : "border-border bg-surface text-text-muted hover:border-accent/60")}>
+                      <span aria-hidden className={cn("rounded-[3px] border-2", shape, active ? "border-accent" : "border-text-subtle")} />
+                      {text}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div className={cn("grid gap-4", imageModels.length > 1 && "sm:grid-cols-2")}>
+              {choice("sourceScope", "Sources à utiliser", [["selected", `${sourceIds.length} source${sourceIds.length > 1 ? "s" : ""} sélectionnée${sourceIds.length > 1 ? "s" : ""}`], ["all", "Toutes les sources prêtes"]])}
+              {imageModels.length > 1 && (
+                <Field id="opt-modelId" label="Modèle d’image">
+                  <select className="h-10 w-full rounded-md border border-border-input bg-surface-raised px-3 text-sm" value={opts.modelId ?? ""} onChange={(e) => setOpts((current) => ({ ...current, modelId: e.target.value }))}>
+                    {imageModels.map((model) => <option key={model.id} value={model.id}>{model.name}</option>)}
+                  </select>
+                </Field>
+              )}
+            </div>
+            {imageModelsError && <p className="text-xs text-danger">Catalogue de modèles indisponible : le modèle par défaut sera utilisé.</p>}
+            <p className="text-xs text-text-muted">Valeurs par défaut modifiables dans Réglages → Intelligence artificielle.</p>
+          </section>}
           {type === "infographic" ? (
             <div className="grid gap-4 border-t pt-4">
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-text-muted" aria-label="Estimation de consommation IA">
