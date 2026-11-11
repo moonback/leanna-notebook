@@ -5,7 +5,7 @@ import { AudioLines, Mic, MicOff, PhoneOff, Maximize2, Minimize2, Sparkles, Copy
 import { Button } from "@/components/ui/button";
 import { Citation } from "@/components/ui/citation";
 import { Dialog, DialogContent } from "@/components/ui/overlay";
-import { PendingVoiceSearches, shouldInviteRoxane, VoiceTurnCitationStore, type NumberedVoicePassage } from "./voice-turn";
+import { PendingVoiceSearches, shouldInviteRoxane, waitForAudioPlaybackDrain, VoiceTurnCitationStore, type NumberedVoicePassage } from "./voice-turn";
 
 type VoiceState = "idle" | "connecting" | "listening" | "speaking" | "error";
 type Passage = NumberedVoicePassage;
@@ -161,9 +161,10 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
   async function waitForPlaybackToFinish() {
     const context = audioContext.current;
     if (!context) return;
-    while (audioContext.current === context && playbackNodes.current.size > 0) {
-      await new Promise<void>((resolve) => window.setTimeout(resolve, 40));
-    }
+    await waitForAudioPlaybackDrain(
+      () => audioContext.current === context && playbackNodes.current.size > 0,
+      () => new Promise<void>((resolve) => window.setTimeout(resolve, 40))
+    );
   }
 
   async function handleToolCall(message: LiveMessage) {
