@@ -708,8 +708,10 @@ function AddSourcesDialog({ open, onOpenChange, notebookId, onAdded, onWebSearch
   const [paste, setPaste] = React.useState({ title: "", text: "" });
   const [selectedFiles, setSelectedFiles] = React.useState<File[]>([]);
   const [progress, setProgress] = React.useState<{ done: number; total: number } | null>(null);
+  const [dragging, setDragging] = React.useState(false);
   const fileRef = React.useRef<HTMLInputElement>(null);
   const folderRef = React.useRef<HTMLInputElement>(null);
+  const ACCEPT = ".pdf,.docx,.pptx,.epub,.txt,.md,.csv,.mp3,.wav,.m4a,.aac,.ogg,.flac,.webm";
   const supportedExtensions = new Set(["pdf", "docx", "pptx", "epub", "txt", "md", "csv", "mp3", "wav", "m4a", "aac", "ogg", "flac", "webm"]);
   const folderFiles = selectedFiles.map((file) => {
     const relativePath = (file as File & { webkitRelativePath?: string }).webkitRelativePath || file.name;
@@ -790,10 +792,17 @@ function AddSourcesDialog({ open, onOpenChange, notebookId, onAdded, onWebSearch
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!busy) onOpenChange(next); }}>
       <DialogContent title="Ajouter des sources" description="Les réponses s’appuieront uniquement sur ces documents.">
-        <div className="grid grid-cols-2 gap-2">
-          <Button type="button" variant="secondary" onClick={onWebSearch}><Search aria-hidden /> Recherche web</Button>
-          <Button type="button" variant="secondary" onClick={onNote}><NotebookPen aria-hidden /> Note</Button>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <button type="button" onClick={onWebSearch} className="flex items-start gap-3 rounded-xl border border-border bg-surface p-3 text-left transition-colors hover:bg-surface-raised focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+            <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-accent-soft text-on-accent-soft"><Search className="size-4" aria-hidden /></span>
+            <span className="grid gap-0.5"><span className="text-sm font-medium">Recherche web</span><span className="text-xs text-text-muted">Trouvez et importez des sources en ligne.</span></span>
+          </button>
+          <button type="button" onClick={onNote} className="flex items-start gap-3 rounded-xl border border-border bg-surface p-3 text-left transition-colors hover:bg-surface-raised focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+            <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-accent-soft text-on-accent-soft"><NotebookPen className="size-4" aria-hidden /></span>
+            <span className="grid gap-0.5"><span className="text-sm font-medium">Note</span><span className="text-xs text-text-muted">Rédigez une note utilisée comme source.</span></span>
+          </button>
         </div>
+        <div className="flex items-center gap-3 text-xs uppercase tracking-wide text-text-muted" aria-hidden><span className="h-px flex-1 bg-border" />ou importer<span className="h-px flex-1 bg-border" /></div>
         <form onSubmit={submit} className="grid gap-4">
           <Tabs value={tab} onValueChange={setTab}>
             <TabsList aria-label="Type de source">
@@ -802,23 +811,52 @@ function AddSourcesDialog({ open, onOpenChange, notebookId, onAdded, onWebSearch
               <TabsTrigger value="text"><Type className="mr-1.5 inline size-3.5" aria-hidden />Texte</TabsTrigger>
             </TabsList>
             <TabsContent value="file" className="grid gap-3 pt-4">
-              <Field id="folder-files" label="Importer un dossier" hint="Leanna parcourt automatiquement le dossier et tous ses sous-dossiers. Formats : PDF, DOCX, PPTX, EPUB, TXT, MD, CSV, MP3, WAV, M4A, AAC, OGG, FLAC et WEBM. 200 Mo maximum par fichier.">
-                <input
-                  ref={folderRef}
-                  type="file"
-                  multiple
-                  accept=".pdf,.docx,.pptx,.epub,.txt,.md,.csv,.mp3,.wav,.m4a,.aac,.ogg,.flac,.webm"
-                  {...({ webkitdirectory: "", directory: "" } as React.InputHTMLAttributes<HTMLInputElement>)}
-                  onChange={(event) => { setSelectedFiles(Array.from(event.currentTarget.files ?? [])); setError(undefined); }}
-                  className="block w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-accent-soft file:px-3 file:py-2 file:text-sm file:font-medium file:text-on-accent-soft"
-                />
-              </Field>
-              <Field id="individual-files" label="Ou sélectionner des fichiers individuellement" hint="Vous pouvez conserver l’import classique de plusieurs fichiers.">
-                <input ref={fileRef} type="file" multiple accept=".pdf,.docx,.pptx,.epub,.txt,.md,.csv,.mp3,.wav,.m4a,.aac,.ogg,.flac,.webm" onChange={(event) => { setSelectedFiles(Array.from(event.currentTarget.files ?? [])); setError(undefined); }} className="block w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-accent-soft file:px-3 file:py-2 file:text-sm file:font-medium file:text-on-accent-soft" />
-              </Field>
+              <input ref={fileRef} type="file" multiple accept={ACCEPT} className="sr-only" tabIndex={-1} aria-label="Sélectionner des fichiers" onChange={(event) => { setSelectedFiles(Array.from(event.currentTarget.files ?? [])); setError(undefined); }} />
+              <input
+                ref={folderRef}
+                type="file"
+                multiple
+                accept={ACCEPT}
+                className="sr-only"
+                tabIndex={-1}
+                aria-label="Sélectionner un dossier"
+                {...({ webkitdirectory: "", directory: "" } as React.InputHTMLAttributes<HTMLInputElement>)}
+                onChange={(event) => { setSelectedFiles(Array.from(event.currentTarget.files ?? [])); setError(undefined); }}
+              />
+              <div
+                onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+                onDragLeave={() => setDragging(false)}
+                onDrop={(e) => { e.preventDefault(); setDragging(false); const dropped = Array.from(e.dataTransfer.files); if (dropped.length) { setSelectedFiles(dropped); setError(undefined); } }}
+                className={cn("grid justify-items-center gap-3 rounded-xl border-2 border-dashed px-4 py-8 text-center transition-colors", dragging ? "border-accent bg-accent-soft" : "border-border bg-surface")}
+              >
+                <span className="grid size-11 place-items-center rounded-full bg-accent-soft text-on-accent-soft"><Upload className="size-5" aria-hidden /></span>
+                <div className="grid gap-1">
+                  <p className="text-sm font-medium">Glissez vos fichiers ici</p>
+                  <p className="text-xs text-text-muted">200 Mo maximum par fichier</p>
+                </div>
+                <div className="flex flex-wrap justify-center gap-2">
+                  <Button type="button" variant="secondary" size="sm" onClick={() => fileRef.current?.click()}><FileText aria-hidden /> Choisir des fichiers</Button>
+                  <Button type="button" variant="secondary" size="sm" onClick={() => folderRef.current?.click()}><FolderOpen aria-hidden /> Choisir un dossier</Button>
+                </div>
+                <div className="flex flex-wrap justify-center gap-1.5" aria-label="Formats compatibles">
+                  {["PDF", "DOCX", "PPTX", "EPUB", "TXT", "MD", "CSV", "Audio"].map((f) => <Badge key={f}>{f}</Badge>)}
+                </div>
+              </div>
               {selectedFiles.length > 0 && (
                 <div className="rounded-lg border bg-surface p-3 text-sm">
-                  <div className="flex items-center gap-2 font-medium"><FolderOpen className="size-4" aria-hidden />{selectedFiles[0] && ((selectedFiles[0] as File & { webkitRelativePath?: string }).webkitRelativePath?.split("/")[0] || "Sélection")}</div>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex min-w-0 items-center gap-2 font-medium"><FolderOpen className="size-4 shrink-0" aria-hidden /><span className="truncate">{(selectedFiles[0] as File & { webkitRelativePath?: string }).webkitRelativePath?.split("/")[0] || `${selectedFiles.length} fichier(s) sélectionné(s)`}</span></div>
+                    <Button type="button" variant="ghost" size="sm" disabled={busy} onClick={() => { setSelectedFiles([]); if (fileRef.current) fileRef.current.value = ""; if (folderRef.current) folderRef.current.value = ""; }}>Effacer</Button>
+                  </div>
+                  <ul className="mt-2 grid max-h-32 gap-1 overflow-y-auto">
+                    {folderFiles.slice(0, 50).map((entry) => (
+                      <li key={entry.relativePath} className={cn("flex items-center justify-between gap-3 text-xs", entry.compatible && entry.withinLimit ? "text-text" : "text-text-muted line-through")}>
+                        <span className="truncate">{entry.relativePath}</span>
+                        <span className="shrink-0 text-text-muted">{(entry.file.size / 1048576).toFixed(1)} Mo</span>
+                      </li>
+                    ))}
+                    {folderFiles.length > 50 && <li className="text-xs text-text-muted">… et {folderFiles.length - 50} autre(s)</li>}
+                  </ul>
                   <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-text-muted">
                     <span>{compatibleFiles.length} document(s) compatible(s)</span>
                     {ignoredFiles > 0 && <span>{ignoredFiles} fichier(s) ignoré(s)</span>}
