@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PendingVoiceSearches, shouldInviteRoxane, VoiceTurnCitationStore, type RetrievedVoicePassage } from "./voice-turn";
+import { PendingVoiceSearches, shouldInviteRoxane, waitForAudioPlaybackDrain, VoiceTurnCitationStore, type RetrievedVoicePassage } from "./voice-turn";
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -102,5 +102,30 @@ describe("shouldInviteRoxane", () => {
     expect(shouldInviteRoxane(0)).toBe(false);
     expect(shouldInviteRoxane(-1)).toBe(false);
     expect(shouldInviteRoxane(2.5)).toBe(false);
+  });
+});
+
+
+describe("waitForAudioPlaybackDrain", () => {
+  it("does not release the next speaker until all scheduled audio has ended", async () => {
+    let pendingAudio = true;
+    let checks = 0;
+
+    await waitForAudioPlaybackDrain(
+      () => pendingAudio,
+      async () => {
+        checks += 1;
+        if (checks === 3) pendingAudio = false;
+      }
+    );
+
+    expect(checks).toBe(3);
+    expect(pendingAudio).toBe(false);
+  });
+
+  it("returns immediately when no audio is pending", async () => {
+    const wait = vi.fn(async () => undefined);
+    await expect(waitForAudioPlaybackDrain(() => false, wait)).resolves.toBeUndefined();
+    expect(wait).not.toHaveBeenCalled();
   });
 });
