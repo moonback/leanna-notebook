@@ -39,6 +39,16 @@ export async function generateImageArtifact(db: SupabaseClient, art: ImageArtifa
   await ctx.progress(35, "génération avec OpenRouter");
   const options = art.options ?? {};
   const body: Record<string, unknown> = { model, prompt, n: 1 };
+  const referenceId = typeof options.referenceArtifactId === "string" ? options.referenceArtifactId : null;
+  if (referenceId) {
+    const { data: reference } = await db.from("artifacts").select("id,storage_path,mime_type").eq("id", referenceId).eq("notebook_id", art.notebook_id).eq("type", "image").eq("status", "ready").maybeSingle();
+    if (!reference?.storage_path || !["image/png","image/jpeg","image/webp"].includes(reference.mime_type ?? "")) throw new PermanentError("invalid_image_reference");
+    const { data: file, error: downloadError } = await db.storage.from("artifacts").download(reference.storage_path);
+    if (downloadError || !file) throw new PermanentError("invalid_image_reference");
+    const referenceBytes = Buffer.from(await file.arrayBuffer());
+    if (referenceBytes.length > MAX_IMAGE_BYTES || !imageMime(referenceBytes)) throw new PermanentError("invalid_image_reference");
+    body.input_references = [`data:${reference.mime_type};base64,${referenceBytes.toString("base64")}`];
+  }
   if (["portrait","landscape","square"].includes(String(options.orientation))) body.aspect_ratio = options.orientation === "portrait" ? "2:3" : options.orientation === "square" ? "1:1" : "3:2";
   const response = await fetch(`${process.env.OPENROUTER_BASE_URL || "https://openrouter.ai/api/v1"}/images`, {
     method: "POST",
