@@ -66,3 +66,7 @@ L'exploration de l'arbre Git (260 fichiers) a permis d'identifier deux chemins s
 | Génération d'image | `apps/worker/src/studio/image-generation.ts` | Brief utilisateur + contexte documentaire tronqué à 7 500 caractères, référence image facultative | API image OpenRouter, contrôle MIME/taille, stockage et versionnement |
 
 Les suggestions d'images utilisent maintenant un message système dédié et un message utilisateur séparé pour les extraits. La génération d'image reste un endpoint multimodal distinct et ne fait pas partie des 18 clés du catalogue.
+
+## Tests et validation repérés
+
+Les tests unitaires du worker incluent notamment `apps/worker/src/studio/generate.test.ts` et `apps/worker/src/studio/audio-overview.test.ts`. Ils couvrent la validation des sorties, les citations, les formats Studio et les scripts Audio Overview. Des assertions ont été ajoutées pour vérifier la séparation des préférences personnalisées et des instructions système. Leur exécution reste à faire depuis un checkout local.
