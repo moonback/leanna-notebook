@@ -230,7 +230,7 @@ function CreateDialog({ type, notebookId, sourceIds, referenceImageId, onClose, 
   React.useEffect(() => {
     if (type !== "image") return;
     if (!imagePreferences) return;
-    if (!imagePreferences.autoSuggestions) { setImageSuggestions([]); setImageSuggestionsLoading(false); return; }
+    if (!imagePreferences.enabled || !imagePreferences.autoSuggestions) { setImageSuggestions([]); setImageSuggestionsLoading(false); return; }
     let active = true;
     setImageSuggestions([]);
     setImageSuggestionsError(false);
