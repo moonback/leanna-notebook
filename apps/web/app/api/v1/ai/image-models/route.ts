@@ -21,6 +21,7 @@ export const GET = handle(async (_req: NextRequest) => {
     inputModalities: m.architecture?.input_modalities ?? [],
     outputModalities: m.architecture?.output_modalities ?? [],
   }));
-  const defaultModelId = process.env.OPENROUTER_IMAGE_MODEL || "google/gemini-3.1-flash-image";
+  const configuredDefault = process.env.OPENROUTER_IMAGE_MODEL || "google/gemini-3.1-flash-image";
+  const defaultModelId = models.some((model) => model.id === configuredDefault) ? configuredDefault : (models[0]?.id ?? configuredDefault);
   return NextResponse.json({ models, defaultModelId });
 });
