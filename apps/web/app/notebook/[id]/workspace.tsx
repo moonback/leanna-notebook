@@ -729,6 +729,7 @@ function AddSourcesDialog({ open, onOpenChange, notebookId, onAdded, onWebSearch
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true); setError(undefined); setProgress(null);
+    let keepDialogOpen = false;
     try {
       if (tab === "file") {
         if (!compatibleFiles.length) throw new Error("Sélectionnez un dossier contenant au moins un document compatible (200 Mo maximum par fichier).");
@@ -764,7 +765,10 @@ function AddSourcesDialog({ open, onOpenChange, notebookId, onAdded, onWebSearch
           description: skipped ? `${skipped} fichier(s) ignoré(s) ou en erreur. Le traitement continue en arrière-plan.` : "Tous les documents compatibles ont été envoyés. Le traitement continue en arrière-plan.",
           tone: failures.length ? "warning" : "success",
         });
-        if (failures.length) setError(`Import partiel : ${failures.slice(0, 5).join(" · ")}${failures.length > 5 ? ` · et ${failures.length - 5} autre(s)` : ""}`);
+        if (failures.length) {
+          keepDialogOpen = true;
+          setError(`Import partiel : ${failures.slice(0, 5).join(" · ")}${failures.length > 5 ? ` · et ${failures.length - 5} autre(s)` : ""}`);
+        }
       } else if (tab === "url") {
         const urls = url.split(/\s+/).filter(Boolean);
         if (!urls.length) throw new Error("Collez au moins une adresse.");
@@ -777,7 +781,7 @@ function AddSourcesDialog({ open, onOpenChange, notebookId, onAdded, onWebSearch
       }
       setUrl(""); setPaste({ title: "", text: "" }); setSelectedFiles([]); if (fileRef.current) fileRef.current.value = "";
       onAdded();
-      if (!error && !(tab === "file" && compatibleFiles.length > 0 && folderFiles.length > compatibleFiles.length)) onOpenChange(false);
+      if (!keepDialogOpen) onOpenChange(false);
     } catch (err) { setError(err instanceof Error ? err.message : "Ajout impossible."); }
     finally { setBusy(false); setProgress(null); }
   }
