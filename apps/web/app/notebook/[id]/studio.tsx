@@ -196,7 +196,7 @@ function CreateDialog({ type, notebookId, sourceIds, referenceImageId, onClose, 
   const [imagePreferences, setImagePreferences] = React.useState<{ enabled: boolean; autoSuggestions: boolean; suggestionCount: number; defaultModelId: string | null; defaultOrientation: "landscape" | "portrait" | "square" } | null>(null);
   const [imageSuggestions, setImageSuggestions] = React.useState<{ id: string; title: string; description: string; prompt: string }[]>([]);
   const [imageSuggestionsLoading, setImageSuggestionsLoading] = React.useState(false);
-  const [imageSuggestionsError, setImageSuggestionsError] = React.useState(false);
+  const [imageSuggestionsError, setImageSuggestionsError] = React.useState("");
   const styleCarouselRef = React.useRef<HTMLDivElement | null>(null);
 
   React.useEffect(() => {
@@ -241,12 +241,12 @@ function CreateDialog({ type, notebookId, sourceIds, referenceImageId, onClose, 
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ sourceIds, sourceScope: opts.sourceScope ?? "selected", suggestionCount: imagePreferences.suggestionCount }),
     }).then(async (response) => {
-      if (!response.ok) throw new Error("image_suggestions_unavailable");
-      const result = await response.json() as { suggestions?: { id: string; title: string; description: string; prompt: string }[] };
+      const result = await response.json() as { error?: string; suggestions?: { id: string; title: string; description: string; prompt: string }[] };
+      if (!response.ok) throw new Error(result.error ?? "image_suggestions_unavailable");
       if (!Array.isArray(result.suggestions)) throw new Error("invalid_image_suggestions");
       if (active) setImageSuggestions(result.suggestions);
-    }).catch(() => {
-      if (active) setImageSuggestionsError(true);
+    }).catch((error: unknown) => {
+      if (active) setImageSuggestionsError(error instanceof Error ? error.message : "image_suggestions_unavailable");
     }).finally(() => {
       if (active) setImageSuggestionsLoading(false);
     });
@@ -455,7 +455,7 @@ function CreateDialog({ type, notebookId, sourceIds, referenceImageId, onClose, 
                 <span className="text-xs leading-5 text-text-muted">{suggestion.description}</span>
                 <span className="mt-1 text-xs font-medium text-accent">Utiliser cette idée</span>
               </button>)}
-            </div> : imageSuggestionsLoading ? <div className="h-16 animate-pulse rounded-xl bg-surface-raised" /> : <p className="rounded-lg bg-surface-raised p-3 text-xs text-text-muted">{imageSuggestionsError ? "Suggestions indisponibles. Vérifiez le modèle de conversation et les sources, ou rédigez votre propre description." : "Ajoutez ou sélectionnez des sources prêtes pour obtenir des idées visuelles adaptées."}</p>}
+            </div> : imageSuggestionsLoading ? <div className="h-16 animate-pulse rounded-xl bg-surface-raised" /> : <p className="rounded-lg bg-surface-raised p-3 text-xs text-text-muted">{imageSuggestionsError ? ({ openrouter_not_configured: "Clé API OpenRouter absente côté serveur.", chat_model_not_configured: "Aucun modèle de conversation n’est configuré. Choisissez-en un dans Réglages → Intelligence artificielle.", openrouter_invalid_key: "La clé API OpenRouter est invalide.", openrouter_insufficient_credits: "Votre compte OpenRouter n’a plus de crédits.", openrouter_chat_model_unavailable: "Le modèle de conversation sélectionné n’est pas disponible sur OpenRouter.", openrouter_rate_limited: "OpenRouter limite temporairement les requêtes. Réessayez dans quelques instants.", image_suggestions_disabled: "Les suggestions automatiques sont désactivées dans Réglages → Intelligence artificielle → Génération d’images.", no_ready_sources: "Aucune source prête sélectionnée. Sélectionnez des sources ou choisissez « Toutes les sources prêtes ».", no_source_content: "Les sources sélectionnées ne contiennent pas encore de texte exploitable.", image_suggestions_provider_error: "OpenRouter a rencontré une erreur. Vérifiez les journaux serveur pour le détail." } as Record<string, string>)[imageSuggestionsError] ?? "Suggestions indisponibles. Vérifiez votre configuration OpenRouter et les sources, ou rédigez votre propre description." : "Ajoutez ou sélectionnez des sources prêtes pour obtenir des idées visuelles adaptées."}</p>}
           </section>}
           <Field id="opt-prompt" label={type === "image" ? "Décrivez l’image à générer" : type === "infographic" ? "Décrivez l’infographie que vous souhaitez créer" : type === "report" ? "Personnaliser le modèle (facultatif)" : "Consignes (facultatif)"} hint={type === "image" ? "Choisissez une idée proposée ou décrivez votre propre image." : type === "infographic" ? undefined : type === "report" ? "Public visé, ton, plan souhaité, longueur ou éléments à mettre en avant…" : "Public visé, angle, thèmes à privilégier…"}>
             <Textarea value={prompt} maxLength={4000} onChange={(e) => setPrompt(e.target.value)} placeholder={type === "image" ? "Choisissez une idée ci-dessus ou décrivez l’image souhaitée…" : type === "infographic" ? "Indiquez le style, la couleur ou le thème principal : « Utilise un thème de couleurs bleu et mets en avant les… »" : type === "report" ? "Ex. : rédiger pour une direction, avec une synthèse exécutive et des recommandations concrètes." : "Ex. : pour un public débutant, insister sur la sécurité."} />
