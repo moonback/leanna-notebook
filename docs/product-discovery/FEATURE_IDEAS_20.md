@@ -11,24 +11,24 @@ Notes de 1 à 10. Faisabilité élevée = note haute (plus simple / plus réalis
 | # | Fonctionnalité | Priorité | Valeur | Innov. | Diff. | Comm. | Fais. | Score /10 |
 |---:|---|---|---:|---:|---:|---:|---:|---:|
 | 1 | Cockpit de fiabilité documentaire | P0 | 9 | 7 | 8 | 9 | 8 | **8,25** |
-| 2 | Détecteur de lacunes et dossier incomplet | P0 | 9 | 9 | 9 | 9 | 7 | **8,65** |
+| 2 | Détecteur de lacunes et dossier incomplet | P0 | 9 | 9 | 9 | 9 | 7 | **8,70** |
 | 3 | OCR et compréhension visuelle des scans | P0 | 9 | 6 | 7 | 8 | 7 | **7,55** |
 | 4 | Déduplication et versions intelligentes | P0 | 8 | 7 | 8 | 8 | 8 | **7,85** |
-| 5 | Moteur de contradictions et évolution des faits | P1 | 10 | 9 | 10 | 9 | 6 | **8,95** |
-| 6 | Raisonnement multi-sources traçable | P1 | 10 | 8 | 9 | 9 | 7 | **8,75** |
-| 7 | Carte de connaissances navigable | P1 | 8 | 9 | 9 | 8 | 6 | **8,05** |
-| 8 | Agents experts en équipe | P1 | 9 | 9 | 9 | 9 | 6 | **8,40** |
-| 9 | Brief de décision avec scénarios | P1 | 9 | 8 | 9 | 9 | 7 | **8,45** |
-| 10 | Studio avec provenance et versions | P1 | 8 | 7 | 8 | 8 | 8 | **7,75** |
+| 5 | Moteur de contradictions et évolution des faits | P1 | 10 | 9 | 10 | 9 | 6 | **9,05** |
+| 6 | Raisonnement multi-sources traçable | P1 | 10 | 8 | 9 | 9 | 7 | **8,80** |
+| 7 | Carte de connaissances navigable | P1 | 8 | 9 | 9 | 8 | 6 | **8,25** |
+| 8 | Agents experts en équipe | P1 | 9 | 9 | 9 | 9 | 6 | **8,55** |
+| 9 | Brief de décision avec scénarios | P1 | 9 | 8 | 9 | 9 | 7 | **8,50** |
+| 10 | Studio avec provenance et versions | P1 | 8 | 7 | 8 | 8 | 8 | **7,80** |
 | 11 | Recherche web comparative et réconciliation | P2 | 8 | 8 | 8 | 8 | 7 | **7,85** |
-| 12 | Veille documentaire et détection de changements | P2 | 8 | 9 | 9 | 9 | 6 | **8,10** |
-| 13 | Assistant de réunion et alignement audio-docs | P2 | 8 | 7 | 7 | 8 | 7 | **7,45** |
-| 14 | Studio vocal pilotable et multi-agents | P2 | 8 | 9 | 9 | 8 | 6 | **8,00** |
-| 15 | Générateur de workflows documentaires | P2 | 9 | 9 | 9 | 9 | 6 | **8,40** |
-| 16 | Simulateur de scénarios et hypothèses | P2 | 8 | 9 | 9 | 8 | 6 | **7,95** |
-| 17 | Mémoire de projet explicable | P2 | 9 | 8 | 9 | 9 | 7 | **8,45** |
+| 12 | Veille documentaire et détection de changements | P2 | 8 | 9 | 9 | 9 | 6 | **8,25** |
+| 13 | Assistant de réunion et alignement audio-docs | P2 | 8 | 7 | 7 | 8 | 7 | **7,50** |
+| 14 | Studio vocal pilotable et multi-agents | P2 | 8 | 9 | 9 | 8 | 6 | **8,10** |
+| 15 | Générateur de workflows documentaires | P2 | 9 | 9 | 9 | 9 | 6 | **8,55** |
+| 16 | Simulateur de scénarios et hypothèses | P2 | 8 | 9 | 9 | 8 | 6 | **8,10** |
+| 17 | Mémoire de projet explicable | P2 | 9 | 8 | 9 | 9 | 7 | **8,50** |
 | 18 | Connecteurs externes synchronisés | P3 | 8 | 6 | 7 | 9 | 5 | **7,10** |
-| 19 | Espace de revue collaborative des preuves | P3 | 8 | 7 | 8 | 8 | 6 | **7,45** |
+| 19 | Espace de revue collaborative des preuves | P3 | 8 | 7 | 8 | 8 | 6 | **7,50** |
 | 20 | Tuteur adaptatif de maîtrise des connaissances | P3 | 8 | 8 | 8 | 8 | 7 | **7,85** |
 
 ## P0 — Fondamentales
