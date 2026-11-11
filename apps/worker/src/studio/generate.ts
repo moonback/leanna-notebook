@@ -53,6 +53,16 @@ const TEMPLATES: Record<string, string> = {
   diagram: "Diagramme : produis un diagramme Mermaid valide (flowchart ou sequenceDiagram selon les sources), dans un bloc de code Mermaid, puis une courte légende. N'ajoute aucune étape non documentée.",
   editorial: "Contenu éditorial : réécris fidèlement les sources sous forme de newsletter, article de blog ou fil de réseaux sociaux selon les consignes. Conserve les citations [n] et n'ajoute aucun fait externe.",
   study_plan: "Plan d'étude : crée un planning de révision sur le nombre de jours indiqué dans les consignes, répartis par jour avec objectifs, notions, exercices et rappels. Chaque notion doit être sourcée [n].",
+  one_pager: "One-pager : produis une synthèse exécutive tenant sur une page, avec titre, contexte, objectif, 3 à 5 messages clés, données vérifiables, risques ou limites, recommandation et prochaine étape. Va à l’essentiel et cite chaque fait.",
+  swot: "Matrice SWOT : construis une matrice en quatre quadrants Forces, Faiblesses, Opportunités et Menaces. Distingue facteurs internes et externes, justifie chaque élément par une citation et ajoute une courte synthèse stratégique. N’invente aucun facteur.",
+  decision_tree: "Arbre de décision : formule la décision initiale, les questions ou conditions successives, les branches Oui/Non ou alternatives, les conséquences et les critères de choix. Représente-le avec un diagramme Mermaid flowchart valide et ajoute une légende sourcée. Ne crée aucune règle absente des sources.",
+  memo: "Fiche mémo : crée une fiche de mémorisation rapide avec objectif, définitions essentielles, règles ou chiffres à retenir, procédure courte, pièges fréquents et encadré « À retenir ». Structure en blocs très courts et cite les éléments factuels.",
+  raci: "Matrice RACI : crée un tableau avec activités ou livrables en lignes et rôles explicitement identifiés en colonnes. Utilise R (réalise), A (approuve et assume), C (consulté), I (informé). Une seule responsabilité A par activité lorsque les sources le permettent. Si les rôles ou responsabilités ne sont pas documentés, indique « à définir » au lieu de les inventer.",
+  case_study: "Étude de cas : structure le document en contexte, acteurs documentés, problématique, faits établis, analyse, contraintes, options, critères d’évaluation, recommandation conditionnelle et enseignements. Sépare clairement faits sourcés, hypothèses et questions ouvertes.",
+  literature_review: "Revue de littérature : croise les sources selon leurs thèmes, thèses, méthodes, résultats, convergences, divergences et limites. Ajoute une matrice de synthèse des sources, identifie les lacunes documentaires et formule une synthèse critique. Ne prétends pas à l’exhaustivité au-delà du corpus fourni.",
+  presentation_script: "Script de présentation : prépare une trame orale slide par slide avec titre, objectif de la slide, messages à afficher, notes du présentateur, transition et durée indicative. Prévois une introduction, une conclusion et les questions possibles. N’invente pas de chiffres ni de résultats.",
+  roadmap: "Feuille de route : organise les actions en phases et jalons, avec objectif, livrable, dépendances, priorité, critères de réussite et horizon temporel. N’invente ni dates ni responsables : utilise « à planifier » ou « à désigner » si les sources ne les précisent pas.",
+  troubleshooting: "Guide de dépannage rapide : présente les symptômes observables, vérifications préalables, causes possibles documentées, procédure de résolution étape par étape, résultat attendu et escalade si le problème persiste. Classe les actions du diagnostic le moins risqué au plus intrusif. Signale les informations manquantes."
 };
 
 /** Construit le prompt d'un type d'artefact. Exporté pour les tests. */
@@ -61,7 +71,7 @@ export function buildPrompt(type: string, options: Record<string, unknown>, cust
   const sys = (task: string) => ({ role: "system" as const, content: `${RULES(lang)}\n${task}${focus}` });
   const user = { role: "user" as const, content: `<passages>\n${passagesBlock}\n</passages>` };
   switch (type) {
-    case "report": case "infographic": case "timeline": case "comparison": case "glossary": case "faq": case "diagram": case "editorial": case "study_plan": {
+    case "report": case "infographic": case "timeline": case "comparison": case "glossary": case "faq": case "diagram": case "editorial": case "study_plan": case "one_pager": case "swot": case "decision_tree": case "memo": case "raci": case "case_study": case "literature_review": case "presentation_script": case "roadmap": case "troubleshooting": {
       const t = type === "report"
         ? (TEMPLATES[String(options.template ?? "briefing")] ?? TEMPLATES.briefing)
         : TEMPLATES[type];
@@ -99,7 +109,7 @@ export function buildPrompt(type: string, options: Record<string, unknown>, cust
 /** Valide la sortie du modèle et la convertit en contenu stocké (références vérifiées contre les passages fournis). */
 export function toContent(type: string, raw: string, passages: Passage[]) {
   const byN = new Map(passages.map((p) => [p.n, p]));
-  if (["report", "infographic", "timeline", "comparison", "glossary", "faq", "diagram", "editorial", "study_plan"].includes(type)) {
+  if (["report", "infographic", "timeline", "comparison", "glossary", "faq", "diagram", "editorial", "study_plan", "one_pager", "swot", "decision_tree", "memo", "raci", "case_study", "literature_review", "presentation_script", "roadmap", "troubleshooting"].includes(type)) {
     const r = resolveCitations(raw, passages);
     return { content: { markdown: r.text, dropped: r.dropped }, citations: r.citations };
   }
