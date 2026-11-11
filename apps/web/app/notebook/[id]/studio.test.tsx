@@ -27,4 +27,15 @@ describe("Markdown du rapport", () => {
     expect(html).not.toContain("[7]");
     expect(html).not.toContain("[1]");
   });
+  it("tableaux, listes numérotées/imbriquées, citations, code et liens sûrs", () => {
+    const html = render("| A | B |\n|---|---|\n| 1 | 2 |\n\n1. un\n   - sous\n2. deux\n\n> cité\n\n`x` et *it* [ok](https://a.fr) [bad](javascript:alert(1))\n\n```\ncode <b>\n```");
+    expect(html).toContain("<table");
+    expect(html).toContain("<ol");
+    expect(html.match(/<ul/g)).toHaveLength(1);
+    expect(html).toContain("<blockquote");
+    expect(html).toContain("<em>it</em>");
+    expect(html).toContain('href="https://a.fr"');
+    expect(html).not.toContain("href=\"javascript");
+    expect(html).toContain("code &lt;b&gt;");
+  });
 });

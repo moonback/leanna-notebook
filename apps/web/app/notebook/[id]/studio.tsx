@@ -291,8 +291,8 @@ function CreateDialog({ type, notebookId, sourceIds, onClose, onGenerate }: { ty
                 <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">{REPORT_MODELS.map(modelCard)}</div>
               </section>
               <section className="grid gap-3">
-                <h3 className="flex items-center gap-2 text-sm font-medium"><Sparkles className="size-4" /> Modèles suggérés par l&apos;IA</h3>
-                <p className="text-xs text-text-muted">OpenRouter analyse les sources sélectionnées et propose des modèles adaptés à leur contenu.</p>
+                <h3 className="flex items-center gap-2 text-sm font-medium"><Sparkles className="size-4" /> Modèles suggérés par Leanna</h3>
+                <p className="text-xs text-text-muted">Leanna analyse les sources sélectionnées et propose des modèles adaptés à leur contenu.</p>
                 {aiModelsLoading ? (
                   <div className="grid gap-2 sm:grid-cols-2" aria-live="polite" aria-busy="true">
                     {[0, 1, 2, 3].map((item) => <div key={item} className="grid min-h-24 gap-2 rounded-xl border border-border bg-surface p-4"><Skeleton className="h-4 w-2/3" /><Skeleton className="h-3 w-full" /><Skeleton className="h-3 w-4/5" /></div>)}
@@ -541,33 +541,106 @@ function DiagramEditor({ markdown }: { markdown: string }) {
 /** Markdown minimal et sûr (aucun HTML injecté) : titres, listes, gras, pastilles [n]. Exporté pour les tests. */
 export function Markdown({ text, citations, sourceTitle, onOpen }: { text: string; citations: Cite[]; sourceTitle: (id: string) => string | undefined; onOpen?: (c: Cite) => void }) {
   const byMarker = new Map(citations.map((c) => [c.marker, c]));
-  const inline = (s: string) => s.split(/(\[\d+\]|\*\*[^*]+\*\*)/g).map((part, i) => {
+  // Inline : lien http(s), pastille [n], gras, italique, code. Aucun HTML injecté.
+  const inline = (s: string): React.ReactNode[] => s.split(/(\[[^\]]+\]\(https?:\/\/[^)\s]+\)|\[\d+\]|\*\*[^*]+\*\*|`[^`]+`|(?<![*\w])\*[^*\s][^*]*\*(?![*\w]))/g).map((part, i) => {
+    const link = /^\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)$/.exec(part);
+    if (link) return <a key={i} href={link[2]} target="_blank" rel="noopener noreferrer" className="text-accent underline underline-offset-2">{link[1]}</a>;
     const m = /^\[(\d+)\]$/.exec(part);
     if (m) {
       const c = byMarker.get(Number(m[1]));
       return c ? <Citation key={i} n={c.marker} source={sourceTitle(c.source_id) ?? "Source supprimée"} quote={c.quote_text} verified={c.verified} onOpen={onOpen ? () => onOpen(c) : undefined} /> : null;
     }
     if (/^\*\*[^*]+\*\*$/.test(part)) return <strong key={i}>{part.slice(2, -2)}</strong>;
+    if (/^`[^`]+`$/.test(part)) return <code key={i} className="rounded bg-surface px-1.5 py-0.5 font-mono text-[0.9em]">{part.slice(1, -1)}</code>;
+    if (/^\*[^*\s][^*]*\*$/.test(part)) return <em key={i}>{part.slice(1, -1)}</em>;
     return <React.Fragment key={i}>{part}</React.Fragment>;
   });
-  const blocks: React.ReactNode[] = [];
-  let list: string[] = [];
-  const flush = () => {
-    if (!list.length) return;
-    blocks.push(<ul key={`l${blocks.length}`} className="ml-5 list-disc space-y-1">{list.map((li, i) => <li key={i}>{inline(li)}</li>)}</ul>);
-    list = [];
+
+  type Item = { indent: number; ordered: boolean; text: string };
+  const renderList = (items: Item[], from: number, key: string): [React.ReactNode, number] => {
+    const base = items[from].indent;
+    const ordered = items[from].ordered;
+    const lis: React.ReactNode[] = [];
+    let i = from;
+    while (i < items.length && items[i].indent >= base) {
+      if (items[i].indent > base) {
+        const [sub, next] = renderList(items, i, `${key}-${i}`);
+        lis.push(<li key={`n${i}`} className="list-none">{sub}</li>);
+        i = next;
+        continue;
+      }
+      lis.push(<li key={i}>{inline(items[i].text)}</li>);
+      i++;
+    }
+    const cls = `ml-5 space-y-1.5 marker:text-text-muted ${ordered ? "list-decimal" : "list-disc"}`;
+    return [ordered ? <ol key={key} className={cls}>{lis}</ol> : <ul key={key} className={cls}>{lis}</ul>, i];
   };
-  text.split("\n").forEach((line, i) => {
+
+  const cells = (row: string) => row.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map((c) => c.trim());
+  const blocks: React.ReactNode[] = [];
+  const lines = text.replace(/\r\n?/g, "\n").split("\n");
+  let items: Item[] = [];
+  const flush = () => {
+    if (!items.length) return;
+    blocks.push(renderList(items, 0, `l${blocks.length}`)[0]);
+    items = [];
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
     const t = line.trim();
-    if (/^[-*]\s+/.test(t)) { list.push(t.replace(/^[-*]\s+/, "")); return; }
+
+    const li = /^(\s*)([-*+]|\d+[.)])\s+(.*)$/.exec(line);
+    if (li) { items.push({ indent: Math.floor(li[1].replace(/\t/g, "  ").length / 2), ordered: /\d/.test(li[2]), text: li[3] }); continue; }
     flush();
-    if (!t) return;
-    const h = /^(#{1,4})\s+(.*)$/.exec(t);
-    if (h) blocks.push(h[1].length <= 2 ? <h3 key={i} className="mt-2 text-xl font-semibold">{inline(h[2])}</h3> : <h4 key={i} className="mt-1 text-lg font-semibold">{inline(h[2])}</h4>);
-    else blocks.push(<p key={i}>{inline(t)}</p>);
-  });
+    if (!t) continue;
+
+    if (t.startsWith("```")) {
+      const code: string[] = [];
+      while (++i < lines.length && !lines[i].trim().startsWith("```")) code.push(lines[i]);
+      blocks.push(<pre key={`c${i}`} className="overflow-x-auto rounded-lg border border-border bg-surface p-3 font-mono text-sm leading-relaxed"><code>{code.join("\n")}</code></pre>);
+      continue;
+    }
+    if (/^([-*_])(\s*\1){2,}$/.test(t)) { blocks.push(<hr key={`r${i}`} className="my-2 border-border" />); continue; }
+
+    if (t.startsWith("|") && i + 1 < lines.length && /^\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?$/.test(lines[i + 1].trim())) {
+      const head = cells(t);
+      const rows: string[][] = [];
+      i += 2;
+      while (i < lines.length && lines[i].trim().startsWith("|")) rows.push(cells(lines[i++]));
+      i--;
+      blocks.push(
+        <div key={`t${i}`} className="overflow-x-auto rounded-lg border border-border">
+          <table className="w-full border-collapse text-left text-[0.95em]">
+            <thead className="bg-surface"><tr>{head.map((h, k) => <th key={k} scope="col" className="border-b border-border px-3 py-2 font-semibold">{inline(h)}</th>)}</tr></thead>
+            <tbody>{rows.map((r, k) => <tr key={k} className="border-b border-border last:border-0 even:bg-surface/50">{head.map((_, j) => <td key={j} className="px-3 py-2 align-top">{inline(r[j] ?? "")}</td>)}</tr>)}</tbody>
+          </table>
+        </div>,
+      );
+      continue;
+    }
+
+    if (t.startsWith(">")) {
+      const quote: string[] = [t.replace(/^>\s?/, "")];
+      while (i + 1 < lines.length && lines[i + 1].trim().startsWith(">")) quote.push(lines[++i].trim().replace(/^>\s?/, ""));
+      blocks.push(<blockquote key={`q${i}`} className="border-l-4 border-accent/40 pl-4 italic text-text-muted">{inline(quote.join(" "))}</blockquote>);
+      continue;
+    }
+
+    const h = /^(#{1,6})\s+(.*)$/.exec(t);
+    if (h) {
+      const n = h[1].length;
+      const text2 = inline(h[2].replace(/\s+#+$/, ""));
+      if (n === 1) blocks.push(<h2 key={i} className="mt-4 border-b border-border pb-2 font-sans text-2xl font-bold tracking-tight first:mt-0">{text2}</h2>);
+      else if (n === 2) blocks.push(<h3 key={i} className="mt-4 font-sans text-xl font-semibold first:mt-0">{text2}</h3>);
+      else if (n === 3) blocks.push(<h4 key={i} className="mt-3 font-sans text-lg font-semibold">{text2}</h4>);
+      else blocks.push(<h5 key={i} className="mt-2 font-sans text-base font-semibold text-text-muted">{text2}</h5>);
+      continue;
+    }
+    blocks.push(<p key={i}>{inline(t)}</p>);
+  }
   flush();
-  return <div className="grid gap-3 font-serif text-reading">{blocks}</div>;
+  return <div className="grid gap-4 font-serif text-reading leading-relaxed [&>*]:min-w-0">{blocks}</div>;
 }
 
 type Card = { key: string; front: string; back: string };
