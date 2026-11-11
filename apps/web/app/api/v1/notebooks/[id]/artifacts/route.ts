@@ -70,6 +70,7 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
     if (!catalogResponse.ok) throw new ApiError(502, "image_model_catalog_unavailable");
     const catalog = await catalogResponse.json() as { data?: { id?: string }[] };
     if (!(catalog.data ?? []).some((model) => model.id === selectedModel)) throw new ApiError(422, "unsupported_image_model");
+    body.options.modelId = selectedModel;
   }
   let referenceImageId: string | null = null;
   if (body.type === "image" && body.options.referenceArtifactId) {
