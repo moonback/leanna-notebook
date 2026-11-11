@@ -69,3 +69,9 @@ Cette architecture décrit les chemins inspectés. Elle ne constitue pas encore 
 ### Personnalisation vocale
 
 L'override de persona est maintenant injecté comme préférence complémentaire délimitée. Les déclarations d'outils et les règles persona restent dans la couche système principale.
+
+### Priorité effective des personnalisations
+
+Dans les parcours Studio, Audio Overview et résumés automatiques, les personnalisations libres et les overrides du catalogue sont transmis dans des messages utilisateur séparés. Le message système conserve les règles de fidélité aux sources, la tâche et le schéma de sortie. Les passages documentaires sont transmis séparément des préférences. Cette organisation améliore la hiérarchie des consignes, sans constituer à elle seule une garantie de sécurité : les validations applicatives restent obligatoires.
+
+Le catalogue d'édition ne représente pas l'intégralité du prompt runtime pour Studio : les templates de tâche et les options sont assemblés dans le worker. L'UI devrait exposer cette composition et ses dépendances.
