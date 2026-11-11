@@ -193,6 +193,9 @@ function CreateDialog({ type, notebookId, sourceIds, referenceImageId, onClose, 
   const [selectedAiModel, setSelectedAiModel] = React.useState<string | null>(null);
   const [imageModels, setImageModels] = React.useState<{ id: string; name: string }[]>([]);
   const [imageModelsError, setImageModelsError] = React.useState(false);
+  const [imageSuggestions, setImageSuggestions] = React.useState<{ id: string; title: string; description: string; prompt: string }[]>([]);
+  const [imageSuggestionsLoading, setImageSuggestionsLoading] = React.useState(false);
+  const [imageSuggestionsError, setImageSuggestionsError] = React.useState(false);
   const styleCarouselRef = React.useRef<HTMLDivElement | null>(null);
 
   React.useEffect(() => {
@@ -210,6 +213,29 @@ function CreateDialog({ type, notebookId, sourceIds, referenceImageId, onClose, 
     return () => { active = false; };
   }, [type]);
   const sourceKey = sourceIds.join(",");
+  React.useEffect(() => {
+    if (type !== "image") return;
+    let active = true;
+    setImageSuggestions([]);
+    setImageSuggestionsError(false);
+    setImageSuggestionsLoading(true);
+    fetch(`/api/v1/notebooks/${notebookId}/artifacts/image-suggestions`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ sourceIds, sourceScope: opts.sourceScope ?? "selected" }),
+    }).then(async (response) => {
+      if (!response.ok) throw new Error("image_suggestions_unavailable");
+      const result = await response.json() as { suggestions?: { id: string; title: string; description: string; prompt: string }[] };
+      if (!Array.isArray(result.suggestions)) throw new Error("invalid_image_suggestions");
+      if (active) setImageSuggestions(result.suggestions);
+    }).catch(() => {
+      if (active) setImageSuggestionsError(true);
+    }).finally(() => {
+      if (active) setImageSuggestionsLoading(false);
+    });
+    return () => { active = false; };
+  }, [type, notebookId, sourceKey, opts.sourceScope]);
+
   const aiModelsCache = React.useRef<{ notebookId: string; sourceIds: Set<string>; suggestions: AiReportModel[] } | null>(null);
   React.useEffect(() => {
     if (type !== "report" || !sourceKey) return;
@@ -399,8 +425,22 @@ function CreateDialog({ type, notebookId, sourceIds, referenceImageId, onClose, 
           {type === "image" && <section className="grid gap-3 rounded-xl border border-border p-3"><h3 className="text-sm font-semibold">Modèle et format</h3>{imageModels.length > 0 ? choice("modelId", "Modèle IA", imageModels.map((model) => [model.id, model.name] as [string, string])) : <p className="text-xs text-text-muted">{imageModelsError ? "Catalogue indisponible : le modèle par défaut sera utilisé." : "Chargement des modèles image…"}</p>}{choice("orientation", "Orientation", [["landscape", "Paysage"], ["portrait", "Portrait"], ["square", "Carré"]])}{choice("sourceScope", "Sources à utiliser", [["selected", sourceIds.length + " sources sélectionnées"], ["all", "Toutes les sources prêtes"]])}<p className="text-xs text-text-muted">Modèle par défaut : Nano Banana 2. Configurable côté serveur avec OPENROUTER_IMAGE_MODEL.</p></section>}
           {type === "audio" && <div className="grid gap-4 sm:grid-cols-2">{choice("format", "Format du podcast", [["deep_dive", "Deep Dive · approfondi"], ["brief", "Brief · essentiel"], ["critique", "Critique · analyse"], ["debate", "Débat · points de vue"]])}{choice("duration", "Durée cible", [["short", "Court · 5 min"], ["standard", "Standard · 10 min"], ["long", "Long · 15 min"]])}{choice("style", "Ton", [["accessible", "Accessible et pédagogique"], ["professional", "Professionnel et précis"], ["dynamic", "Dynamique et vivant"]])}</div>}
           {(type === "flashcards" || type === "quiz") && <div className="grid gap-4 sm:grid-cols-2">{choice("difficulty", "Difficulté", [["easy", "Facile"], ["medium", "Moyenne"], ["hard", "Difficile"]])}{choice("count", "Quantité", [["fewer", "Moins"], ["standard", "Standard"], ["more", "Plus"]])}</div>}
-          <Field id="opt-prompt" label={type === "image" ? "Décrivez l’image à générer" : type === "infographic" ? "Décrivez l’infographie que vous souhaitez créer" : type === "report" ? "Personnaliser le modèle (facultatif)" : "Consignes (facultatif)"} hint={type === "image" ? "Sujet, style, composition, couleurs et texte éventuel." : type === "infographic" ? undefined : type === "report" ? "Public visé, ton, plan souhaité, longueur ou éléments à mettre en avant…" : "Public visé, angle, thèmes à privilégier…"}>
-            <Textarea value={prompt} maxLength={4000} onChange={(e) => setPrompt(e.target.value)} placeholder={type === "image" ? "Ex. : une illustration éditoriale élégante, format paysage, palette bleu nuit et ivoire…" : type === "infographic" ? "Indiquez le style, la couleur ou le thème principal : « Utilise un thème de couleurs bleu et mets en avant les… »" : type === "report" ? "Ex. : rédiger pour une direction, avec une synthèse exécutive et des recommandations concrètes." : "Ex. : pour un public débutant, insister sur la sécurité."} />
+          {type === "image" && <section className="grid gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div><h3 className="text-sm font-semibold">Idées adaptées à vos sources</h3><p className="text-xs text-text-muted">Leanna analyse le contenu du notebook pour proposer des concepts visuels pertinents.</p></div>
+              {imageSuggestionsLoading && <span className="inline-flex items-center gap-2 text-xs text-text-muted"><Loader2 className="size-3.5 animate-spin" /> Analyse des sources…</span>}
+            </div>
+            {imageSuggestions.length > 0 ? <div className="grid gap-2 sm:grid-cols-2">
+              {imageSuggestions.map((suggestion) => <button key={suggestion.id} type="button" onClick={() => setPrompt(suggestion.prompt)}
+                className={cn("grid gap-1.5 rounded-xl border p-3 text-left transition-colors hover:border-accent hover:bg-accent-soft/40", prompt === suggestion.prompt ? "border-accent bg-accent-soft" : "border-border bg-surface")}>
+                <span className="text-sm font-medium">{suggestion.title}</span>
+                <span className="text-xs leading-5 text-text-muted">{suggestion.description}</span>
+                <span className="mt-1 text-xs font-medium text-accent">Utiliser cette idée</span>
+              </button>)}
+            </div> : imageSuggestionsLoading ? <div className="h-16 animate-pulse rounded-xl bg-surface-raised" /> : <p className="rounded-lg bg-surface-raised p-3 text-xs text-text-muted">{imageSuggestionsError ? "Suggestions indisponibles. Vérifiez le modèle de conversation et les sources, ou rédigez votre propre description." : "Ajoutez ou sélectionnez des sources prêtes pour obtenir des idées visuelles adaptées."}</p>}
+          </section>}
+          <Field id="opt-prompt" label={type === "image" ? "Décrivez l’image à générer" : type === "infographic" ? "Décrivez l’infographie que vous souhaitez créer" : type === "report" ? "Personnaliser le modèle (facultatif)" : "Consignes (facultatif)"} hint={type === "image" ? "Choisissez une idée proposée ou décrivez votre propre image." : type === "infographic" ? undefined : type === "report" ? "Public visé, ton, plan souhaité, longueur ou éléments à mettre en avant…" : "Public visé, angle, thèmes à privilégier…"}>
+            <Textarea value={prompt} maxLength={4000} onChange={(e) => setPrompt(e.target.value)} placeholder={type === "image" ? "Choisissez une idée ci-dessus ou décrivez l’image souhaitée…" : type === "infographic" ? "Indiquez le style, la couleur ou le thème principal : « Utilise un thème de couleurs bleu et mets en avant les… »" : type === "report" ? "Ex. : rédiger pour une direction, avec une synthèse exécutive et des recommandations concrètes." : "Ex. : pour un public débutant, insister sur la sécurité."} />
           </Field>
           {type === "infographic" ? (
             <div className="grid gap-4 border-t pt-4">
