@@ -195,6 +195,9 @@ const REPORT_MODELS = [
   { id: "blog_post", title: "Article de blog", description: "Un article fluide, structuré et agréable à lire." },
 ] as const;
 type AiReportModel = { id: string; title: string; description: string; instruction: string };
+type ImageSuggestion = { id: string; title: string; description: string; prompt: string };
+// Idées d'image mises en cache par notebook : relancées seulement si une nouvelle source est ajoutée ou manuellement.
+const imageSuggestionsCache = new Map<string, { sourceIds: Set<string>; suggestions: ImageSuggestion[] }>();
 
 function CreateDialog({ type, notebookId, sourceIds, referenceImageId, onClose, onGenerate }: { type: ArtType | null; notebookId: string; sourceIds: string[]; referenceImageId?: string | null; onClose: () => void; onGenerate: (t: ArtType, o: Record<string, string>, p?: string) => Promise<boolean> }) {
   const [opts, setOpts] = React.useState<Record<string, string>>({});
@@ -244,30 +247,48 @@ function CreateDialog({ type, notebookId, sourceIds, referenceImageId, onClose, 
     return () => { active = false; };
   }, [type, imagePreferences?.enabled]);
   const sourceKey = sourceIds.join(",");
-  React.useEffect(() => {
-    if (type !== "image") return;
-    if (!imagePreferences) return;
-    if (!imagePreferences.enabled || !imagePreferences.autoSuggestions) { setImageSuggestions([]); setImageSuggestionsLoading(false); return; }
-    let active = true;
-    setImageSuggestions([]);
+  const suggestionRequestId = React.useRef(0);
+  const sourceScope = opts.sourceScope ?? "selected";
+  const suggestionCount = imagePreferences?.suggestionCount;
+  const runImageSuggestions = React.useCallback(() => {
+    if (suggestionCount === undefined) return;
+    const requestId = ++suggestionRequestId.current;
+    const ids = sourceKey.split(",").filter(Boolean);
     setImageSuggestionsError("");
     setImageSuggestionsLoading(true);
     fetch(`/api/v1/notebooks/${notebookId}/artifacts/image-suggestions`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ sourceIds, sourceScope: opts.sourceScope ?? "selected", suggestionCount: imagePreferences.suggestionCount }),
+      body: JSON.stringify({ sourceIds: ids, sourceScope, suggestionCount }),
     }).then(async (response) => {
-      const result = await response.json() as { error?: string; suggestions?: { id: string; title: string; description: string; prompt: string }[] };
+      const result = await response.json() as { error?: string; suggestions?: ImageSuggestion[] };
       if (!response.ok) throw new Error(result.error ?? "image_suggestions_unavailable");
       if (!Array.isArray(result.suggestions)) throw new Error("invalid_image_suggestions");
-      if (active) setImageSuggestions(result.suggestions);
+      imageSuggestionsCache.set(notebookId, { sourceIds: new Set(ids), suggestions: result.suggestions });
+      if (requestId === suggestionRequestId.current) setImageSuggestions(result.suggestions);
     }).catch((error: unknown) => {
-      if (active) setImageSuggestionsError(error instanceof Error ? error.message : "image_suggestions_unavailable");
+      if (requestId === suggestionRequestId.current) setImageSuggestionsError(error instanceof Error ? error.message : "image_suggestions_unavailable");
     }).finally(() => {
-      if (active) setImageSuggestionsLoading(false);
+      if (requestId === suggestionRequestId.current) setImageSuggestionsLoading(false);
     });
-    return () => { active = false; };
-  }, [type, notebookId, sourceKey, opts.sourceScope, imagePreferences]);
+  }, [notebookId, sourceKey, sourceScope, suggestionCount]);
+  // Mise à jour automatique uniquement quand une source inédite apparaît (ou aucune idée en cache).
+  // Le retrait de sources ou la réouverture de la fenêtre réutilise les idées existantes.
+  React.useEffect(() => {
+    if (type !== "image") return;
+    if (!imagePreferences) return;
+    if (!imagePreferences.enabled || !imagePreferences.autoSuggestions) { setImageSuggestions([]); setImageSuggestionsLoading(false); return; }
+    const currentIds = sourceKey.split(",").filter(Boolean);
+    const cached = imageSuggestionsCache.get(notebookId);
+    if (cached) {
+      setImageSuggestions(cached.suggestions);
+      if (currentIds.every((id) => cached.sourceIds.has(id))) return;
+    } else {
+      setImageSuggestions([]);
+    }
+    if (currentIds.length === 0) return;
+    runImageSuggestions();
+  }, [type, notebookId, sourceKey, imagePreferences, runImageSuggestions]);
 
   const aiModelsCache = React.useRef<{ notebookId: string; sourceIds: Set<string>; suggestions: AiReportModel[] } | null>(null);
   React.useEffect(() => {
@@ -463,6 +484,7 @@ function CreateDialog({ type, notebookId, sourceIds, referenceImageId, onClose, 
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div><h3 className="text-sm font-semibold">Idées adaptées à vos sources</h3><p className="text-xs text-text-muted">Leanna analyse le contenu du notebook pour proposer des concepts visuels pertinents.</p></div>
               {imageSuggestionsLoading && <span className="inline-flex items-center gap-2 text-xs text-text-muted"><Loader2 className="size-3.5 animate-spin" /> Analyse des sources…</span>}
+              {imagePreferences?.enabled && <Button type="button" variant="secondary" size="sm" disabled={imageSuggestionsLoading || sourceIds.length === 0} onClick={runImageSuggestions}><Sparkles className="size-3.5" /> {imageSuggestions.length > 0 ? "Régénérer les idées" : "Générer des idées"}</Button>}
             </div>
             {imageSuggestions.length > 0 ? <div className="grid gap-2 sm:grid-cols-2">
               {imageSuggestions.map((suggestion) => <button key={suggestion.id} type="button" onClick={() => setPrompt(suggestion.prompt)}
