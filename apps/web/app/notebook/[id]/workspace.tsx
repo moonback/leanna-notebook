@@ -745,20 +745,17 @@ function AddSourcesDialog({ open, onOpenChange, notebookId, onAdded, onWebSearch
             const up = await fetch(j.uploadUrl, { method: "PUT", headers: { "content-type": j.contentType }, body: file });
             if (!up.ok) throw new Error("envoi échoué");
             batch.push({ type: "upload", storagePath: j.storagePath, title: relativePath.slice(0, 300) });
-            if (batch.length === 50 || index === compatibleFiles.length - 1) {
+          } catch (uploadError) {
+            failures.push(`${relativePath} : ${uploadError instanceof Error ? uploadError.message : "erreur inconnue"}`);
+          }
+          if (batch.length === 50 || index === compatibleFiles.length - 1) {
+            if (batch.length) {
               await post(batch);
               imported += batch.length;
               batch = [];
             }
-          } catch (uploadError) {
-            failures.push(`${relativePath} : ${uploadError instanceof Error ? uploadError.message : "erreur inconnue"}`);
-          } finally {
-            setProgress({ done: index + 1, total: compatibleFiles.length });
           }
-        }
-        if (batch.length) {
-          await post(batch);
-          imported += batch.length;
+          setProgress({ done: index + 1, total: compatibleFiles.length });
         }
         if (!imported) throw new Error(failures[0] ?? "Aucun document n’a pu être importé.");
         const skipped = ignoredFiles + failures.length;
@@ -780,7 +777,7 @@ function AddSourcesDialog({ open, onOpenChange, notebookId, onAdded, onWebSearch
       }
       setUrl(""); setPaste({ title: "", text: "" }); setSelectedFiles([]); if (fileRef.current) fileRef.current.value = "";
       onAdded();
-      if (!error) onOpenChange(false);
+      if (!error && !(tab === "file" && compatibleFiles.length > 0 && folderFiles.length > compatibleFiles.length)) onOpenChange(false);
     } catch (err) { setError(err instanceof Error ? err.message : "Ajout impossible."); }
     finally { setBusy(false); setProgress(null); }
   }
