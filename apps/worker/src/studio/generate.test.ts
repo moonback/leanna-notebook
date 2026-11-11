@@ -114,7 +114,7 @@ describe("modèles de rapport du Studio", () => {
 
 
 describe("nouveaux formats du Studio", () => {
-  const formats = ["infographic", "timeline", "comparison", "glossary", "faq", "diagram", "editorial", "study_plan"];
+  const formats = ["infographic", "timeline", "comparison", "glossary", "faq", "diagram", "editorial", "study_plan", "one_pager", "swot", "decision_tree", "memo", "raci", "case_study", "literature_review", "presentation_script", "roadmap", "troubleshooting"];
   it.each(formats)("génère %s en Markdown sourcé et conserve les citations", (type) => {
     const prompt = buildPrompt(type, {}, null, "<passage n=\"1\">Le DMX pilote 512 canaux.</passage>", "fr");
     expect(prompt.json).toBe(false);
