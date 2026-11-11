@@ -422,7 +422,9 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
             return;
           }
           const content = msg.serverContent;
-          if (content?.interrupted) {
+          // Pendant l'intervention de Roxane, le micro est coupé : un `interrupted` tardif de Leanna
+          // (écho de sa propre voix) ne doit pas stopper l'audio de Roxane, qui partage la file de lecture.
+          if (content?.interrupted && !roxaneSpeaking.current) {
             playbackNodes.current.forEach((n) => { try { n.stop(); } catch {} });
             playbackNodes.current.clear();
             nextPlaybackTime.current = 0;
