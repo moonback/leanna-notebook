@@ -80,3 +80,7 @@ Les fichiers de test existants n'ont pas pu être recensés exhaustivement ni ex
 - Correction d'un retour à la ligne échappé littéralement dans l'import de ce dernier fichier de test, qui empêchait son parsing TypeScript.
 
 Ces tests ont été modifiés mais ne sont pas exécutés dans cet environnement distant. Les parcours de résumés automatiques et l'injection d'overrides de catalogue dans le handler Studio nécessitent encore des tests dédiés.
+
+### Résumés automatiques
+
+Le fichier `apps/worker/src/studio/summaries.test.ts` couvre la composition des messages pour le résumé de source et la vue d'ensemble, l'omission des personnalisations vides, ainsi que la validation des schémas JSON. Ces cas sont ajoutés mais leur exécution reste à effectuer localement.
