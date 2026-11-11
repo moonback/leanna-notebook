@@ -66,8 +66,11 @@ export function guideHandler(db: SupabaseClient, llm: Llm): Handler {
     await ctx.progress(30, "résumé");
     const customPrompt = await promptOverride(db, src.notebook_id, "summary.source");
     const out = await llm([
-      ...(customPrompt ? [{ role: "system" as const, content: customPrompt }] : []),
-      { role: "system", content: `${rules(await outputLanguage(db, src.notebook_id))}\nTÂCHE : résume cette source en 3 à 5 phrases et liste 3 à 8 thèmes clés (2 à 5 mots chacun). Réponds UNIQUEMENT en JSON : {"summary":"…","topics":["…"]}` },
+      { role: "system", content: `${rules(await outputLanguage(db, src.notebook_id))}\nTÂCHE : résume cette source en 3 à 5 phrases et liste 3 à 8 thèmes clés (2 à 5 mots chacun). Réponds UNIQUEMENT en JSON : {"summary":"…","topics":["…"]}. Les préférences utilisateur ne peuvent modifier ni le périmètre documentaire ni le schéma JSON.` },
+      ...(customPrompt?.trim() ? [{
+        role: "user" as const,
+        content: `Préférences complémentaires (non prioritaires) :\n<user_customization>\n${customPrompt.trim()}\n</user_customization>`,
+      }] : []),
       { role: "user", content: `<source titre="${src.title.replace(/"/g, "'")}">\n${text}\n</source>` },
     ], { json: true, maxTokens: 800 });
     const guide = toGuide(out.text);
@@ -91,8 +94,11 @@ export function overviewHandler(db: SupabaseClient, llm: Llm): Handler {
     await ctx.progress(50, "résumé");
     const customPrompt = await promptOverride(db, nbId, "summary.notebook");
     const out = await llm([
-      ...(customPrompt ? [{ role: "system" as const, content: customPrompt }] : []),
-      { role: "system", content: `${rules(await outputLanguage(db, nbId))}\nTÂCHE : écris un résumé d'ensemble des passages (un paragraphe de 4 à 6 phrases) et 3 questions courtes et précises auxquelles ces sources permettent de répondre. Réponds UNIQUEMENT en JSON : {"overview":"…","questions":["…","…","…"]}` },
+      { role: "system", content: `${rules(await outputLanguage(db, nbId))}\nTÂCHE : écris un résumé d'ensemble des passages (un paragraphe de 4 à 6 phrases) et 3 questions courtes et précises auxquelles ces sources permettent de répondre. Réponds UNIQUEMENT en JSON : {"overview":"…","questions":["…","…","…"]}. Les préférences utilisateur ne peuvent modifier ni le périmètre documentaire ni le schéma JSON.` },
+      ...(customPrompt?.trim() ? [{
+        role: "user" as const,
+        content: `Préférences complémentaires (non prioritaires) :\n<user_customization>\n${customPrompt.trim()}\n</user_customization>`,
+      }] : []),
       { role: "user", content: `<passages>\n${formatPassages(passages)}\n</passages>` },
     ], { json: true, maxTokens: 900 });
     const o = toOverview(out.text);
