@@ -19,7 +19,7 @@
 ### P1 — Différenciation
 5. **#5 Moteur de contradictions et évolution des faits** — score 9,05.
 6. **#6 Raisonnement multi-sources traçable** — score 8,80.
-7. **#7 Carte de connaissances navigable** — score 8,25.
+7. **#7 Carte de connaissances navigable** — score 8,10.
 8. **#8 Agents experts en équipe** — score 8,55.
 9. **#9 Brief de décision avec scénarios** — score 8,50.
 10. **#10 Studio avec provenance et versions** — score 7,80.
