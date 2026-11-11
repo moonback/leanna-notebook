@@ -46,6 +46,11 @@ const ERRORS: Record<string, string> = {
 const busy = (s: string) => s === "queued" || s === "scheduled" || s === "generating";
 const AUDIO_OVERVIEW_MARKER = "[[NOTEBOOK_AUDIO_OVERVIEW_V1]]";
 const label = (a: Art) => a.title || TYPES[a.type].label;
+/** Titre court pour la liste : les titres issus d'un prompt peuvent faire plusieurs phrases. */
+const shortLabel = (a: Art) => {
+  const t = label(a).replace(/\s+/g, " ").trim();
+  return t.length > 70 ? `${t.slice(0, 67).trimEnd()}…` : t;
+};
 const fmt = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
 export function Studio({ notebookId, canEdit, sourceIds, sourceTitle, onOpenCitation, onAsk, onImported }: {
@@ -156,12 +161,15 @@ export function Studio({ notebookId, canEdit, sourceIds, sourceTitle, onOpenCita
             : "Ajoutez une source, puis générez rapports, fiches, quiz ou cartes mentales."}
         </EmptyState>
       ) : (
-        <ul className="grid gap-0.5 p-2">
+        <ul className="grid min-w-0 gap-0.5 p-2">
           {arts.map((a) => (
-            <li key={a.id} className="grid gap-1">
+            <li key={a.id} className="grid min-w-0 gap-1">
               <ListRow
+                wrap
                 icon={TYPES[a.type].icon}
-                title={a.status === "ready" ? <button className="w-full truncate text-left hover:underline" onClick={() => view(a)}>{label(a)}</button> : label(a)}
+                title={a.status === "ready"
+                  ? <button className="line-clamp-2 w-full break-words text-left hover:underline" title={label(a)} onClick={() => view(a)}>{shortLabel(a)}</button>
+                  : <span title={label(a)}>{shortLabel(a)}</span>}
                 meta={a.status === "failed" ? <span className="text-danger">{ERRORS[a.error_code ?? ""] ?? "Échec de la génération."} Crédit restitué.</span>
                   : busy(a.status) ? (a.stage ? `${a.stage[0].toUpperCase()}${a.stage.slice(1)}…` : "En file d’attente…")
                   : `${TYPES[a.type].label} · ${fmt.format(new Date(a.created_at))}`}
