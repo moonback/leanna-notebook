@@ -30,6 +30,7 @@ const TYPES: Record<ArtType, { label: string; icon: React.ReactNode; hint: strin
   diagram: { label: "Diagramme", icon: <Workflow />, hint: "Flux ou organigramme Mermaid éditable" },
   editorial: { label: "Contenu éditorial", icon: <Newspaper />, hint: "Newsletter, article ou fil social" },
   study_plan: { label: "Plan d'étude", icon: <CalendarDays />, hint: "Planning de révision construit depuis les sources" },
+  image: { label: "Image IA", icon: <ImageIcon />, hint: "Créer une image à partir des sources" },
 };
 const ERRORS: Record<string, string> = {
   ai_not_configured: "L’assistant n’est pas configuré côté serveur.",
