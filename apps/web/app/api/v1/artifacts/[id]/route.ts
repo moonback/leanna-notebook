@@ -32,7 +32,15 @@ export const DELETE = handle(async (_req: NextRequest, { params }: Params) => {
   await requireUser();
   const { id } = await params;
   await requireRole(await artifactNotebook(id), "editor");
-  const { error } = await createServiceClient().from("artifacts").delete().eq("id", id);
+  const db = createServiceClient();
+  const { data: imageVersions } = await db.from("artifact_image_versions").select("storage_path").eq("artifact_id", id);
+  const { data: artifact } = await db.from("artifacts").select("storage_path,type").eq("id", id).single();
+  const paths = [...new Set([artifact?.type === "image" ? artifact.storage_path : null, ...(imageVersions ?? []).map((v) => v.storage_path)].filter((p): p is string => Boolean(p)))];
+  if (paths.length) {
+    const { error: storageError } = await db.storage.from("artifacts").remove(paths);
+    if (storageError) throw storageError;
+  }
+  const { error } = await db.from("artifacts").delete().eq("id", id);
   if (error) throw error;
   return new NextResponse(null, { status: 204 });
 });

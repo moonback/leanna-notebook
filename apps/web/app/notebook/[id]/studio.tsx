@@ -1,6 +1,6 @@
 "use client";
 import * as React from "react";
-import { AudioLines, BookOpen, Check, ChevronDown, ChevronRight, Download, Layers, ListChecks, Network, RotateCcw, Sparkles, Trash2, X, Clock3, Table2, BookText, CircleHelp, Workflow, Newspaper, CalendarDays, BarChart3, FilePlus2 } from "lucide-react";
+import { Loader2, Image as ImageIcon, AudioLines, BookOpen, Check, ChevronDown, ChevronRight, Download, Layers, ListChecks, Network, RotateCcw, Sparkles, Trash2, X, Clock3, Table2, BookText, CircleHelp, Workflow, Newspaper, CalendarDays, BarChart3, FilePlus2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, Textarea } from "@/components/ui/field";
 import { Alert, Badge, EmptyState, Progress, Skeleton } from "@/components/ui/feedback";
@@ -12,7 +12,7 @@ import { toast } from "@/components/ui/toast";
 import { ArtifactShareButton } from "./artifact-share-button";
 import { cn } from "@/lib/utils";
 
-type ArtType = "report" | "flashcards" | "quiz" | "mind_map" | "audio" | "infographic" | "timeline" | "comparison" | "glossary" | "faq" | "diagram" | "editorial" | "study_plan";
+type ArtType = "report" | "flashcards" | "quiz" | "mind_map" | "audio" | "infographic" | "timeline" | "comparison" | "glossary" | "faq" | "diagram" | "editorial" | "study_plan" | "image";
 type Art = { id: string; type: ArtType; title: string | null; status: string; error_code: string | null; options: Record<string, string> | null; custom_prompt?: string | null; created_at: string; progress?: number; stage?: string; unread?: boolean };
 type Cite = { marker: number; source_id: string; quote_text: string; char_start: number; char_end: number; verified: boolean };
 
@@ -30,6 +30,7 @@ const TYPES: Record<ArtType, { label: string; icon: React.ReactNode; hint: strin
   diagram: { label: "Diagramme", icon: <Workflow />, hint: "Flux ou organigramme Mermaid éditable" },
   editorial: { label: "Contenu éditorial", icon: <Newspaper />, hint: "Newsletter, article ou fil social" },
   study_plan: { label: "Plan d'étude", icon: <CalendarDays />, hint: "Planning de révision construit depuis les sources" },
+  image: { label: "Image IA", icon: <ImageIcon />, hint: "Créer une image à partir des sources" },
 };
 const ERRORS: Record<string, string> = {
   ai_not_configured: "L’assistant n’est pas configuré côté serveur.",
@@ -40,6 +41,7 @@ const ERRORS: Record<string, string> = {
   audio_tts_config: "La configuration du fournisseur de voix est invalide.",
   audio_voices_invalid: "Configurez deux identifiants de voix différents.",
   audio_ffmpeg_not_installed: "ffmpeg est absent du PATH du worker. Installez-le puis redémarrez le worker.",
+  image_generation_disabled: "La génération d’images est désactivée dans Réglages → Intelligence artificielle.", image_provider_rejected: "Le modèle image a refusé la requête ou n’est pas disponible.", image_generation_failed: "La génération de l’image a échoué. Les crédits sont restitués.", invalid_image_response: "Le fournisseur n’a pas renvoyé une image valide.", image_too_large: "L’image dépasse la limite de 20 Mo.",
 };
 const busy = (s: string) => s === "queued" || s === "scheduled" || s === "generating";
 const AUDIO_OVERVIEW_MARKER = "[[NOTEBOOK_AUDIO_OVERVIEW_V1]]";
@@ -53,9 +55,23 @@ export function Studio({ notebookId, canEdit, sourceIds, sourceTitle, onOpenCita
   const [arts, setArts] = React.useState<Art[] | null>(null);
   const [failedLoad, setFailedLoad] = React.useState(false);
   const [creating, setCreating] = React.useState<ArtType | null>(null);
+  const [referenceImageId, setReferenceImageId] = React.useState<string | null>(null);
+  const [imageGenerationEnabled, setImageGenerationEnabled] = React.useState(false);
   const [open, setOpen] = React.useState<string | null>(null);
   const [confirm, confirmDialog] = useConfirm();
   const readyCount = sourceIds.length;
+
+  React.useEffect(() => {
+    let active = true;
+    fetch("/api/v1/ai/image-preferences", { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("image_preferences_unavailable");
+        const result = await response.json() as { settings?: { enabled?: boolean } };
+        if (active) setImageGenerationEnabled(result.settings?.enabled === true);
+      })
+      .catch(() => { if (active) setImageGenerationEnabled(false); });
+    return () => { active = false; };
+  }, []);
 
   const seen = React.useRef(new Map<string, string>());
   const load = React.useCallback(async () => {
@@ -84,7 +100,7 @@ export function Studio({ notebookId, canEdit, sourceIds, sourceTitle, onOpenCita
   async function generate(type: ArtType, options: Record<string, string>, customPrompt?: string) {
     const r = await fetch(`/api/v1/notebooks/${notebookId}/artifacts`, {
       method: "POST", headers: { "content-type": "application/json", "idempotency-key": crypto.randomUUID() },
-      body: JSON.stringify({ type, options, sourceIds: type === "infographic" && options.sourceScope === "all" ? [] : sourceIds, ...(customPrompt ? { customPrompt } : {}) }),
+      body: JSON.stringify({ type, options, sourceIds: (type === "infographic" || type === "image") && options.sourceScope === "all" ? [] : sourceIds, ...(customPrompt ? { customPrompt } : {}) }),
     });
     const j = await r.json().catch(() => ({}));
     if (r.status === 429) { toast({ title: "Quota atteint", description: "Changez d’offre dans les réglages ou réessayez plus tard.", tone: "error" }); return false; }
@@ -113,7 +129,7 @@ export function Studio({ notebookId, canEdit, sourceIds, sourceTitle, onOpenCita
       {confirmDialog}
       {canEdit && (
         <div className="grid grid-cols-2 gap-2 border-b p-3">
-          {(["report", "flashcards", "quiz", "mind_map", "infographic", "timeline", "comparison", "glossary", "faq", "diagram", "editorial", "study_plan"] as ArtType[]).map((t) => (
+          {(["report", "flashcards", "quiz", "mind_map", "infographic", "timeline", "comparison", "glossary", "faq", "diagram", "editorial", "study_plan", ...(imageGenerationEnabled ? ["image" as const] : [])] as ArtType[]).map((t) => (
             <Button key={t} variant="secondary" className="justify-start" disabled={!readyCount} title={readyCount ? TYPES[t].hint : "Ajoutez d’abord une source"} onClick={() => setCreating(t)}>
               {TYPES[t].icon} {TYPES[t].label}
             </Button>
@@ -164,8 +180,8 @@ export function Studio({ notebookId, canEdit, sourceIds, sourceTitle, onOpenCita
           ))}
         </ul>
       )}
-      <CreateDialog type={creating} notebookId={notebookId} sourceIds={sourceIds} onClose={() => setCreating(null)} onGenerate={generate} />
-      <ArtifactViewer id={open} canShare={canEdit} onImported={onImported} onClose={() => setOpen(null)} sourceTitle={sourceTitle} onOpenCitation={onOpenCitation} onAsk={(t) => { setOpen(null); onAsk(t); }} />
+      <CreateDialog type={creating === "image" && !imageGenerationEnabled ? null : creating} notebookId={notebookId} sourceIds={sourceIds} referenceImageId={referenceImageId} onClose={() => { setCreating(null); setReferenceImageId(null); }} onGenerate={generate} />
+      <ArtifactViewer id={open} canShare={canEdit} onImported={onImported} onEditImage={imageGenerationEnabled ? (artifactId) => { setOpen(null); setReferenceImageId(artifactId); setCreating("image"); } : undefined} onClose={() => setOpen(null)} sourceTitle={sourceTitle} onOpenCitation={onOpenCitation} onAsk={(t) => { setOpen(null); onAsk(t); }} />
     </Panel>
   );
 }
@@ -180,7 +196,7 @@ const REPORT_MODELS = [
 ] as const;
 type AiReportModel = { id: string; title: string; description: string; instruction: string };
 
-function CreateDialog({ type, notebookId, sourceIds, onClose, onGenerate }: { type: ArtType | null; notebookId: string; sourceIds: string[]; onClose: () => void; onGenerate: (t: ArtType, o: Record<string, string>, p?: string) => Promise<boolean> }) {
+function CreateDialog({ type, notebookId, sourceIds, referenceImageId, onClose, onGenerate }: { type: ArtType | null; notebookId: string; sourceIds: string[]; referenceImageId?: string | null; onClose: () => void; onGenerate: (t: ArtType, o: Record<string, string>, p?: string) => Promise<boolean> }) {
   const [opts, setOpts] = React.useState<Record<string, string>>({});
   const [prompt, setPrompt] = React.useState("");
   const [sending, setSending] = React.useState(false);
@@ -188,9 +204,68 @@ function CreateDialog({ type, notebookId, sourceIds, onClose, onGenerate }: { ty
   const [aiModelsLoading, setAiModelsLoading] = React.useState(false);
   const [aiModelsError, setAiModelsError] = React.useState(false);
   const [selectedAiModel, setSelectedAiModel] = React.useState<string | null>(null);
+  const [imageModels, setImageModels] = React.useState<{ id: string; name: string }[]>([]);
+  const [imageModelsError, setImageModelsError] = React.useState(false);
+  const [imagePreferences, setImagePreferences] = React.useState<{ enabled: boolean; autoSuggestions: boolean; suggestionCount: number; defaultModelId: string | null; defaultOrientation: "landscape" | "portrait" | "square" } | null>(null);
+  const [imageSuggestions, setImageSuggestions] = React.useState<{ id: string; title: string; description: string; prompt: string }[]>([]);
+  const [imageSuggestionsLoading, setImageSuggestionsLoading] = React.useState(false);
+  const [imageSuggestionsError, setImageSuggestionsError] = React.useState("");
   const styleCarouselRef = React.useRef<HTMLDivElement | null>(null);
 
+  React.useEffect(() => {
+    if (type !== "image") return;
+    setImagePreferences(null);
+    let active = true;
+    fetch("/api/v1/ai/image-preferences", { cache: "no-store" }).then(async (response) => {
+      if (!response.ok) throw new Error("image_preferences_unavailable");
+      return response.json() as Promise<{ settings: { enabled: boolean; autoSuggestions: boolean; suggestionCount: number; defaultModelId: string | null; defaultOrientation: "landscape" | "portrait" | "square" } }>;
+    }).then((result) => {
+      if (!active) return;
+      setImagePreferences(result.settings);
+      setOpts((current) => ({ ...current, orientation: result.settings.defaultOrientation, ...(result.settings.defaultModelId ? { modelId: result.settings.defaultModelId } : {}) }));
+    }).catch(() => { if (active) setImagePreferences({ enabled: true, autoSuggestions: true, suggestionCount: 4, defaultModelId: null, defaultOrientation: "landscape" }); });
+    return () => { active = false; };
+  }, [type]);
+  React.useEffect(() => {
+    if (type !== "image") return;
+    let active = true;
+    fetch("/api/v1/ai/image-models").then(async (response) => {
+      if (!response.ok) throw new Error("image_catalog_unavailable");
+      return response.json() as Promise<{ models: { id: string; name: string }[]; defaultModelId: string }>;
+    }).then((result) => {
+      if (!active) return;
+      setImageModels(result.models ?? []);
+      setImageModelsError(false);
+      setOpts((current) => ({ ...current, modelId: current.modelId || result.defaultModelId }));
+    }).catch(() => { if (active) setImageModelsError(true); });
+    return () => { active = false; };
+  }, [type]);
   const sourceKey = sourceIds.join(",");
+  React.useEffect(() => {
+    if (type !== "image") return;
+    if (!imagePreferences) return;
+    if (!imagePreferences.enabled || !imagePreferences.autoSuggestions) { setImageSuggestions([]); setImageSuggestionsLoading(false); return; }
+    let active = true;
+    setImageSuggestions([]);
+    setImageSuggestionsError("");
+    setImageSuggestionsLoading(true);
+    fetch(`/api/v1/notebooks/${notebookId}/artifacts/image-suggestions`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ sourceIds, sourceScope: opts.sourceScope ?? "selected", suggestionCount: imagePreferences.suggestionCount }),
+    }).then(async (response) => {
+      const result = await response.json() as { error?: string; suggestions?: { id: string; title: string; description: string; prompt: string }[] };
+      if (!response.ok) throw new Error(result.error ?? "image_suggestions_unavailable");
+      if (!Array.isArray(result.suggestions)) throw new Error("invalid_image_suggestions");
+      if (active) setImageSuggestions(result.suggestions);
+    }).catch((error: unknown) => {
+      if (active) setImageSuggestionsError(error instanceof Error ? error.message : "image_suggestions_unavailable");
+    }).finally(() => {
+      if (active) setImageSuggestionsLoading(false);
+    });
+    return () => { active = false; };
+  }, [type, notebookId, sourceKey, opts.sourceScope, imagePreferences]);
+
   const aiModelsCache = React.useRef<{ notebookId: string; sourceIds: Set<string>; suggestions: AiReportModel[] } | null>(null);
   React.useEffect(() => {
     if (type !== "report" || !sourceKey) return;
@@ -227,7 +302,7 @@ function CreateDialog({ type, notebookId, sourceIds, onClose, onGenerate }: { ty
     return () => { active = false; };
   }, [type, notebookId, sourceKey]);
   React.useEffect(() => {
-    setOpts(type === "report" ? { template: "briefing", reportFormat: "document" } : type === "flashcards" || type === "quiz" ? { difficulty: "medium", count: "standard" } : type === "audio" ? { format: "deep_dive", duration: "standard", style: "accessible" } : type === "infographic" ? { language: "fr", orientation: "landscape", visualStyle: "auto", detailLevel: "standard", sourceScope: "selected" } : {});
+    setOpts(type === "report" ? { template: "briefing", reportFormat: "document" } : type === "flashcards" || type === "quiz" ? { difficulty: "medium", count: "standard" } : type === "audio" ? { format: "deep_dive", duration: "standard", style: "accessible" } : type === "infographic" ? { language: "fr", orientation: "landscape", visualStyle: "auto", detailLevel: "standard", sourceScope: "selected" } : type === "image" ? { orientation: "landscape", sourceScope: "selected" } : {});
     setPrompt("");
   }, [type]);
   if (!type) return null;
@@ -261,14 +336,17 @@ function CreateDialog({ type, notebookId, sourceIds, onClose, onGenerate }: { ty
     const audioPrompt = type === "audio" ? `${AUDIO_OVERVIEW_MARKER}${prompt.trim() ? `\\n${prompt.trim()}` : ""}` : undefined;
     const selectedModel = aiModels.find((model) => model.id === selectedAiModel);
     const reportPrompt = [selectedModel?.instruction, prompt.trim()].filter(Boolean).join("\n\n");
-    const ok = await onGenerate(type!, opts, type === "audio" ? audioPrompt : type === "report" ? reportPrompt || undefined : prompt.trim() || undefined);
+    const imageOptions = type === "image" && referenceImageId ? { ...opts, referenceArtifactId: referenceImageId } : opts;
+    const ok = await onGenerate(type!, imageOptions, type === "audio" ? audioPrompt : type === "report" ? reportPrompt || undefined : prompt.trim() || undefined);
     setSending(false);
     if (ok) onClose();
   }
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent size="lg" title={type === "infographic" ? "Personnaliser l’infographie" : type === "report" ? "Créer un rapport" : `Générer : ${TYPES[type].label}`} description={type === "infographic" ? "Configurez la langue, le format, le style et les sources avant de lancer la création." : type === "report" ? "Choisissez un format et un modèle pour composer un rapport à partir de vos sources." : "À partir des sources sélectionnées. La génération continue en arrière-plan."}>
+      <DialogContent size="lg" title={type === "infographic" ? "Personnaliser l’infographie" : type === "image" ? "Créer une image IA" : type === "report" ? "Créer un rapport" : `Générer : ${TYPES[type].label}`} description={type === "infographic" ? "Configurez la langue, le format, le style et les sources avant de lancer la création." : type === "image" ? "Décrivez l’image souhaitée à partir des sources du notebook." : type === "report" ? "Choisissez un format et un modèle pour composer un rapport à partir de vos sources." : "À partir des sources sélectionnées. La génération continue en arrière-plan."}>
         <form onSubmit={submit} className="grid gap-5">
+          {type === "image" && imagePreferences?.enabled === false && <Alert tone="warning" title="Génération d’images désactivée">Activez la génération d’images dans Réglages → Intelligence artificielle pour utiliser cette fonctionnalité.</Alert>}
+          {type === "image" && referenceImageId && <Alert tone="warning" title="Modification d’une image existante">L’image actuelle sera utilisée comme référence. Une nouvelle image sera créée sans écraser l’originale.</Alert>}
           {type === "report" && (
             <>
               <section className="grid gap-3">
@@ -375,10 +453,25 @@ function CreateDialog({ type, notebookId, sourceIds, onClose, onGenerate }: { ty
               </section>
             </div>
           )}
+          {type === "image" && <section className="grid gap-3 rounded-xl border border-border p-3"><h3 className="text-sm font-semibold">Modèle et format</h3>{imageModels.length > 0 ? choice("modelId", "Modèle IA", imageModels.map((model) => [model.id, model.name] as [string, string])) : <p className="text-xs text-text-muted">{imageModelsError ? "Catalogue indisponible : le modèle par défaut sera utilisé." : "Chargement des modèles image…"}</p>}{choice("orientation", "Orientation", [["landscape", "Paysage"], ["portrait", "Portrait"], ["square", "Carré"]])}{choice("sourceScope", "Sources à utiliser", [["selected", sourceIds.length + " sources sélectionnées"], ["all", "Toutes les sources prêtes"]])}<p className="text-xs text-text-muted">Les valeurs par défaut sont définies dans Réglages → Intelligence artificielle.</p></section>}
           {type === "audio" && <div className="grid gap-4 sm:grid-cols-2">{choice("format", "Format du podcast", [["deep_dive", "Deep Dive · approfondi"], ["brief", "Brief · essentiel"], ["critique", "Critique · analyse"], ["debate", "Débat · points de vue"]])}{choice("duration", "Durée cible", [["short", "Court · 5 min"], ["standard", "Standard · 10 min"], ["long", "Long · 15 min"]])}{choice("style", "Ton", [["accessible", "Accessible et pédagogique"], ["professional", "Professionnel et précis"], ["dynamic", "Dynamique et vivant"]])}</div>}
           {(type === "flashcards" || type === "quiz") && <div className="grid gap-4 sm:grid-cols-2">{choice("difficulty", "Difficulté", [["easy", "Facile"], ["medium", "Moyenne"], ["hard", "Difficile"]])}{choice("count", "Quantité", [["fewer", "Moins"], ["standard", "Standard"], ["more", "Plus"]])}</div>}
-          <Field id="opt-prompt" label={type === "infographic" ? "Décrivez l’infographie que vous souhaitez créer" : type === "report" ? "Personnaliser le modèle (facultatif)" : "Consignes (facultatif)"} hint={type === "infographic" ? undefined : type === "report" ? "Public visé, ton, plan souhaité, longueur ou éléments à mettre en avant…" : "Public visé, angle, thèmes à privilégier…"}>
-            <Textarea value={prompt} maxLength={4000} onChange={(e) => setPrompt(e.target.value)} placeholder={type === "infographic" ? "Indiquez le style, la couleur ou le thème principal : « Utilise un thème de couleurs bleu et mets en avant les… »" : type === "report" ? "Ex. : rédiger pour une direction, avec une synthèse exécutive et des recommandations concrètes." : "Ex. : pour un public débutant, insister sur la sécurité."} />
+          {type === "image" && <section className="grid gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div><h3 className="text-sm font-semibold">Idées adaptées à vos sources</h3><p className="text-xs text-text-muted">Leanna analyse le contenu du notebook pour proposer des concepts visuels pertinents.</p></div>
+              {imageSuggestionsLoading && <span className="inline-flex items-center gap-2 text-xs text-text-muted"><Loader2 className="size-3.5 animate-spin" /> Analyse des sources…</span>}
+            </div>
+            {imageSuggestions.length > 0 ? <div className="grid gap-2 sm:grid-cols-2">
+              {imageSuggestions.map((suggestion) => <button key={suggestion.id} type="button" onClick={() => setPrompt(suggestion.prompt)}
+                className={cn("grid gap-1.5 rounded-xl border p-3 text-left transition-colors hover:border-accent hover:bg-accent-soft/40", prompt === suggestion.prompt ? "border-accent bg-accent-soft" : "border-border bg-surface")}>
+                <span className="text-sm font-medium">{suggestion.title}</span>
+                <span className="text-xs leading-5 text-text-muted">{suggestion.description}</span>
+                <span className="mt-1 text-xs font-medium text-accent">Utiliser cette idée</span>
+              </button>)}
+            </div> : imageSuggestionsLoading ? <div className="h-16 animate-pulse rounded-xl bg-surface-raised" /> : <p className="rounded-lg bg-surface-raised p-3 text-xs text-text-muted">{imageSuggestionsError ? ({ openrouter_not_configured: "Clé API OpenRouter absente côté serveur.", chat_model_not_configured: "Aucun modèle de conversation n’est configuré. Choisissez-en un dans Réglages → Intelligence artificielle.", openrouter_invalid_key: "La clé API OpenRouter est invalide.", openrouter_insufficient_credits: "Votre compte OpenRouter n’a plus de crédits.", openrouter_chat_model_unavailable: "Le modèle de conversation sélectionné n’est pas disponible sur OpenRouter.", openrouter_rate_limited: "OpenRouter limite temporairement les requêtes. Réessayez dans quelques instants.", image_suggestions_disabled: "Les suggestions automatiques sont désactivées dans Réglages → Intelligence artificielle → Génération d’images.", no_ready_sources: "Aucune source prête sélectionnée. Sélectionnez des sources ou choisissez « Toutes les sources prêtes ».", no_source_content: "Les sources sélectionnées ne contiennent pas encore de texte exploitable.", image_suggestions_provider_error: "OpenRouter a rencontré une erreur. Vérifiez les journaux serveur pour le détail." } as Record<string, string>)[imageSuggestionsError] ?? "Suggestions indisponibles. Vérifiez votre configuration OpenRouter et les sources, ou rédigez votre propre description." : "Ajoutez ou sélectionnez des sources prêtes pour obtenir des idées visuelles adaptées."}</p>}
+          </section>}
+          <Field id="opt-prompt" label={type === "image" ? "Décrivez l’image à générer" : type === "infographic" ? "Décrivez l’infographie que vous souhaitez créer" : type === "report" ? "Personnaliser le modèle (facultatif)" : "Consignes (facultatif)"} hint={type === "image" ? "Choisissez une idée proposée ou décrivez votre propre image." : type === "infographic" ? undefined : type === "report" ? "Public visé, ton, plan souhaité, longueur ou éléments à mettre en avant…" : "Public visé, angle, thèmes à privilégier…"}>
+            <Textarea value={prompt} maxLength={4000} onChange={(e) => setPrompt(e.target.value)} placeholder={type === "image" ? "Choisissez une idée ci-dessus ou décrivez l’image souhaitée…" : type === "infographic" ? "Indiquez le style, la couleur ou le thème principal : « Utilise un thème de couleurs bleu et mets en avant les… »" : type === "report" ? "Ex. : rédiger pour une direction, avec une synthèse exécutive et des recommandations concrètes." : "Ex. : pour un public débutant, insister sur la sécurité."} />
           </Field>
           {type === "infographic" ? (
             <div className="grid gap-4 border-t pt-4">
@@ -394,7 +487,7 @@ function CreateDialog({ type, notebookId, sourceIds, onClose, onGenerate }: { ty
           ) : (
             <div className="flex justify-end gap-2 border-t pt-4">
               <DialogClose asChild><Button type="button" variant="secondary">Annuler</Button></DialogClose>
-              <Button type="submit" loading={sending}><Sparkles aria-hidden /> {type === "report" ? "Générer le rapport" : "Générer"}</Button>
+              <Button type="submit" loading={sending} disabled={type === "image" && imagePreferences?.enabled === false}><Sparkles aria-hidden /> {type === "report" ? "Générer le rapport" : "Générer"}</Button>
             </div>
           )}
         </form>
@@ -405,7 +498,7 @@ function CreateDialog({ type, notebookId, sourceIds, onClose, onGenerate }: { ty
 
 /* ---------------------------------------------------------- Visionneuses ---- */
 
-type Content = { markdown?: string; cards?: Card[]; questions?: QuizQ[]; root?: MapNode; audio_path?: string; audio_format?: string; tts_characters?: number; segment_count?: number; estimated_duration_seconds?: number; audio_bytes?: number | null };
+type Content = { image_path?: string; model?: string; markdown?: string; cards?: Card[]; questions?: QuizQ[]; root?: MapNode; audio_path?: string; audio_format?: string; tts_characters?: number; segment_count?: number; estimated_duration_seconds?: number; audio_bytes?: number | null };
 
 type Progress = { item_key: string; state: string; answer: number | null };
 
@@ -419,7 +512,7 @@ async function resetProgress(id: string) {
   if (!r?.ok) toast({ title: "Remise à zéro non enregistrée", tone: "error" });
 }
 
-function ArtifactViewer({ id, canShare, onImported, onClose, sourceTitle, onOpenCitation, onAsk }: { id: string | null; canShare: boolean; onImported?: () => void; onClose: () => void; sourceTitle: (id: string) => string | undefined; onOpenCitation?: (c: Cite) => void; onAsk: (t: string) => void }) {
+function ArtifactViewer({ id, canShare, onImported, onEditImage, onClose, sourceTitle, onOpenCitation, onAsk }: { id: string | null; canShare: boolean; onImported?: () => void; onEditImage?: (id: string) => void; onClose: () => void; sourceTitle: (id: string) => string | undefined; onOpenCitation?: (c: Cite) => void; onAsk: (t: string) => void }) {
   const [data, setData] = React.useState<{ artifact: { id: string; type: ArtType; title: string | null; content: Content; options: Record<string, string> | null; custom_prompt: string | null }; citations: Cite[]; progress: Progress[] } | null>(null);
   const [failed, setFailed] = React.useState(false);
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
@@ -440,6 +533,7 @@ function ArtifactViewer({ id, canShare, onImported, onClose, sourceTitle, onOpen
           {art?.custom_prompt && !art.custom_prompt.startsWith(AUDIO_OVERVIEW_MARKER) && <p className="mb-4 rounded-md bg-surface px-3 py-2 text-xs text-text-muted"><span className="font-medium">Consignes de génération :</span> {art.custom_prompt}</p>}
           {failed ? <Alert tone="danger" title="Contenu indisponible" />
             : !art ? <div className="grid gap-2" aria-busy="true" aria-label="Chargement"><Skeleton className="h-5 w-2/3" /><Skeleton className="h-4" /><Skeleton className="h-4 w-5/6" /></div>
+             : art.type === "image" ? <div className="grid gap-3"><img src={"/api/v1/artifacts/" + art.id + "/image"} alt={art.title || "Image générée par IA"} className="mx-auto max-h-[65vh] w-auto max-w-full rounded-xl border border-border object-contain" /><div className="flex flex-wrap items-center justify-between gap-3"><a className="text-sm font-medium text-accent underline" href={"/api/v1/artifacts/" + art.id + "/image"} download="leanna-image.png">Télécharger l’image</a>{canShare && onEditImage && <Button size="sm" variant="secondary" onClick={() => onEditImage(art.id)}><Sparkles aria-hidden /> Modifier cette image</Button>}</div><p className="text-xs text-text-muted">{String(art.content.model || "OpenRouter")}</p></div>
              : art.type === "infographic" ? <InfographicView markdown={art.content.markdown ?? ""} options={art.options ?? {}} citations={data!.citations} sourceTitle={sourceTitle} onOpen={onOpenCitation ? (c) => { onClose(); onOpenCitation(c); } : undefined} />
              : art.type === "diagram" ? <DiagramEditor markdown={art.content.markdown ?? ""} />
              : art.type === "report" || art.type === "audio" || ["timeline", "comparison", "glossary", "faq", "editorial", "study_plan"].includes(art.type) ? <div className="grid gap-4">{art.content.audio_path && <div className="grid gap-2 rounded-lg border border-border p-3"><audio ref={audioRef} controls preload="metadata" className="w-full" src={`/api/v1/artifacts/${art.id}/audio`} /><div className="flex flex-wrap items-center justify-between gap-2"><div className="flex flex-wrap items-center gap-3 text-xs text-text-muted">{typeof art.content.estimated_duration_seconds === "number" && <span>Durée estimée : {Math.floor(art.content.estimated_duration_seconds / 60)} min</span>}{typeof art.content.tts_characters === "number" && <span>{art.content.tts_characters.toLocaleString("fr-FR")} caractères TTS</span>}{typeof art.content.segment_count === "number" && <span>{art.content.segment_count} répliques</span>}</div><label className="flex items-center gap-2 text-xs text-text-muted">Vitesse <select aria-label="Vitesse de lecture" className="h-8 rounded-md border border-border-input bg-surface-raised px-2 text-sm text-text" value={playbackRate} onChange={(e) => setPlaybackRate(e.target.value)}>{["0.75", "1", "1.25", "1.5", "1.75", "2"].map((v) => <option key={v} value={v}>{v}×</option>)}</select></label><a className="inline-flex items-center gap-2 text-sm font-medium text-accent hover:underline" href={`/api/v1/artifacts/${art.id}/audio?download=1`}><Download aria-hidden size={16} /> Télécharger le MP3</a></div></div>}<Markdown text={art.content.markdown ?? ""} citations={data!.citations} sourceTitle={sourceTitle} onOpen={onOpenCitation ? (c) => { onClose(); onOpenCitation(c); } : undefined} /></div>
