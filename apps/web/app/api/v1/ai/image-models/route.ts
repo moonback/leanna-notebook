@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { ApiError, handle, requireRole, requireUser } from "@/lib/api";
+import { ApiError, handle, requireUser } from "@/lib/api";
 import { createServiceClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
