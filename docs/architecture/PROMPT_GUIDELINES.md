@@ -47,3 +47,11 @@ Pour chaque modification, conserver un jeu de cas de référence et comparer :
 - comportement sur demandes ambiguës et corpus contradictoires.
 
 Ne pas publier un score qualitatif non reproductible.
+
+## Implémentation recommandée pour les overrides
+
+- Ne jamais concaténer une personnalisation libre dans le message système principal.
+- Conserver le rôle système pour les invariants, la tâche, les règles de citation et le schéma de sortie.
+- Envoyer les préférences personnalisées dans un message utilisateur distinct, clairement délimité et non prioritaire.
+- Garder les passages documentaires dans un message séparé des préférences.
+- Afficher dans le gestionnaire la composition runtime réelle, et pas seulement le texte d'override éditable.
