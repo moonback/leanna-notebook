@@ -709,6 +709,7 @@ function AddSourcesDialog({ open, onOpenChange, notebookId, onAdded, onWebSearch
   const [selectedFiles, setSelectedFiles] = React.useState<File[]>([]);
   const [progress, setProgress] = React.useState<{ done: number; total: number } | null>(null);
   const fileRef = React.useRef<HTMLInputElement>(null);
+  const folderRef = React.useRef<HTMLInputElement>(null);
   const supportedExtensions = new Set(["pdf", "docx", "pptx", "epub", "txt", "md", "csv", "mp3", "wav", "m4a", "aac", "ogg", "flac", "webm"]);
   const folderFiles = selectedFiles.map((file) => {
     const relativePath = (file as File & { webkitRelativePath?: string }).webkitRelativePath || file.name;
@@ -763,7 +764,7 @@ function AddSourcesDialog({ open, onOpenChange, notebookId, onAdded, onWebSearch
         toast({
           title: `${imported} document${imported > 1 ? "s" : ""} ajouté${imported > 1 ? "s" : ""}`,
           description: skipped ? `${skipped} fichier(s) ignoré(s) ou en erreur. Le traitement continue en arrière-plan.` : "Tous les documents compatibles ont été envoyés. Le traitement continue en arrière-plan.",
-          tone: failures.length ? "warning" : "success",
+          tone: failures.length ? "error" : "success",
         });
         if (failures.length) {
           keepDialogOpen = true;
@@ -779,7 +780,7 @@ function AddSourcesDialog({ open, onOpenChange, notebookId, onAdded, onWebSearch
         await post([{ type: "text", title: paste.title, text: paste.text }]);
         toast({ title: "Source ajoutée", description: "Le traitement continue en arrière-plan.", tone: "success" });
       }
-      setUrl(""); setPaste({ title: "", text: "" }); setSelectedFiles([]); if (fileRef.current) fileRef.current.value = "";
+      setUrl(""); setPaste({ title: "", text: "" }); setSelectedFiles([]); if (fileRef.current) fileRef.current.value = ""; if (folderRef.current) folderRef.current.value = "";
       onAdded();
       if (!keepDialogOpen) onOpenChange(false);
     } catch (err) { setError(err instanceof Error ? err.message : "Ajout impossible."); }
@@ -801,9 +802,9 @@ function AddSourcesDialog({ open, onOpenChange, notebookId, onAdded, onWebSearch
               <TabsTrigger value="text"><Type className="mr-1.5 inline size-3.5" aria-hidden />Texte</TabsTrigger>
             </TabsList>
             <TabsContent value="file" className="grid gap-3 pt-4">
-              <Field id="files" label="Choisir un dossier ou des fichiers" hint="Leanna parcourt aussi les sous-dossiers. Formats : PDF, DOCX, PPTX, EPUB, TXT, MD, CSV, MP3, WAV, M4A, AAC, OGG, FLAC et WEBM. 200 Mo maximum par fichier.">
+              <Field id="folder-files" label="Importer un dossier" hint="Leanna parcourt automatiquement le dossier et tous ses sous-dossiers. Formats : PDF, DOCX, PPTX, EPUB, TXT, MD, CSV, MP3, WAV, M4A, AAC, OGG, FLAC et WEBM. 200 Mo maximum par fichier.">
                 <input
-                  ref={fileRef}
+                  ref={folderRef}
                   type="file"
                   multiple
                   accept=".pdf,.docx,.pptx,.epub,.txt,.md,.csv,.mp3,.wav,.m4a,.aac,.ogg,.flac,.webm"
@@ -811,6 +812,9 @@ function AddSourcesDialog({ open, onOpenChange, notebookId, onAdded, onWebSearch
                   onChange={(event) => { setSelectedFiles(Array.from(event.currentTarget.files ?? [])); setError(undefined); }}
                   className="block w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-accent-soft file:px-3 file:py-2 file:text-sm file:font-medium file:text-on-accent-soft"
                 />
+              </Field>
+              <Field id="individual-files" label="Ou sélectionner des fichiers individuellement" hint="Vous pouvez conserver l’import classique de plusieurs fichiers.">
+                <input ref={fileRef} type="file" multiple accept=".pdf,.docx,.pptx,.epub,.txt,.md,.csv,.mp3,.wav,.m4a,.aac,.ogg,.flac,.webm" onChange={(event) => { setSelectedFiles(Array.from(event.currentTarget.files ?? [])); setError(undefined); }} className="block w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-accent-soft file:px-3 file:py-2 file:text-sm file:font-medium file:text-on-accent-soft" />
               </Field>
               {selectedFiles.length > 0 && (
                 <div className="rounded-lg border bg-surface p-3 text-sm">
@@ -822,7 +826,7 @@ function AddSourcesDialog({ open, onOpenChange, notebookId, onAdded, onWebSearch
                   {progress && (
                     <div className="mt-3 grid gap-1">
                       <div className="flex justify-between text-xs text-text-muted"><span>Envoi des documents</span><span>{progress.done}/{progress.total}</span></div>
-                      <Progress value={progress.total ? progress.done / progress.total * 100 : 0} />
+                      <Progress label="Envoi des documents" value={progress.total ? progress.done / progress.total * 100 : 0} />
                     </div>
                   )}
                 </div>
