@@ -72,3 +72,11 @@ Enregistrer par cas : version du prompt, modèle, options, tokens entrée/sortie
 ## Statut de cette passe
 
 Les fichiers de test existants n'ont pas pu être recensés exhaustivement ni exécutés depuis l'API distante. Aucun résultat de test IA réel n'est revendiqué. La validation doit être faite après checkout de la branche dans l'environnement local du projet.
+
+## Tests ajoutés dans la seconde passe
+
+- `apps/worker/src/studio/generate.test.ts` : vérifie que la personnalisation libre Studio est un message utilisateur distinct et n'apparaît pas dans le message système.
+- `apps/worker/src/studio/audio-overview.test.ts` : vérifie la même séparation pour les consignes éditoriales Audio Overview.
+- Correction d'un retour à la ligne échappé littéralement dans l'import de ce dernier fichier de test, qui empêchait son parsing TypeScript.
+
+Ces tests ont été modifiés mais ne sont pas exécutés dans cet environnement distant. Les parcours de résumés automatiques et l'injection d'overrides de catalogue dans le handler Studio nécessitent encore des tests dédiés.
