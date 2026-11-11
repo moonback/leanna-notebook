@@ -19,6 +19,12 @@ export async function generateImageArtifact(db: SupabaseClient, art: ImageArtifa
   const key = process.env.OPENROUTER_API_KEY;
   if (!key) throw new PermanentError("ai_not_configured");
   const model = String(art.options?.modelId || process.env.OPENROUTER_IMAGE_MODEL || "google/gemini-3.1-flash-image");
+  const { data: existingVersion } = await db.from("artifact_image_versions").select("storage_path,mime_type,size_bytes,model_id,provider_cost_usd").eq("artifact_id", art.id).eq("version_number", 1).maybeSingle();
+  if (existingVersion) {
+    const { error } = await db.from("artifacts").update({ status: "ready", storage_path: existingVersion.storage_path, mime_type: existingVersion.mime_type, content: { image_path: existingVersion.storage_path, mime_type: existingVersion.mime_type, size_bytes: existingVersion.size_bytes, model: existingVersion.model_id, provider_cost_usd: existingVersion.provider_cost_usd, prompt: art.custom_prompt ?? "" } }).eq("id", art.id);
+    if (error) throw error;
+    return { model: existingVersion.model_id, mime_type: existingVersion.mime_type, size_bytes: existingVersion.size_bytes, provider_cost_usd: existingVersion.provider_cost_usd };
+  }
   let sourceQuery = db.from("sources").select("id,title,extracted_text").eq("notebook_id", art.notebook_id).eq("status", "ready");
   if (art.source_ids?.length) sourceQuery = sourceQuery.in("id", art.source_ids);
   const { data: sources, error: sourceError } = await sourceQuery;
