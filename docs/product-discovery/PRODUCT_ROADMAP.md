@@ -14,7 +14,7 @@
 1. **#1 Cockpit de fiabilité documentaire** — score 8,25. Première brique de confiance.
 2. **#2 Détecteur de lacunes et dossier incomplet** — score 8,70. Cas d'usage à forte valeur.
 3. **#3 OCR et compréhension visuelle des scans** — score 7,55. Supprime une limite explicite d'ingestion.
-4. **#4 Déduplication et versions intelligentes** — score 7,85. Qualité du corpus et fondation temporelle.
+4. **#4 Déduplication et versions intelligentes** — score 7,80. Qualité du corpus et fondation temporelle.
 
 ### P1 — Différenciation
 5. **#5 Moteur de contradictions et évolution des faits** — score 9,05.
@@ -27,7 +27,7 @@
 ### P2 — Innovation
 11. **#11 Recherche web comparative et réconciliation** — score 7,85.
 12. **#12 Veille documentaire et détection de changements** — score 8,25.
-13. **#13 Assistant de réunion et alignement audio-docs** — score 7,50.
+13. **#13 Assistant de réunion et alignement audio-docs** — score 7,45.
 14. **#14 Studio vocal pilotable et multi-agents** — score 8,10.
 15. **#15 Générateur de workflows documentaires** — score 8,55.
 16. **#16 Simulateur de scénarios et hypothèses** — score 8,10.
