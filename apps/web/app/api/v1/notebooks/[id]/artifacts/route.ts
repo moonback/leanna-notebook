@@ -58,7 +58,11 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
   const body = await parseBody(req, createSchema);
   if (!process.env.OPENROUTER_API_KEY || (body.type !== "image" && !process.env.OPENROUTER_CHAT_MODEL)) throw new ApiError(503, "ai_not_configured");
   if (body.type === "image") {
-    const selectedModel = body.options.modelId || process.env.OPENROUTER_IMAGE_MODEL || "google/gemini-3.1-flash-image";
+    const { data: imagePrefs } = await createServiceClient().from("ai_image_preferences")
+      .select("enabled,default_model_id,default_orientation").eq("user_id", user.id).maybeSingle();
+    if (imagePrefs?.enabled === false) throw new ApiError(403, "image_generation_disabled");
+    const selectedModel = body.options.modelId || imagePrefs?.default_model_id || process.env.OPENROUTER_IMAGE_MODEL || "google/gemini-3.1-flash-image";
+    if (!body.options.modelId && imagePrefs?.default_orientation) body.options.orientation = imagePrefs.default_orientation;
     const catalogResponse = await fetch("https://openrouter.ai/api/v1/images/models", {
       headers: { authorization: "Bearer " + process.env.OPENROUTER_API_KEY, "X-Title": "Leanna Notebook" },
       next: { revalidate: 1800 },
