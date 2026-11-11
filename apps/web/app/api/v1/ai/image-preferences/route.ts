@@ -13,7 +13,7 @@ const schema = z.object({
 }).strict();
 
 const defaults = {
-  enabled: true, autoSuggestions: true, suggestionCount: 4,
+  enabled: false, autoSuggestions: false, suggestionCount: 4,
   defaultModelId: null as string | null, defaultOrientation: "landscape" as const,
 };
 
