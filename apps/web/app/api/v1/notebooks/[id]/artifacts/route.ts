@@ -62,7 +62,7 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
       .select("enabled,default_model_id,default_orientation").eq("user_id", user.id).maybeSingle();
     if (imagePrefs?.enabled === false) throw new ApiError(403, "image_generation_disabled");
     const selectedModel = body.options.modelId || imagePrefs?.default_model_id || process.env.OPENROUTER_IMAGE_MODEL || "google/gemini-3.1-flash-image";
-    if (!body.options.modelId && imagePrefs?.default_orientation) body.options.orientation = imagePrefs.default_orientation;
+    if (!body.options.orientation && imagePrefs?.default_orientation) body.options.orientation = imagePrefs.default_orientation;
     const catalogResponse = await fetch("https://openrouter.ai/api/v1/images/models", {
       headers: { authorization: "Bearer " + process.env.OPENROUTER_API_KEY, "X-Title": "Leanna Notebook" },
       next: { revalidate: 1800 },
