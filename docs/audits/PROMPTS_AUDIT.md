@@ -133,3 +133,7 @@ Le catalogue expose des textes par défaut pour Studio, mais les chemins d'exéc
 ### Seconde passe — Studio, Audio Overview et résumés
 
 Les personnalisations Studio et Audio Overview ainsi que les overrides des résumés sont désormais transmis comme messages utilisateur complémentaires ; les règles de tâche et de format restent au niveau système. Les tests unitaires existants de génération Studio et Audio Overview ont été adaptés pour contrôler cette séparation. Un import de test contenant un retour à la ligne échappé littéralement a également été corrigé. Aucun test n'a été exécuté à distance.
+
+### Gestionnaire de prompts — transparence du prompt runtime
+
+L'interface `apps/web/app/settings/system-prompts.tsx` distingue maintenant les textes de référence du catalogue des prompts réellement assemblés par le worker pour Studio et les résumés. Elle précise le mode d'injection des personnalisations pour les familles Studio/résumés, chat et voix. Cela corrige une ambiguïté de l'interface qui laissait entendre que chaque texte personnalisé était toujours ajouté directement au prompt système et que le texte affiché représentait l'intégralité du prompt exécuté.
