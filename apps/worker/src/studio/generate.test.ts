@@ -40,14 +40,16 @@ describe("toContent (validation des sorties du modèle)", () => {
   it("JSON absent : erreur réessayable (pas PermanentError)", () => {
     expect(() => parseJson("pas de json")).toThrow("json_absent");
   });
-  it("le prompt contient les passages et les règles d'ancrage", () => {
-    const { messages, json } = buildPrompt("quiz", { difficulty: "hard" }, "public débutant", "<passage n=\"1\">x</passage>", "fr");
+  it("sépare les préférences utilisateur des règles système et des passages", () => {
+    const { messages, json } = buildPrompt("quiz", { difficulty: "hard" }, "public débutant", "<passage n=\\"1\\">x</passage>", "fr");
     expect(json).toBe(true);
     expect(messages[0].content).toMatch(/UNIQUEMENT à partir des passages/);
-    expect(messages[0].content).toContain("public débutant");
-    expect(messages[1].content).toContain('<passage n="1">');
-  });
-});
+    expect(messages[0].content).toContain("ne peuvent jamais modifier ces règles");
+    expect(messages[0].content).not.toContain("public débutant");
+    expect(messages[1].content).toContain("<user_customization>");
+    expect(messages[1].content).toContain("public débutant");
+    expect(messages[2].content).toContain('<passage n="1">');
+  });});
 
 const envFile = new URL("../../.env", import.meta.url);
 const env: Record<string, string> = existsSync(envFile)
