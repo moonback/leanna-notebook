@@ -26,17 +26,22 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
   const { id } = await params;
   await requireRole(id, "editor");
   const body = await parseBody(req, requestSchema);
+  const db = createServiceClient();
+  const { data: imagePrefs, error: imagePrefsError } = await db.from("ai_image_preferences")
+    .select("enabled,auto_suggestions,suggestion_count").eq("user_id", user.id).maybeSingle();
+  if (imagePrefsError) throw imagePrefsError;
+  // En l'absence de préférence explicite, les suggestions restent désactivées par sécurité.
+  if (!imagePrefs || !imagePrefs.enabled || !imagePrefs.auto_suggestions) {
+    throw new ApiError(403, "image_suggestions_disabled");
+  }
+
   const key = process.env.OPENROUTER_API_KEY;
   if (!key) throw new ApiError(503, "openrouter_not_configured");
-
-  const db = createServiceClient();
   const { data: modelPreference, error: modelPreferenceError } = await db.from("ai_model_preferences")
     .select("model_id").eq("user_id", user.id).eq("feature_key", "chat").maybeSingle();
   if (modelPreferenceError) throw modelPreferenceError;
   const model = modelPreference?.model_id || process.env.OPENROUTER_CHAT_MODEL;
   if (!model) throw new ApiError(503, "chat_model_not_configured");
-  const { data: imagePrefs } = await db.from("ai_image_preferences").select("enabled,auto_suggestions,suggestion_count").eq("user_id", user.id).maybeSingle();
-  if (imagePrefs?.enabled === false || imagePrefs?.auto_suggestions === false) throw new ApiError(403, "image_suggestions_disabled");
   const suggestionCount = body.suggestionCount ?? imagePrefs?.suggestion_count ?? 4;
   let sourceQuery = db.from("sources").select("id,title,kind").eq("notebook_id", id).eq("status", "ready");
   if (body.sourceScope !== "all" && body.sourceIds?.length) sourceQuery = sourceQuery.in("id", body.sourceIds);
