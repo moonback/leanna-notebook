@@ -55,6 +55,7 @@ export function Studio({ notebookId, canEdit, sourceIds, sourceTitle, onOpenCita
   const [arts, setArts] = React.useState<Art[] | null>(null);
   const [failedLoad, setFailedLoad] = React.useState(false);
   const [creating, setCreating] = React.useState<ArtType | null>(null);
+  const [referenceImageId, setReferenceImageId] = React.useState<string | null>(null);
   const [open, setOpen] = React.useState<string | null>(null);
   const [confirm, confirmDialog] = useConfirm();
   const readyCount = sourceIds.length;
@@ -166,8 +167,8 @@ export function Studio({ notebookId, canEdit, sourceIds, sourceTitle, onOpenCita
           ))}
         </ul>
       )}
-      <CreateDialog type={creating} notebookId={notebookId} sourceIds={sourceIds} onClose={() => setCreating(null)} onGenerate={generate} />
-      <ArtifactViewer id={open} canShare={canEdit} onImported={onImported} onClose={() => setOpen(null)} sourceTitle={sourceTitle} onOpenCitation={onOpenCitation} onAsk={(t) => { setOpen(null); onAsk(t); }} />
+      <CreateDialog type={creating} notebookId={notebookId} sourceIds={sourceIds} referenceImageId={referenceImageId} onClose={() => { setCreating(null); setReferenceImageId(null); }} onGenerate={generate} />
+      <ArtifactViewer id={open} canShare={canEdit} onImported={onImported} onEditImage={(artifactId) => { setOpen(null); setReferenceImageId(artifactId); setCreating("image"); }} onClose={() => setOpen(null)} sourceTitle={sourceTitle} onOpenCitation={onOpenCitation} onAsk={(t) => { setOpen(null); onAsk(t); }} />
     </Panel>
   );
 }
@@ -182,7 +183,7 @@ const REPORT_MODELS = [
 ] as const;
 type AiReportModel = { id: string; title: string; description: string; instruction: string };
 
-function CreateDialog({ type, notebookId, sourceIds, onClose, onGenerate }: { type: ArtType | null; notebookId: string; sourceIds: string[]; onClose: () => void; onGenerate: (t: ArtType, o: Record<string, string>, p?: string) => Promise<boolean> }) {
+function CreateDialog({ type, notebookId, sourceIds, referenceImageId, onClose, onGenerate }: { type: ArtType | null; notebookId: string; sourceIds: string[]; referenceImageId?: string | null; onClose: () => void; onGenerate: (t: ArtType, o: Record<string, string>, p?: string) => Promise<boolean> }) {
   const [opts, setOpts] = React.useState<Record<string, string>>({});
   const [prompt, setPrompt] = React.useState("");
   const [sending, setSending] = React.useState(false);
@@ -263,7 +264,8 @@ function CreateDialog({ type, notebookId, sourceIds, onClose, onGenerate }: { ty
     const audioPrompt = type === "audio" ? `${AUDIO_OVERVIEW_MARKER}${prompt.trim() ? `\\n${prompt.trim()}` : ""}` : undefined;
     const selectedModel = aiModels.find((model) => model.id === selectedAiModel);
     const reportPrompt = [selectedModel?.instruction, prompt.trim()].filter(Boolean).join("\n\n");
-    const ok = await onGenerate(type!, opts, type === "audio" ? audioPrompt : type === "report" ? reportPrompt || undefined : prompt.trim() || undefined);
+    const imageOptions = type === "image" && referenceImageId ? { ...opts, referenceArtifactId: referenceImageId } : opts;
+    const ok = await onGenerate(type!, imageOptions, type === "audio" ? audioPrompt : type === "report" ? reportPrompt || undefined : prompt.trim() || undefined);
     setSending(false);
     if (ok) onClose();
   }
@@ -271,6 +273,7 @@ function CreateDialog({ type, notebookId, sourceIds, onClose, onGenerate }: { ty
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent size="lg" title={type === "infographic" ? "Personnaliser l’infographie" : type === "image" ? "Créer une image IA" : type === "report" ? "Créer un rapport" : `Générer : ${TYPES[type].label}`} description={type === "infographic" ? "Configurez la langue, le format, le style et les sources avant de lancer la création." : type === "image" ? "Décrivez l’image souhaitée à partir des sources du notebook." : type === "report" ? "Choisissez un format et un modèle pour composer un rapport à partir de vos sources." : "À partir des sources sélectionnées. La génération continue en arrière-plan."}>
         <form onSubmit={submit} className="grid gap-5">
+          {type === "image" && referenceImageId && <Alert tone="info" title="Modification d’une image existante">L’image actuelle sera utilisée comme référence. Une nouvelle image sera créée sans écraser l’originale.</Alert>}
           {type === "report" && (
             <>
               <section className="grid gap-3">
@@ -422,7 +425,7 @@ async function resetProgress(id: string) {
   if (!r?.ok) toast({ title: "Remise à zéro non enregistrée", tone: "error" });
 }
 
-function ArtifactViewer({ id, canShare, onImported, onClose, sourceTitle, onOpenCitation, onAsk }: { id: string | null; canShare: boolean; onImported?: () => void; onClose: () => void; sourceTitle: (id: string) => string | undefined; onOpenCitation?: (c: Cite) => void; onAsk: (t: string) => void }) {
+function ArtifactViewer({ id, canShare, onImported, onEditImage, onClose, sourceTitle, onOpenCitation, onAsk }: { id: string | null; canShare: boolean; onImported?: () => void; onEditImage?: (id: string) => void; onClose: () => void; sourceTitle: (id: string) => string | undefined; onOpenCitation?: (c: Cite) => void; onAsk: (t: string) => void }) {
   const [data, setData] = React.useState<{ artifact: { id: string; type: ArtType; title: string | null; content: Content; options: Record<string, string> | null; custom_prompt: string | null }; citations: Cite[]; progress: Progress[] } | null>(null);
   const [failed, setFailed] = React.useState(false);
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
@@ -443,7 +446,7 @@ function ArtifactViewer({ id, canShare, onImported, onClose, sourceTitle, onOpen
           {art?.custom_prompt && !art.custom_prompt.startsWith(AUDIO_OVERVIEW_MARKER) && <p className="mb-4 rounded-md bg-surface px-3 py-2 text-xs text-text-muted"><span className="font-medium">Consignes de génération :</span> {art.custom_prompt}</p>}
           {failed ? <Alert tone="danger" title="Contenu indisponible" />
             : !art ? <div className="grid gap-2" aria-busy="true" aria-label="Chargement"><Skeleton className="h-5 w-2/3" /><Skeleton className="h-4" /><Skeleton className="h-4 w-5/6" /></div>
-             : art.type === "image" ? <div className="grid gap-3"><img src={"/api/v1/artifacts/" + art.id + "/image"} alt={art.title || "Image générée par IA"} className="mx-auto max-h-[65vh] w-auto max-w-full rounded-xl border border-border object-contain" /><a className="text-sm font-medium text-accent underline" href={"/api/v1/artifacts/" + art.id + "/image"} download="leanna-image.png">Télécharger l’image</a><p className="text-xs text-text-muted">{String(art.content.model || "OpenRouter")}</p></div>
+             : art.type === "image" ? <div className="grid gap-3"><img src={"/api/v1/artifacts/" + art.id + "/image"} alt={art.title || "Image générée par IA"} className="mx-auto max-h-[65vh] w-auto max-w-full rounded-xl border border-border object-contain" /><div className="flex flex-wrap items-center justify-between gap-3"><a className="text-sm font-medium text-accent underline" href={"/api/v1/artifacts/" + art.id + "/image"} download="leanna-image.png">Télécharger l’image</a>{canShare && <Button size="sm" variant="secondary" onClick={() => onEditImage?.(art.id)}><Sparkles aria-hidden /> Modifier cette image</Button>}</div><p className="text-xs text-text-muted">{String(art.content.model || "OpenRouter")}</p></div>
              : art.type === "infographic" ? <InfographicView markdown={art.content.markdown ?? ""} options={art.options ?? {}} citations={data!.citations} sourceTitle={sourceTitle} onOpen={onOpenCitation ? (c) => { onClose(); onOpenCitation(c); } : undefined} />
              : art.type === "diagram" ? <DiagramEditor markdown={art.content.markdown ?? ""} />
              : art.type === "report" || art.type === "audio" || ["timeline", "comparison", "glossary", "faq", "editorial", "study_plan"].includes(art.type) ? <div className="grid gap-4">{art.content.audio_path && <div className="grid gap-2 rounded-lg border border-border p-3"><audio ref={audioRef} controls preload="metadata" className="w-full" src={`/api/v1/artifacts/${art.id}/audio`} /><div className="flex flex-wrap items-center justify-between gap-2"><div className="flex flex-wrap items-center gap-3 text-xs text-text-muted">{typeof art.content.estimated_duration_seconds === "number" && <span>Durée estimée : {Math.floor(art.content.estimated_duration_seconds / 60)} min</span>}{typeof art.content.tts_characters === "number" && <span>{art.content.tts_characters.toLocaleString("fr-FR")} caractères TTS</span>}{typeof art.content.segment_count === "number" && <span>{art.content.segment_count} répliques</span>}</div><label className="flex items-center gap-2 text-xs text-text-muted">Vitesse <select aria-label="Vitesse de lecture" className="h-8 rounded-md border border-border-input bg-surface-raised px-2 text-sm text-text" value={playbackRate} onChange={(e) => setPlaybackRate(e.target.value)}>{["0.75", "1", "1.25", "1.5", "1.75", "2"].map((v) => <option key={v} value={v}>{v}×</option>)}</select></label><a className="inline-flex items-center gap-2 text-sm font-medium text-accent hover:underline" href={`/api/v1/artifacts/${art.id}/audio?download=1`}><Download aria-hidden size={16} /> Télécharger le MP3</a></div></div>}<Markdown text={art.content.markdown ?? ""} citations={data!.citations} sourceTitle={sourceTitle} onOpen={onOpenCitation ? (c) => { onClose(); onOpenCitation(c); } : undefined} /></div>
