@@ -5,6 +5,7 @@ import { embedderFromEnv } from "./ai/embeddings.ts";
 import { ingestHandler } from "./ingest/handler.ts";
 import { llmFromEnv } from "./ai/llm.ts";
 import { studioHandler } from "./studio/generate.ts";
+import { generateImageArtifact } from "./studio/image-generation.ts";
 import { guideHandler, overviewHandler } from "./studio/summaries.ts";
 import { researchHandler } from "./research/handler.ts";
 import { transcriberFromEnv } from "./ai/transcription.ts";
@@ -31,7 +32,20 @@ if (!transcriber) console.warn("DEEPGRAM_API_KEY absent : import audio désactiv
 const handlers: Partial<Record<JobKind, Handler>> = {
   ingest_source: ingestHandler(db, embedder, { summaries: Boolean(llm), transcriber }),
   research: researchHandler(db, process.env.TAVILY_API_KEY),
-  generate_artifact: studioHandler(db, llm, speech),
+  generate_artifact: async (job, ctx) => {
+    if (job.target_id) {
+      const { data: artifact } = await db.from("artifacts").select("id,type,options,custom_prompt,source_ids,notebook_id,workspace_id,created_by").eq("id", job.target_id).single();
+      if (artifact?.type === "image") {
+        await db.from("artifacts").update({ status: "generating", error_code: null }).eq("id", artifact.id);
+        try { return await generateImageArtifact(db, artifact, ctx); }
+        catch (error) {
+          if (error instanceof Error) await db.from("artifacts").update({ status: "failed", error_code: error.name === "PermanentError" ? "image_generation_failed" : "image_generation_failed" }).eq("id", artifact.id);
+          throw error;
+        }
+      }
+    }
+    return studioHandler(db, llm, speech)(job, ctx);
+  },
   ...(llm ? { source_guide: guideHandler(db, llm), notebook_overview: overviewHandler(db, llm) } : {}),
 };
 if (!llm) console.warn("OPENROUTER_API_KEY / OPENROUTER_CHAT_MODEL absents : Studio en échec (crédit rendu), pas de guides ni de résumé de notebook.");
