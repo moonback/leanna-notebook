@@ -22,14 +22,17 @@ const ERRORS: Record<string, string> = {
 };
 
 /** H01 : partage privé par email (propriétaire). Rôles appliqués côté serveur. */
-export function ShareButton({ notebookId, allowCopies }: { notebookId: string; allowCopies: boolean }) {
+export function ShareButton({ notebookId, allowCopies, open: controlledOpen, onOpenChange }: { notebookId: string; allowCopies: boolean; open?: boolean; onOpenChange?: (open: boolean) => void }) {
+  const controlled = controlledOpen !== undefined;
   const [copies, setCopies] = React.useState(allowCopies);
   async function toggleCopies(v: boolean) {
     setCopies(v);
     const r = await fetch(`/api/v1/notebooks/${notebookId}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ allow_copies: v }) }).catch(() => null);
     if (!r?.ok) { setCopies(!v); toast({ title: "Réglage non enregistré", tone: "error" }); }
   }
-  const [open, setOpen] = React.useState(false);
+  const [innerOpen, setInnerOpen] = React.useState(false);
+  const open = controlled ? controlledOpen : innerOpen;
+  const setOpen = controlled ? (v: boolean) => onOpenChange?.(v) : setInnerOpen;
   const [confirm, confirmDialog] = useConfirm();
   const [people, setPeople] = React.useState<Person[] | null>(null);
   const [failed, setFailed] = React.useState(false);
@@ -86,7 +89,7 @@ export function ShareButton({ notebookId, allowCopies }: { notebookId: string; a
   return (
     <>
       {confirmDialog}
-      <Button size="sm" variant="secondary" onClick={() => setOpen(true)}><Share2 aria-hidden /> Partager</Button>
+      {!controlled && <Button size="sm" variant="secondary" onClick={() => setOpen(true)}><Share2 aria-hidden /> Partager</Button>}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent title="Partager le notebook" description="Les lecteurs consultent et posent des questions ; les éditeurs ajoutent des sources et génèrent du contenu.">
           <form onSubmit={invite} className="grid gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-end">

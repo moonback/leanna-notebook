@@ -12,7 +12,7 @@ const ERRORS: Record<string, string> = {
 };
 
 /** H05 : duplique le notebook (sources, passages, guides, contenus générés) dans votre espace. */
-export function CopyButton({ notebookId }: { notebookId: string }) {
+export function useCopyNotebook(notebookId: string) {
   const router = useRouter();
   const [busy, setBusy] = React.useState(false);
 
@@ -31,5 +31,10 @@ export function CopyButton({ notebookId }: { notebookId: string }) {
     }
   }
 
+  return { busy, copy };
+}
+
+export function CopyButton({ notebookId }: { notebookId: string }) {
+  const { busy, copy } = useCopyNotebook(notebookId);
   return <Button size="sm" variant="secondary" loading={busy} onClick={() => void copy()}><Copy aria-hidden /> Faire une copie</Button>;
 }

@@ -13,8 +13,7 @@ import { Citation } from "@/components/ui/citation";
 import { toast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 import { Studio } from "./studio";
-import { CopyButton } from "./copy-button";
-import { ShareButton } from "./share-dialog";
+import { NotebookActionsMenu } from "./notebook-actions-menu";
 import { FastResearch } from "./fast-research";
 import { VoiceAssistant } from "./voice-assistant";
 import type { NumberedVoicePassage } from "./voice-turn";
@@ -58,6 +57,12 @@ function useMediaQuery(query: string): boolean {
 export function Workspace({ notebookId, initialTitle, role, allowCopies }: { notebookId: string; initialTitle: string; role: Role; allowCopies: boolean }) {
   const canEdit = role === "editor" || role === "owner";
   const [title, setTitle] = React.useState(initialTitle);
+  const [titleSlot, setTitleSlot] = React.useState<HTMLElement | null>(null);
+  const [actionsSlot, setActionsSlot] = React.useState<HTMLElement | null>(null);
+  React.useEffect(() => {
+    setTitleSlot(document.getElementById("app-header-title"));
+    setActionsSlot(document.getElementById("app-header-notebook-actions"));
+  }, []);
   const [sources, setSources] = React.useState<Source[] | null>(null);
   const [deselected, setDeselected] = React.useState<Set<string>>(new Set());
   const [loadError, setLoadError] = React.useState(false);
@@ -251,15 +256,18 @@ export function Workspace({ notebookId, initialTitle, role, allowCopies }: { not
   return (
     <>
       {confirmDialog}
-      <div className="flex h-12 shrink-0 items-center gap-2 border-b px-3 sm:px-5">
-        {canEdit ? (
+      {titleSlot && createPortal(
+        canEdit ? (
           <input aria-label="Titre du notebook" defaultValue={title} placeholder="Notebook sans titre" maxLength={200}
             onBlur={(e) => void rename(e.target.value)} onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
-            className="min-w-0 flex-1 truncate rounded-md bg-transparent px-2 py-1 text-lg font-semibold hover:bg-surface focus-visible:bg-surface" />
-        ) : <h1 className="truncate text-lg font-semibold">{title || "Notebook sans titre"}</h1>}
-        {(role === "owner" || (role !== "chat" && allowCopies)) && <CopyButton notebookId={notebookId} />}
-        {role === "owner" && <ShareButton notebookId={notebookId} allowCopies={allowCopies} />}
-      </div>
+            className="min-w-0 max-w-md flex-1 truncate rounded-md bg-transparent px-2 py-1 text-base font-semibold hover:bg-surface focus-visible:bg-surface" />
+        ) : <h1 className="truncate text-base font-semibold">{title || "Notebook sans titre"}</h1>,
+        titleSlot,
+      )}
+      {actionsSlot && createPortal(
+        <NotebookActionsMenu notebookId={notebookId} allowCopies={allowCopies} canCopy={role === "owner" || (role !== "chat" && allowCopies)} canShare={role === "owner"} />,
+        actionsSlot,
+      )}
 
       {/* Bureau : Sources et Studio se replient indépendamment. Mobile : navigation par onglets. */}
       {role === "chat" ? <div className="min-h-0 flex-1 p-2 sm:p-3">{chatPanel}</div> : desktop ? (
