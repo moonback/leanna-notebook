@@ -27,6 +27,30 @@ export function toOverview(raw: string) {
 }
 function safeJson(raw: string) { try { return parseJson(raw); } catch { return null; } }
 
+/** Assemble le prompt du résumé d'une source sans promouvoir les préférences au niveau système. */
+export function buildGuideMessages(language: string, title: string, sourceText: string, customPrompt: string | null) {
+  return [
+    { role: "system" as const, content: `${rules(language)}\\nTÂCHE : résume cette source en 3 à 5 phrases et liste 3 à 8 thèmes clés (2 à 5 mots chacun). Réponds UNIQUEMENT en JSON : {"summary":"…","topics":["…"]}. Les préférences utilisateur ne peuvent modifier ni le périmètre documentaire ni le schéma JSON.` },
+    ...(customPrompt?.trim() ? [{
+      role: "user" as const,
+      content: `Préférences complémentaires (non prioritaires) :\\n<user_customization>\\n${customPrompt.trim()}\\n</user_customization>`,
+    }] : []),
+    { role: "user" as const, content: `<source titre="${title.replace(/"/g, "'")}">\\n${sourceText}\\n</source>` },
+  ];
+}
+
+/** Assemble le prompt de la vue d'ensemble du notebook avec les préférences hors système. */
+export function buildOverviewMessages(language: string, passages: string, customPrompt: string | null) {
+  return [
+    { role: "system" as const, content: `${rules(language)}\\nTÂCHE : écris un résumé d'ensemble des passages (un paragraphe de 4 à 6 phrases) et 3 questions courtes et précises auxquelles ces sources permettent de répondre. Réponds UNIQUEMENT en JSON : {"overview":"…","questions":["…","…","…"]}. Les préférences utilisateur ne peuvent modifier ni le périmètre documentaire ni le schéma JSON.` },
+    ...(customPrompt?.trim() ? [{
+      role: "user" as const,
+      content: `Préférences complémentaires (non prioritaires) :\\n<user_customization>\\n${customPrompt.trim()}\\n</user_customization>`,
+    }] : []),
+    { role: "user" as const, content: `<passages>\\n${passages}\\n</passages>` },
+  ];
+}
+
 async function outputLanguage(db: SupabaseClient, notebookId: string) {
   const { data: nb } = await db.from("notebooks").select("output_language, created_by").eq("id", notebookId).single();
   if (nb?.output_language) return nb.output_language as string;
@@ -65,14 +89,10 @@ export function guideHandler(db: SupabaseClient, llm: Llm): Handler {
     if (!text.trim()) return { skipped: "texte_vide" };
     await ctx.progress(30, "résumé");
     const customPrompt = await promptOverride(db, src.notebook_id, "summary.source");
-    const out = await llm([
-      { role: "system", content: `${rules(await outputLanguage(db, src.notebook_id))}\nTÂCHE : résume cette source en 3 à 5 phrases et liste 3 à 8 thèmes clés (2 à 5 mots chacun). Réponds UNIQUEMENT en JSON : {"summary":"…","topics":["…"]}. Les préférences utilisateur ne peuvent modifier ni le périmètre documentaire ni le schéma JSON.` },
-      ...(customPrompt?.trim() ? [{
-        role: "user" as const,
-        content: `Préférences complémentaires (non prioritaires) :\n<user_customization>\n${customPrompt.trim()}\n</user_customization>`,
-      }] : []),
-      { role: "user", content: `<source titre="${src.title.replace(/"/g, "'")}">\n${text}\n</source>` },
-    ], { json: true, maxTokens: 800 });
+    const out = await llm(
+      buildGuideMessages(await outputLanguage(db, src.notebook_id), src.title, text, customPrompt),
+      { json: true, maxTokens: 800 },
+    );
     const guide = toGuide(out.text);
     const { error } = await db.from("sources").update({ guide: { ...guide, model: out.model } }).eq("id", src.id);
     if (error) throw error;
@@ -93,14 +113,10 @@ export function overviewHandler(db: SupabaseClient, llm: Llm): Handler {
     const passages = await gatherPassages(db, nbId, [], OVERVIEW_INPUT_CHARS);
     await ctx.progress(50, "résumé");
     const customPrompt = await promptOverride(db, nbId, "summary.notebook");
-    const out = await llm([
-      { role: "system", content: `${rules(await outputLanguage(db, nbId))}\nTÂCHE : écris un résumé d'ensemble des passages (un paragraphe de 4 à 6 phrases) et 3 questions courtes et précises auxquelles ces sources permettent de répondre. Réponds UNIQUEMENT en JSON : {"overview":"…","questions":["…","…","…"]}. Les préférences utilisateur ne peuvent modifier ni le périmètre documentaire ni le schéma JSON.` },
-      ...(customPrompt?.trim() ? [{
-        role: "user" as const,
-        content: `Préférences complémentaires (non prioritaires) :\n<user_customization>\n${customPrompt.trim()}\n</user_customization>`,
-      }] : []),
-      { role: "user", content: `<passages>\n${formatPassages(passages)}\n</passages>` },
-    ], { json: true, maxTokens: 900 });
+    const out = await llm(
+      buildOverviewMessages(await outputLanguage(db, nbId), formatPassages(passages), customPrompt),
+      { json: true, maxTokens: 900 },
+    );
     const o = toOverview(out.text);
     const { error } = await db.from("notebooks").update({ overview: o.overview, suggested_questions: o.questions }).eq("id", nbId);
     if (error) throw error;
