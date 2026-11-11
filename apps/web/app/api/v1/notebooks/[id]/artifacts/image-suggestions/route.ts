@@ -2,6 +2,9 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { ApiError, handle, parseBody, requireRole, requireUser } from "@/lib/api";
 import { createServiceClient } from "@/lib/supabase/server";
+import { log } from "@/lib/log";
+
+export const runtime = "nodejs";
 
 type Params = { params: Promise<{ id: string }> };
 const requestSchema = z.object({
@@ -24,10 +27,14 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
   await requireRole(id, "editor");
   const body = await parseBody(req, requestSchema);
   const key = process.env.OPENROUTER_API_KEY;
-  const model = process.env.OPENROUTER_CHAT_MODEL;
-  if (!key || !model) throw new ApiError(503, "ai_not_configured");
+  if (!key) throw new ApiError(503, "openrouter_not_configured");
 
   const db = createServiceClient();
+  const { data: modelPreference, error: modelPreferenceError } = await db.from("ai_model_preferences")
+    .select("model_id").eq("user_id", user.id).eq("feature_key", "chat").maybeSingle();
+  if (modelPreferenceError) throw modelPreferenceError;
+  const model = modelPreference?.model_id || process.env.OPENROUTER_CHAT_MODEL;
+  if (!model) throw new ApiError(503, "chat_model_not_configured");
   const { data: imagePrefs } = await db.from("ai_image_preferences").select("enabled,auto_suggestions,suggestion_count").eq("user_id", user.id).maybeSingle();
   if (imagePrefs?.enabled === false || imagePrefs?.auto_suggestions === false) throw new ApiError(403, "image_suggestions_disabled");
   const suggestionCount = body.suggestionCount ?? imagePrefs?.suggestion_count ?? 4;
@@ -77,8 +84,13 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
     });
   } catch { throw new ApiError(503, "image_suggestions_unavailable"); }
   if (!response.ok) {
-    if ([401, 402, 403, 404].includes(response.status)) throw new ApiError(503, "ai_config");
-    throw new ApiError(503, "image_suggestions_unavailable");
+    const providerBody = await response.text().catch(() => "");
+    log.error("image_suggestions_provider_error", { status: response.status, model, detail: providerBody.slice(0, 500) });
+    if (response.status === 401) throw new ApiError(503, "openrouter_invalid_key");
+    if (response.status === 402) throw new ApiError(503, "openrouter_insufficient_credits");
+    if (response.status === 404) throw new ApiError(503, "openrouter_chat_model_unavailable");
+    if (response.status === 429) throw new ApiError(503, "openrouter_rate_limited");
+    throw new ApiError(503, "image_suggestions_provider_error");
   }
   let payload: { choices?: { message?: { content?: string } }[] };
   try { payload = await response.json(); } catch { throw new ApiError(503, "image_suggestions_unavailable"); }
