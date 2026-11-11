@@ -5,7 +5,7 @@ import { AudioLines, Mic, MicOff, PhoneOff, Maximize2, Minimize2, Sparkles, Copy
 import { Button } from "@/components/ui/button";
 import { Citation } from "@/components/ui/citation";
 import { Dialog, DialogContent } from "@/components/ui/overlay";
-import { PendingVoiceSearches, shouldInviteRoxane, VoiceTurnCitationStore, type NumberedVoicePassage } from "./voice-turn";
+import { PendingVoiceSearches, shouldInviteRoxane, waitForAudioPlaybackDrain, VoiceTurnCitationStore, type NumberedVoicePassage } from "./voice-turn";
 
 type VoiceState = "idle" | "connecting" | "listening" | "speaking" | "error";
 type Passage = NumberedVoicePassage;
@@ -157,6 +157,16 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
     node.start(startAt);
   }
 
+  /** Wait until every scheduled PCM chunk has actually finished playing. */
+  async function waitForPlaybackToFinish() {
+    const context = audioContext.current;
+    if (!context) return;
+    await waitForAudioPlaybackDrain(
+      () => audioContext.current === context && playbackNodes.current.size > 0,
+      () => new Promise<void>((resolve) => window.setTimeout(resolve, 40))
+    );
+  }
+
   async function handleToolCall(message: LiveMessage) {
     const calls = message?.toolCall?.functionCalls ?? [];
     for (const call of calls) {
@@ -229,7 +239,12 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
                 const nextMessage = parseFrame(nextEvent.data); if (!nextMessage?.serverContent) return;
                 const data = nextMessage.serverContent, spoken = data.outputTranscription?.text;
                 if (spoken) { roxaneTurnText.current += spoken; setRoxaneAnswer((current) => current + spoken); setStatus("Roxane intervient…"); }
-                for (const part of data.modelTurn?.parts ?? []) if (part.inlineData?.data) await playPcm(part.inlineData.data, part.inlineData.mimeType ?? "audio/pcm;rate=24000");
+                for (const part of data.modelTurn?.parts ?? []) {
+                  if (!part.inlineData?.data) continue;
+                  await playPcm(part.inlineData.data, part.inlineData.mimeType ?? "audio/pcm;rate=24000");
+                  setState("speaking");
+                  setStatus("Roxane vous répond…");
+                }
                 if (data.turnComplete) { roxaneTurnResolver.current?.(); roxaneTurnResolver.current = null; }
               } catch { /* ignore malformed Roxane frames */ }
             };
@@ -355,6 +370,9 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
           roxaneTurnResolver.current = () => { window.clearTimeout(timeout); resolve(); };
           connection.send(JSON.stringify({ clientContent: { turns: [{ role: "user", parts: [{ text: prompt }] }], turnComplete: true } }));
         });
+        // Gemini peut signaler turnComplete alors que les derniers buffers PCM sont encore en lecture.
+        // Garder le micro principal bloqué évite que Leanna reprenne la main et coupe Roxane.
+        await waitForPlaybackToFinish();
         roxaneSpeaking.current = false;
         if (roxaneTurnText.current.trim()) assistantTurn.current += `\n\nRoxane : ${roxaneTurnText.current.trim()}`;
       };
@@ -404,7 +422,9 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
             return;
           }
           const content = msg.serverContent;
-          if (content?.interrupted) {
+          // Pendant l'intervention de Roxane, le micro est coupé : un `interrupted` tardif de Leanna
+          // (écho de sa propre voix) ne doit pas stopper l'audio de Roxane, qui partage la file de lecture.
+          if (content?.interrupted && !roxaneSpeaking.current) {
             playbackNodes.current.forEach((n) => { try { n.stop(); } catch {} });
             playbackNodes.current.clear();
             nextPlaybackTime.current = 0;
