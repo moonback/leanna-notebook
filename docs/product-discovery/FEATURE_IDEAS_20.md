@@ -16,7 +16,7 @@ Notes de 1 à 10. Faisabilité élevée = note haute (plus simple / plus réalis
 | 4 | Déduplication et versions intelligentes | P0 | 8 | 7 | 8 | 8 | 8 | **7,85** |
 | 5 | Moteur de contradictions et évolution des faits | P1 | 10 | 9 | 10 | 9 | 6 | **9,05** |
 | 6 | Raisonnement multi-sources traçable | P1 | 10 | 8 | 9 | 9 | 7 | **8,80** |
-| 7 | Carte de connaissances navigable | P1 | 8 | 9 | 9 | 8 | 6 | **8,25** |
+| 7 | Carte de connaissances navigable | P1 | 8 | 9 | 9 | 8 | 6 | **8,10** |
 | 8 | Agents experts en équipe | P1 | 9 | 9 | 9 | 9 | 6 | **8,55** |
 | 9 | Brief de décision avec scénarios | P1 | 9 | 8 | 9 | 9 | 7 | **8,50** |
 | 10 | Studio avec provenance et versions | P1 | 8 | 7 | 8 | 8 | 8 | **7,80** |
