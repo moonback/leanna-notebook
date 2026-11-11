@@ -1,27 +1,28 @@
 # Leanna Notebook
 
-Assistant de recherche documentaire : rassemblez vos sources, posez des questions à leur sujet et vérifiez les réponses grâce à des citations qui renvoient aux passages d'origine. Le Studio transforme le corpus en supports de synthèse et de révision.
+Assistant de recherche documentaire : rassemblez vos sources, posez des questions à leur sujet et vérifiez les réponses grâce à des citations qui renvoient aux passages d'origine. Le Studio transforme le corpus en supports de synthèse, de création et de révision.
 
-Leanna Notebook est une application SaaS multi-utilisateur fondée sur Next.js, Supabase et un worker Node. Le dépôt contient également un client desktop Electron. Le projet est en développement actif ; les fonctionnalités et limites ci-dessous distinguent les capacités décrites du produit des éléments encore en cours.
+Leanna Notebook est une application SaaS multi-utilisateur fondée sur Next.js, Supabase et un worker Node. Le dépôt contient également un client desktop Electron. Le projet est en développement actif ; les états ci-dessous distinguent les capacités repérées dans le code des validations opérationnelles qui restent à effectuer.
 
 ## Fonctionnalités
 
-| Domaine | Capacités décrites | État documentaire |
+| Domaine | Capacités repérées dans le code | Réserve |
 |---|---|---|
-| Notebooks | Organisation, recherche, partage privé, liens et copie | Disponible selon le README |
-| Sources | PDF, Office, EPUB, texte, CSV, audio, web, notes | Disponible selon le README ; OCR PDF scanné absent |
-| Chat | Streaming, recherche hybride, citations vérifiables, notes | Disponible selon le README |
-| Studio | Rapports, fiches, quiz, cartes mentales | Disponible selon le README |
-| Audio Overview | Script deux voix, ElevenLabs, ffmpeg, MP3 | Implémentation signalée sur branche dédiée ; validation restante |
-| Gemini Live | Conversation audio bidirectionnelle et recherche RAG | Décrit comme disponible dans le README |
-| Fast Research / Découvrir | Recherche web et galerie éditoriale | Présents dans le README ; vérifier la branche courante |
-| Electron | Client desktop et build Windows NSIS | Scripts présents ; parcours de mise à jour à valider |
-| Facturation réelle | Stripe / paiement | Non disponible : mode simulé |
-| Emails applicatifs | Invitations et notifications | Non disponible selon le README |
-| Google Drive | Connecteur | À faire selon le README |
-| Infographies / présentations | Génération visuelle | À faire selon le tableau d'avancement |
+| Notebooks | Organisation, membres, liens de partage, visites et copie | Parcours de bout en bout non retesté ici |
+| Sources | Import, traitement, sélection, recherche et citations | OCR des PDF scannés non confirmé |
+| Chat | Streaming SSE, recherche hybride, citations résolues et notes | Dépend de la configuration Supabase/IA |
+| Studio | Rapports, fiches, quiz, cartes mentales, infographies, chronologies, comparatifs, glossaires, FAQ, diagrammes, contenus éditoriaux et plans d'étude | 13 types acceptés par l'API ; résultats visuels non validés exhaustivement |
+| Audio Overview | Script dialogué à deux voix, TTS segmenté, mixage ffmpeg et MP3 privé | Nécessite les identifiants TTS et ffmpeg sur le worker |
+| Mode vocal | Gemini Live, recherche RAG, Leanna et co-animatrice Roxane | Roxane est désactivée par défaut ; deux premiers échanges silencieux |
+| Prompts système | Catalogue éditable par utilisateur dans les réglages, avec sauvegarde et réinitialisation | Traçage des prompts de résumé encore incomplet |
+| Modèles IA | Catalogue OpenRouter et préférences par fonctionnalité | Dépend de la clé OpenRouter |
+| Fast Research / Découvrir | Routes de recherche, import de résultats et ouverture de découvertes | Parcours complet non retesté ici |
+| Electron | Client desktop, configuration de build et dépendance electron-updater | Installation et mise à jour non validées dans cette passe |
+| Facturation réelle | Mode de facturation configurable | README et code de configuration indiquent un mode simulé par défaut |
+| Google Drive | Type de source prévu dans le modèle de données | Connecteur de bout en bout non confirmé |
+| Présentations | Type `slide_deck` présent dans l'enum SQL | Non accepté par le schéma de création Studio inspecté |
 
-Les détails et réserves sont documentés dans [la vue d'ensemble](docs/PROJECT_OVERVIEW.md) et [le rapport d'audit](docs/DOCUMENTATION_AUDIT.md).
+Le statut « repéré dans le code » ne signifie pas qu'une fonctionnalité a été testée en production. Voir le [rapport d'audit](docs/DOCUMENTATION_AUDIT.md).
 
 ## Architecture technique
 
@@ -47,7 +48,7 @@ flowchart LR
   DESK[apps/desktop - Electron] --> WEB
 ```
 
-Le worker consomme les jobs persistés en base. Le README décrit la réclamation concurrente avec `SKIP LOCKED`, des baux renouvelés par heartbeat, des retries et une gestion de quotas à la création/fin du job. Voir [Architecture](docs/ARCHITECTURE.md).
+Le worker consomme les jobs persistés en base. Le système décrit dans le code utilise des jobs, quotas et états de progression. Voir [Architecture](docs/ARCHITECTURE.md).
 
 ## Démarrage local
 
@@ -65,7 +66,7 @@ pnpm install
 pnpm db:start
 ```
 
-Configurez les variables web et worker. Le README référence `apps/web/.env.example` ; l'existence du fichier n'a pas pu être confirmée durant l'audit distant. L'exemple worker accessible est `apps/worker/.env.example`.
+Configurez les variables web et worker. Le README précédent référençait `apps/web/.env.example`, dont l'existence n'a pas été confirmée lors de l'audit distant. L'exemple worker accessible est `apps/worker/.env.example`.
 
 ### Lancement
 Terminal 1 :
@@ -91,7 +92,7 @@ Les variables principales sont :
 | Variable | Utilité |
 |---|---|
 | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Connexion web à Supabase |
-| `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | Accès worker/serveur |
+| `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | Accès Supabase serveur/worker |
 | `OPENROUTER_API_KEY`, `OPENROUTER_CHAT_MODEL` | Chat et génération |
 | `OPENROUTER_EMBEDDINGS_MODEL`, `EMBEDDINGS_PROVIDER`, `EMBEDDINGS_MODEL`, `EMBEDDINGS_API_KEY` | Embeddings |
 | `GEMINI_API_KEY` | Gemini Live |
@@ -101,7 +102,7 @@ Les variables principales sont :
 | `APP_URL`, `BILLING_MODE` | URL publique et mode de facturation |
 | `NEXT_PUBLIC_LEGAL_ENTITY`, `NEXT_PUBLIC_LEGAL_EMAIL` | Informations des pages légales |
 
-La liste complète et les variables worker sont détaillées dans [Configuration](docs/CONFIGURATION.md). Ne versionnez jamais de secrets. Web et worker doivent utiliser des embeddings compatibles de même dimension (1024 selon le README).
+La liste complète et les variables worker sont détaillées dans [Configuration](docs/CONFIGURATION.md). Ne versionnez jamais de secrets. Web et worker doivent utiliser des embeddings compatibles de même dimension (1024 selon la configuration décrite).
 
 ## Scripts
 
@@ -117,17 +118,18 @@ La liste complète et les variables worker sont détaillées dans [Configuration
 | `pnpm desktop:dev` | Client Electron en développement |
 | `pnpm desktop:build` / `pnpm desktop:dist:win` | Build desktop / Windows |
 
-Ces commandes proviennent des manifestes racine et des packages web, worker et desktop. Leur exécution n'a pas été réalisée pendant cet audit distant.
+Ces commandes proviennent des manifestes du dépôt ; elles n'ont pas été exécutées pendant cette passe distante.
 
 ## Documentation
 
-L'index de référence est [docs/README.md](docs/README.md). Il donne accès aux guides d'installation, à l'architecture, à l'API, à Supabase, aux workers, à l'IA, aux prompts, à Electron, à la sécurité, aux fonctionnalités et aux guides utilisateur.
+L'index de référence est [docs/README.md](docs/README.md).
 
 Documents importants :
 - [Architecture](docs/ARCHITECTURE.md)
 - [Référence API](docs/API_REFERENCE.md)
 - [Base de données](docs/DATABASE.md)
 - [Catalogue des prompts IA](docs/AI_PROMPTS_CATALOG.md)
+- [Gestion des prompts](docs/features/SYSTEM_PROMPTS.md)
 - [Mode vocal](docs/features/VOICE_MODE.md)
 - [Studio](docs/features/STUDIO.md)
 - [Guide utilisateur](docs/user-guide/GETTING_STARTED.md)
@@ -138,14 +140,14 @@ Documents importants :
 1. Créer une branche dédiée depuis `main` (par exemple `feat/...`, `fix/...` ou `docs/...`).
 2. Garder les changements ciblés et ajouter/adapter les tests pertinents.
 3. Exécuter `pnpm typecheck`, `pnpm lint`, `pnpm test` et, pour les changements SQL, `pnpm db:test`.
-4. Ouvrir une Pull Request vers `main` avec le périmètre, les tests exécutés et les limites connues.
+4. Ouvrir une Pull Request vers `main avec le périmètre, les tests exécutés et les limites connues.
 
 La structure est organisée autour de `apps/web`, `apps/worker`, `apps/desktop`, `packages/core` et `supabase`. Voir [Structure du projet](docs/PROJECT_STRUCTURE.md).
 
 ## Licence
 
-Aucun fichier `LICENSE` n'a été trouvé à la racine via l'API GitHub durant cet audit. La licence du projet doit être confirmée avant toute redistribution ; aucune licence n'est présumée ici.
+Aucun fichier `LICENSE` n'a été trouvé à la racine via l'API GitHub lors de la première passe. La licence du projet doit être confirmée avant toute redistribution ; aucune licence n'est présumée ici.
 
 ---
 
-**État documentaire :** base documentaire structurée, mais audit du code incomplet. Les limites précises sont consignées dans [docs/DOCUMENTATION_AUDIT.md](docs/DOCUMENTATION_AUDIT.md).
+**État documentaire :** la documentation décrit désormais plusieurs fonctionnalités confirmées dans le code, mais les validations locales et l'audit exhaustif des handlers restent à faire. Consulter [docs/DOCUMENTATION_AUDIT.md](docs/DOCUMENTATION_AUDIT.md).
