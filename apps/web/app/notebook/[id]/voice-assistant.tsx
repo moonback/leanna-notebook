@@ -24,6 +24,13 @@ type LiveMessage = {
   };
 };
 
+const ROXANE_T0 = typeof performance !== "undefined" ? performance.now() : 0;
+/** Logs de diagnostic Roxane : filtrer la console avec "[Roxane]". */
+function rlog(event: string, details?: Record<string, unknown>) {
+  const t = ((performance.now() - ROXANE_T0) / 1000).toFixed(2);
+  console.log(`[Roxane] +${t}s ${event}`, details ?? "");
+}
+
 function bytesToBase64(bytes: Uint8Array) {
   let binary = "";
   const step = 0x8000;
@@ -109,6 +116,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
   const intentionalClose = React.useRef(false);
 
   const stop = React.useCallback(() => {
+    rlog("stop() appelé", { nodes: playbackNodes.current.size, roxaneSpeaking: roxaneSpeaking.current, stack: new Error().stack?.split("\n").slice(2, 5).join(" | ") });
     intentionalClose.current = true;
     socket.current?.close();
     socket.current = null;
@@ -153,8 +161,9 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
     const startAt = Math.max(ctx.currentTime + 0.02, nextPlaybackTime.current);
     nextPlaybackTime.current = startAt + buffer.duration;
     playbackNodes.current.add(node);
-    node.onended = () => playbackNodes.current.delete(node);
+    node.onended = () => { playbackNodes.current.delete(node); if (roxaneSpeaking.current) rlog("chunk audio terminé", { restants: playbackNodes.current.size }); };
     node.start(startAt);
+    if (roxaneSpeaking.current) rlog("chunk audio planifié", { dureeS: +buffer.duration.toFixed(2), debutDansS: +(startAt - ctx.currentTime).toFixed(2), rate });
   }
 
   /** Wait until every scheduled PCM chunk has actually finished playing. */
@@ -224,7 +233,10 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
           if (message?.error) { window.clearTimeout(timeout); reject(new Error(message.error.message ?? "Erreur de configuration de Roxane.")); }
           if (message?.setupComplete) {
             window.clearTimeout(timeout);
-            connection.onclose = () => {
+            rlog("setupComplete, session prête");
+            connection.onerror = (e) => rlog("WebSocket erreur", { type: e.type });
+            connection.onclose = (e) => {
+              rlog("WebSocket FERMÉ", { code: e.code, reason: e.reason, wasClean: e.wasClean });
               if (roxaneSocket.current === connection) {
                 roxaneSocket.current = null;
                 if (roxaneEnabledRef.current) {
@@ -236,8 +248,22 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
             };
             connection.onmessage = async (nextEvent) => {
               try {
-                const nextMessage = parseFrame(nextEvent.data); if (!nextMessage?.serverContent) return;
+                const nextMessage = parseFrame(nextEvent.data);
+                if (!nextMessage) { rlog("frame illisible", { type: typeof nextEvent.data }); return; }
+                if (!nextMessage.serverContent) { rlog("frame hors serverContent", { keys: Object.keys(nextMessage), brut: JSON.stringify(nextMessage).slice(0, 300) }); return; }
                 const data = nextMessage.serverContent, spoken = data.outputTranscription?.text;
+                const audioParts = (data.modelTurn?.parts ?? []).filter((p) => p.inlineData?.data);
+                rlog("frame", {
+                  audioChunks: audioParts.length,
+                  audioBase64Len: audioParts.reduce((n, p) => n + (p.inlineData?.data?.length ?? 0), 0),
+                  text: spoken,
+                  turnComplete: data.turnComplete,
+                  interrupted: data.interrupted,
+                  generationComplete: (data as { generationComplete?: boolean }).generationComplete,
+                  nodes: playbackNodes.current.size,
+                  ctxState: audioContext.current?.state
+                });
+                if (data.interrupted) rlog("INTERRUPTED reçu de la session Roxane");
                 if (spoken) { roxaneTurnText.current += spoken; setRoxaneAnswer((current) => current + spoken); setStatus("Roxane intervient…"); }
                 for (const part of data.modelTurn?.parts ?? []) {
                   if (!part.inlineData?.data) continue;
@@ -245,8 +271,8 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
                   setState("speaking");
                   setStatus("Roxane vous répond…");
                 }
-                if (data.turnComplete) { roxaneTurnResolver.current?.(); roxaneTurnResolver.current = null; }
-              } catch { /* ignore malformed Roxane frames */ }
+                if (data.turnComplete) { rlog("turnComplete Roxane", { nodes: playbackNodes.current.size }); roxaneTurnResolver.current?.(); roxaneTurnResolver.current = null; }
+              } catch (error) { rlog("erreur traitement frame", { error: String(error) }); }
             };
             resolve();
           }
@@ -348,10 +374,9 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
           `Question de l'utilisateur : ${userTurn.current.trim()}`,
           `R├®ponse de Leanna : ${assistantTurn.current.trim()}`,
           `Extraits v├®rifi├®s consult├®s : ${groundedSources || "Aucun extrait transmis"}`,
-          "Parle uniquement si tu identifies au moins un ├®l├®ment concret : contradiction, hypoth├¿se fragile, limite importante, information manquante qui change la conclusion, cons├®quence pratique ou question r├®ellement n├®cessaire.",
-          "Ne r├®p├¿te pas Leanna, ne la f├®licite pas par r├®flexe, ne reformule pas sa r├®ponse et ne pose jamais une question g├®n├®rique pour meubler.",
-          "Si tu n'as rien de pertinent ├á ajouter, termine imm├®diatement le tour sans produire de texte ni audio. Le silence est la r├®ponse attendue dans ce cas.",
-          "Si tu interviens, limite-toi ├á une remarque concise et directement utile. N'ajoute aucun fait absent des extraits."
+          "Réponds maintenant à voix haute, en deux à quatre phrases complètes : relève un élément concret (hypothèse fragile, limite, contradiction, information manquante, conséquence pratique) ou pose une question utile pour approfondir.",
+          "Ne répète pas Leanna, ne la félicite pas par réflexe et ne reformule pas sa réponse. Termine toujours ta dernière phrase.",
+          "N'ajoute aucun fait absent des extraits."
         ].join("\n\n");
         const connection = roxaneSocket.current;
         if (!connection || connection.readyState !== WebSocket.OPEN) {
@@ -361,18 +386,24 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
         roxaneTurnText.current = "";
         setRoxaneAnswer("");
         roxaneSpeaking.current = true;
+        rlog("askRoxane: envoi du prompt", { turnNumber, nodesLeanna: playbackNodes.current.size });
         setStatus("Roxane analyse la réponse de Leanna…");
         await new Promise<void>((resolve) => {
           const timeout = window.setTimeout(() => {
+            rlog("TIMEOUT 18s en attente de turnComplete Roxane");
             roxaneTurnResolver.current = null;
             resolve();
           }, 18000);
           roxaneTurnResolver.current = () => { window.clearTimeout(timeout); resolve(); };
-          connection.send(JSON.stringify({ clientContent: { turns: [{ role: "user", parts: [{ text: prompt }] }], turnComplete: true } }));
+          // Gemini 3.x Live : le texte en cours de session passe par realtimeInput.text (clientContent ne déclenchait aucune réponse).
+          connection.send(JSON.stringify({ realtimeInput: { text: prompt } }));
+          rlog("prompt envoyé via realtimeInput.text", { longueur: prompt.length, socketState: connection.readyState });
         });
         // Gemini peut signaler turnComplete alors que les derniers buffers PCM sont encore en lecture.
         // Garder le micro principal bloqué évite que Leanna reprenne la main et coupe Roxane.
+        rlog("attente fin de lecture", { nodes: playbackNodes.current.size });
         await waitForPlaybackToFinish();
+        rlog("lecture terminée, micro rouvert", { texte: roxaneTurnText.current.slice(0, 80) });
         roxaneSpeaking.current = false;
         if (roxaneTurnText.current.trim()) assistantTurn.current += `\n\nRoxane : ${roxaneTurnText.current.trim()}`;
       };
@@ -424,6 +455,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
           const content = msg.serverContent;
           // Pendant l'intervention de Roxane, le micro est coupé : un `interrupted` tardif de Leanna
           // (écho de sa propre voix) ne doit pas stopper l'audio de Roxane, qui partage la file de lecture.
+          if (content?.interrupted) rlog("INTERRUPTED reçu de la session Leanna", { roxaneSpeaking: roxaneSpeaking.current, ignoré: roxaneSpeaking.current, nodes: playbackNodes.current.size });
           if (content?.interrupted && !roxaneSpeaking.current) {
             playbackNodes.current.forEach((n) => { try { n.stop(); } catch {} });
             playbackNodes.current.clear();
