@@ -9,6 +9,9 @@ Documentation vérifiée à partir du README et des manifestes accessibles le 11
 - [Structure du dépôt](PROJECT_STRUCTURE.md)
 
 ## Références techniques
+- [Inventaire des prompts](audits/PROMPTS_INVENTORY.md) · [Audit des prompts](audits/PROMPTS_AUDIT.md)
+- [Architecture des prompts](architecture/PROMPT_ARCHITECTURE.md) · [Conventions](architecture/PROMPT_GUIDELINES.md)
+- [Évaluation des prompts](testing/PROMPT_EVALUATION.md) · [Roadmap d'optimisation](roadmap/PROMPT_OPTIMIZATION_ROADMAP.md)
 - [Architecture](ARCHITECTURE.md)
 - [API](API_REFERENCE.md)
 - [Base de données](DATABASE.md)
