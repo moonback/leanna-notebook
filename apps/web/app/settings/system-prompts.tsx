@@ -24,6 +24,21 @@ export function SystemPromptsSettings() {
   const active = SYSTEM_PROMPT_CATALOG.find((p) => p.key === activeKey) ?? SYSTEM_PROMPT_CATALOG[0];
   const saved = overrides[active.key] ?? "";
   const dirty = draft !== saved;
+  const isWorkerComposed = active.key.startsWith("studio.") || active.key.startsWith("summary.");
+  const referenceLabel = isWorkerComposed ? "Afficher le texte de référence du catalogue" : "Afficher le prompt système de référence";
+  const runtimeDescription = isWorkerComposed
+    ? "Le prompt exécuté est assemblé côté worker à partir des règles de tâche, du format, des options, des préférences et des passages sélectionnés. Le texte de référence ci-dessus est un repère du catalogue : il ne représente pas à lui seul le prompt complet envoyé au modèle."
+    : active.key === "chat"
+      ? "Le serveur assemble le prompt de conversation avec les règles de référence, le contexte documentaire et vos préférences complémentaires. Les contraintes de sécurité et de citation restent prioritaires."
+      : active.key.startsWith("voice.")
+        ? "Le serveur assemble le prompt du persona vocal et votre personnalisation complémentaire dans l'instruction Gemini Live. Les règles du persona, l'ancrage documentaire et les outils restent prioritaires."
+        : "Le serveur conserve les instructions de référence et ajoute votre personnalisation comme préférence complémentaire, sans remplacer les contraintes applicatives.";
+  const customizationLabel = isWorkerComposed
+    ? "Préférences personnalisées (envoyées séparément des instructions système)"
+    : "Instructions personnalisées";
+  const customizationHelp = isWorkerComposed
+    ? "Transmises dans un message utilisateur distinct, après les règles système et avant les passages documentaires."
+    : "Ajoutées au contexte d'instructions de référence comme préférences complémentaires non prioritaires.";
   const filtered = SYSTEM_PROMPT_CATALOG.filter((p) => (p.label + " " + p.group + " " + p.description).toLowerCase().includes(search.toLowerCase()));
 
   React.useEffect(() => {
@@ -92,17 +107,17 @@ export function SystemPromptsSettings() {
           <Badge tone={saved ? "success" : "neutral"}>{saved ? "Personnalisé" : "Par défaut"}</Badge>
         </div>
         <details className="rounded-md border border-border-subtle bg-surface-sunken p-3 text-xs">
-          <summary className="cursor-pointer font-medium text-text">Afficher le prompt système de référence</summary>
+          <summary className="cursor-pointer font-medium text-text">{referenceLabel}</summary>
           <pre className="mt-3 max-h-64 overflow-auto whitespace-pre-wrap font-mono leading-5 text-text-muted">{active.defaultPrompt}</pre>
         </details>
         <div className="rounded-md border border-border-subtle bg-surface-sunken p-3 text-xs text-text-muted">
           <div className="flex items-center gap-2 font-medium text-text"><ShieldCheck className="size-4" /> Instructions de référence</div>
-          <p className="mt-1">Le prompt de référence est conservé dans le code. Votre texte personnalisé est ajouté à ces instructions et ne peut pas désactiver les règles de sécurité, les contrôles de sources ou le format technique requis.</p>
+          <p className="mt-1">{runtimeDescription}</p>
         </div>
         <div className="grid gap-2">
-          <label htmlFor="system-prompt-editor" className="text-sm font-medium">Instructions personnalisées</label>
+          <label htmlFor="system-prompt-editor" className="text-sm font-medium">{customizationLabel}</label>
           <Textarea id="system-prompt-editor" value={draft} onChange={(e) => setDraft(e.target.value)} rows={18} maxLength={12000} placeholder="Ajoutez ici les consignes spécifiques à cette fonctionnalité…" spellCheck={false} className="min-h-[360px] font-mono text-xs leading-5" disabled={loading} />
-          <div className="flex items-center justify-between text-xs text-text-subtle"><span>Ajoutées au prompt système de référence</span><span className="tabular-nums">{draft.length.toLocaleString("fr-FR")} / 12 000</span></div>
+          <div className="flex items-center justify-between gap-3 text-xs text-text-subtle"><span>{customizationHelp}</span><span className="shrink-0 tabular-nums">{draft.length.toLocaleString("fr-FR")} / 12 000</span></div>
         </div>
         {error && <p role="alert" className="text-sm text-danger">{error}</p>}
         {message && <p role="status" className="flex items-center gap-2 text-sm text-success"><Check className="size-4" />{message}</p>}
