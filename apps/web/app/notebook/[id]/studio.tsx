@@ -191,8 +191,24 @@ function CreateDialog({ type, notebookId, sourceIds, referenceImageId, onClose, 
   const [aiModelsLoading, setAiModelsLoading] = React.useState(false);
   const [aiModelsError, setAiModelsError] = React.useState(false);
   const [selectedAiModel, setSelectedAiModel] = React.useState<string | null>(null);
+  const [imageModels, setImageModels] = React.useState<{ id: string; name: string }[]>([]);
+  const [imageModelsError, setImageModelsError] = React.useState(false);
   const styleCarouselRef = React.useRef<HTMLDivElement | null>(null);
 
+  React.useEffect(() => {
+    if (type !== "image") return;
+    let active = true;
+    fetch("/api/v1/ai/image-models").then(async (response) => {
+      if (!response.ok) throw new Error("image_catalog_unavailable");
+      return response.json() as Promise<{ models: { id: string; name: string }[]; defaultModelId: string }>;
+    }).then((result) => {
+      if (!active) return;
+      setImageModels(result.models ?? []);
+      setImageModelsError(false);
+      setOpts((current) => ({ ...current, modelId: current.modelId || result.defaultModelId }));
+    }).catch(() => { if (active) setImageModelsError(true); });
+    return () => { active = false; };
+  }, [type]);
   const sourceKey = sourceIds.join(",");
   const aiModelsCache = React.useRef<{ notebookId: string; sourceIds: Set<string>; suggestions: AiReportModel[] } | null>(null);
   React.useEffect(() => {
@@ -273,7 +289,7 @@ function CreateDialog({ type, notebookId, sourceIds, referenceImageId, onClose, 
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent size="lg" title={type === "infographic" ? "Personnaliser l’infographie" : type === "image" ? "Créer une image IA" : type === "report" ? "Créer un rapport" : `Générer : ${TYPES[type].label}`} description={type === "infographic" ? "Configurez la langue, le format, le style et les sources avant de lancer la création." : type === "image" ? "Décrivez l’image souhaitée à partir des sources du notebook." : type === "report" ? "Choisissez un format et un modèle pour composer un rapport à partir de vos sources." : "À partir des sources sélectionnées. La génération continue en arrière-plan."}>
         <form onSubmit={submit} className="grid gap-5">
-          {type === "image" && referenceImageId && <Alert tone="info" title="Modification d’une image existante">L’image actuelle sera utilisée comme référence. Une nouvelle image sera créée sans écraser l’originale.</Alert>}
+          {type === "image" && referenceImageId && <Alert tone="warning" title="Modification d’une image existante">L’image actuelle sera utilisée comme référence. Une nouvelle image sera créée sans écraser l’originale.</Alert>}
           {type === "report" && (
             <>
               <section className="grid gap-3">
@@ -380,7 +396,7 @@ function CreateDialog({ type, notebookId, sourceIds, referenceImageId, onClose, 
               </section>
             </div>
           )}
-          {type === "image" && <section className="grid gap-3 rounded-xl border border-border p-3"><h3 className="text-sm font-semibold">Format de l’image</h3>{choice("orientation", "Orientation", [["landscape", "Paysage"], ["portrait", "Portrait"], ["square", "Carré"]])}{choice("sourceScope", "Sources à utiliser", [["selected", sourceIds.length + " sources sélectionnées"], ["all", "Toutes les sources prêtes"]])}<p className="text-xs text-text-muted">Modèle par défaut : Nano Banana 2. Configurable côté serveur avec OPENROUTER_IMAGE_MODEL.</p></section>}
+          {type === "image" && <section className="grid gap-3 rounded-xl border border-border p-3"><h3 className="text-sm font-semibold">Modèle et format</h3>{imageModels.length > 0 ? choice("modelId", "Modèle IA", imageModels.map((model) => [model.id, model.name] as [string, string])) : <p className="text-xs text-text-muted">{imageModelsError ? "Catalogue indisponible : le modèle par défaut sera utilisé." : "Chargement des modèles image…"}</p>}{choice("orientation", "Orientation", [["landscape", "Paysage"], ["portrait", "Portrait"], ["square", "Carré"]])}{choice("sourceScope", "Sources à utiliser", [["selected", sourceIds.length + " sources sélectionnées"], ["all", "Toutes les sources prêtes"]])}<p className="text-xs text-text-muted">Modèle par défaut : Nano Banana 2. Configurable côté serveur avec OPENROUTER_IMAGE_MODEL.</p></section>}
           {type === "audio" && <div className="grid gap-4 sm:grid-cols-2">{choice("format", "Format du podcast", [["deep_dive", "Deep Dive · approfondi"], ["brief", "Brief · essentiel"], ["critique", "Critique · analyse"], ["debate", "Débat · points de vue"]])}{choice("duration", "Durée cible", [["short", "Court · 5 min"], ["standard", "Standard · 10 min"], ["long", "Long · 15 min"]])}{choice("style", "Ton", [["accessible", "Accessible et pédagogique"], ["professional", "Professionnel et précis"], ["dynamic", "Dynamique et vivant"]])}</div>}
           {(type === "flashcards" || type === "quiz") && <div className="grid gap-4 sm:grid-cols-2">{choice("difficulty", "Difficulté", [["easy", "Facile"], ["medium", "Moyenne"], ["hard", "Difficile"]])}{choice("count", "Quantité", [["fewer", "Moins"], ["standard", "Standard"], ["more", "Plus"]])}</div>}
           <Field id="opt-prompt" label={type === "image" ? "Décrivez l’image à générer" : type === "infographic" ? "Décrivez l’infographie que vous souhaitez créer" : type === "report" ? "Personnaliser le modèle (facultatif)" : "Consignes (facultatif)"} hint={type === "image" ? "Sujet, style, composition, couleurs et texte éventuel." : type === "infographic" ? undefined : type === "report" ? "Public visé, ton, plan souhaité, longueur ou éléments à mettre en avant…" : "Public visé, angle, thèmes à privilégier…"}>
