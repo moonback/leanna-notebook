@@ -12,30 +12,30 @@
 
 ### P0 — Fondamentale
 1. **#1 Cockpit de fiabilité documentaire** — score 8,25. Première brique de confiance.
-2. **#2 Détecteur de lacunes et dossier incomplet** — score 8,65. Cas d'usage à forte valeur.
+2. **#2 Détecteur de lacunes et dossier incomplet** — score 8,70. Cas d'usage à forte valeur.
 3. **#3 OCR et compréhension visuelle des scans** — score 7,55. Supprime une limite explicite d'ingestion.
 4. **#4 Déduplication et versions intelligentes** — score 7,85. Qualité du corpus et fondation temporelle.
 
 ### P1 — Différenciation
-5. **#5 Moteur de contradictions et évolution des faits** — score 8,95.
-6. **#6 Raisonnement multi-sources traçable** — score 8,75.
-7. **#7 Carte de connaissances navigable** — score 8,05.
-8. **#8 Agents experts en équipe** — score 8,40.
-9. **#9 Brief de décision avec scénarios** — score 8,45.
-10. **#10 Studio avec provenance et versions** — score 7,75.
+5. **#5 Moteur de contradictions et évolution des faits** — score 9,05.
+6. **#6 Raisonnement multi-sources traçable** — score 8,80.
+7. **#7 Carte de connaissances navigable** — score 8,25.
+8. **#8 Agents experts en équipe** — score 8,55.
+9. **#9 Brief de décision avec scénarios** — score 8,50.
+10. **#10 Studio avec provenance et versions** — score 7,80.
 
 ### P2 — Innovation
 11. **#11 Recherche web comparative et réconciliation** — score 7,85.
-12. **#12 Veille documentaire et détection de changements** — score 8,10.
-13. **#13 Assistant de réunion et alignement audio-docs** — score 7,45.
-14. **#14 Studio vocal pilotable et multi-agents** — score 8,00.
-15. **#15 Générateur de workflows documentaires** — score 8,40.
-16. **#16 Simulateur de scénarios et hypothèses** — score 7,95.
-17. **#17 Mémoire de projet explicable** — score 8,45.
+12. **#12 Veille documentaire et détection de changements** — score 8,25.
+13. **#13 Assistant de réunion et alignement audio-docs** — score 7,50.
+14. **#14 Studio vocal pilotable et multi-agents** — score 8,10.
+15. **#15 Générateur de workflows documentaires** — score 8,55.
+16. **#16 Simulateur de scénarios et hypothèses** — score 8,10.
+17. **#17 Mémoire de projet explicable** — score 8,50.
 
 ### P3 — Vision long terme
 18. **#18 Connecteurs externes synchronisés** — score 7,10.
-19. **#19 Espace de revue collaborative des preuves** — score 7,45.
+19. **#19 Espace de revue collaborative des preuves** — score 7,50.
 20. **#20 Tuteur adaptatif de maîtrise des connaissances** — score 7,85.
 
 ## Feuille de route par horizon
