@@ -166,7 +166,11 @@ export function Studio({ notebookId, canEdit, sourceIds, sourceTitle, onOpenCita
             <li key={a.id} className="grid min-w-0 gap-1">
               <ListRow
                 wrap
-                icon={TYPES[a.type].icon}
+                icon={a.type === "image" && a.status === "ready"
+                  // eslint-disable-next-line @next/next/no-img-element
+                  ? <img src={`/api/v1/artifacts/${a.id}/image`} alt="" loading="lazy" className="size-full object-cover" />
+                  : TYPES[a.type].icon}
+                iconClassName={a.type === "image" && a.status === "ready" ? "size-14 border border-border" : undefined}
                 title={a.status === "ready"
                   ? <button className="line-clamp-2 w-full break-words text-left hover:underline" title={label(a)} onClick={() => view(a)}>{shortLabel(a)}</button>
                   : <span title={label(a)}>{shortLabel(a)}</span>}

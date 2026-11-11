@@ -72,14 +72,14 @@ export function Tr({ className, ...props }: React.HTMLAttributes<HTMLTableRowEle
 
 /** Ligne de liste générique (source, artefact) : icône · texte principal + méta · action. */
 export function ListRow({
-  icon, title, meta, trailing, selected, wrap, className, ...props
-}: Omit<React.HTMLAttributes<HTMLDivElement>, "title"> & { icon?: React.ReactNode; title: React.ReactNode; meta?: React.ReactNode; trailing?: React.ReactNode; selected?: boolean; /** Autorise le titre (2 lignes) et la méta à passer à la ligne au lieu d'être tronqués. */ wrap?: boolean }) {
+  icon, title, meta, trailing, selected, wrap, iconClassName, className, ...props
+}: Omit<React.HTMLAttributes<HTMLDivElement>, "title"> & { iconClassName?: string; icon?: React.ReactNode; title: React.ReactNode; meta?: React.ReactNode; trailing?: React.ReactNode; selected?: boolean; /** Autorise le titre (2 lignes) et la méta à passer à la ligne au lieu d'être tronqués. */ wrap?: boolean }) {
   return (
     <div
       className={cn("group flex min-h-11 min-w-0 items-center gap-3 rounded-md px-3 py-1.5 hover:bg-surface", wrap && "items-start", selected && "bg-accent-soft/60", className)}
       {...props}
     >
-      {icon && <span aria-hidden className="grid size-7 shrink-0 place-items-center rounded-md bg-surface text-text-muted [&_svg]:size-4">{icon}</span>}
+      {icon && <span aria-hidden className={cn("grid size-7 shrink-0 place-items-center overflow-hidden rounded-md bg-surface text-text-muted [&_svg]:size-4", iconClassName)}>{icon}</span>}
       <div className="min-w-0 flex-1">
         <div className={cn("text-sm text-text", wrap ? "line-clamp-2 break-words" : "truncate")}>{title}</div>
         {meta && <div className={cn("text-xs text-text-subtle", wrap ? "break-words" : "truncate")}>{meta}</div>}
