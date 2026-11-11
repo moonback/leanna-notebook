@@ -223,11 +223,14 @@ function CreateDialog({ type, notebookId, sourceIds, referenceImageId, onClose, 
       if (!active) return;
       setImagePreferences(result.settings);
       setOpts((current) => ({ ...current, orientation: result.settings.defaultOrientation, ...(result.settings.defaultModelId ? { modelId: result.settings.defaultModelId } : {}) }));
-    }).catch(() => { if (active) setImagePreferences({ enabled: true, autoSuggestions: true, suggestionCount: 4, defaultModelId: null, defaultOrientation: "landscape" }); });
+    }).catch(() => { if (active) setImagePreferences({ enabled: false, autoSuggestions: false, suggestionCount: 4, defaultModelId: null, defaultOrientation: "landscape" }); });
     return () => { active = false; };
   }, [type]);
   React.useEffect(() => {
-    if (type !== "image") return;
+    if (type !== "image" || !imagePreferences?.enabled) {
+      setImageModels([]);
+      return;
+    }
     let active = true;
     fetch("/api/v1/ai/image-models").then(async (response) => {
       if (!response.ok) throw new Error("image_catalog_unavailable");
@@ -239,7 +242,7 @@ function CreateDialog({ type, notebookId, sourceIds, referenceImageId, onClose, 
       setOpts((current) => ({ ...current, modelId: current.modelId || result.defaultModelId }));
     }).catch(() => { if (active) setImageModelsError(true); });
     return () => { active = false; };
-  }, [type]);
+  }, [type, imagePreferences?.enabled]);
   const sourceKey = sourceIds.join(",");
   React.useEffect(() => {
     if (type !== "image") return;
