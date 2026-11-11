@@ -112,3 +112,20 @@ Aucun score numérique avant/après n'est publié : il n'existe pas de benchmark
 ### Limite de couverture mise à jour
 
 L'arbre Git du commit audité contient 260 fichiers et a été énuméré. Les chemins image et voix supplémentaires ont été inspectés. Cela améliore la couverture par rapport au seul catalogue, mais ne prouve pas que chaque appel LLM ou chaque chaîne inline de tous les fichiers TypeScript/JavaScript a été analysé : la recherche de code GitHub reste indisponible et aucun clone local n'a été utilisé.
+
+## Harmonisation des personnalisations — seconde passe
+
+### Studio et Audio Overview
+
+**Constat :** `buildPrompt()` plaçait la consigne libre `customPrompt` dans le message système ; l'override du catalogue était ensuite concaténé au même message. Audio Overview faisait de même avec sa consigne éditoriale.  
+**Correction :** les règles de tâche, d'ancrage documentaire et de format restent dans le message système. Les personnalisations libres et les overrides du catalogue sont désormais transmis dans des messages utilisateur distincts, encadrés et explicitement non prioritaires. Les passages restent séparés dans leur propre bloc.  
+**Tests ajoutés / adaptés :** vérification que les personnalisations Studio et Audio Overview ne sont plus présentes dans le message système et que les sources gardent leur message séparé. Exécution non réalisée à ce stade.
+
+### Résumés automatiques
+
+**Constat :** les overrides `summary.source` et `summary.notebook` étaient transmis comme messages système supplémentaires avant les règles fixes.  
+**Correction :** ils sont maintenant transmis comme préférences complémentaires dans un message utilisateur distinct ; le schéma JSON, le périmètre documentaire et les règles de langue restent dans le système.
+
+### Limite résiduelle du gestionnaire de prompts
+
+Le catalogue expose des textes par défaut pour Studio, mais les chemins d'exécution utilisent leurs propres templates dans `generate.ts` / `audio-overview.ts`. Le texte du catalogue est lu comme override personnalisé ; il ne constitue pas à lui seul le prompt réellement exécuté. L'interface doit donc présenter explicitement la composition effective (template applicatif + override + options + règles + sources) afin d'éviter de laisser croire que l'éditeur affiche l'intégralité du prompt runtime.
