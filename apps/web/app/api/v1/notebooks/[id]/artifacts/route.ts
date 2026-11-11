@@ -57,16 +57,20 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
   await requireRole(id, "editor");
   const body = await parseBody(req, createSchema);
   if (!process.env.OPENROUTER_API_KEY || (body.type !== "image" && !process.env.OPENROUTER_CHAT_MODEL)) throw new ApiError(503, "ai_not_configured");
+  let referenceImageId: string | null = null;
+  if (body.type === "image" && body.options.referenceArtifactId) {
+    const { data: reference } = await createServiceClient().from("artifacts").select("id").eq("id", body.options.referenceArtifactId).eq("notebook_id", id).eq("type", "image").eq("status", "ready").maybeSingle();
+    if (!reference) throw new ApiError(422, "invalid_image_reference");
+    referenceImageId = reference.id;
+  }
   const idem = req.headers.get("idempotency-key");
   const { data, error } = await createServiceClient().rpc("create_artifact", {
     p_notebook: id, p_user: user.id, p_type: body.type, p_options: body.options, p_custom_prompt: body.customPrompt || null,
     p_source_ids: body.sourceIds ?? [], p_idempotency_key: idem ? `${user.id}:${id}:${idem}` : null,
   });
   if (error) throw error;
-  if (body.type === "image" && body.options.referenceArtifactId) {
-    const { data: reference } = await createServiceClient().from("artifacts").select("id").eq("id", body.options.referenceArtifactId).eq("notebook_id", id).eq("type", "image").eq("status", "ready").maybeSingle();
-    if (!reference) throw new ApiError(422, "invalid_image_reference");
-    const { error: parentError } = await createServiceClient().from("artifacts").update({ parent_id: reference.id }).eq("id", data as string);
+  if (referenceImageId) {
+    const { error: parentError } = await createServiceClient().from("artifacts").update({ parent_id: referenceImageId }).eq("id", data as string);
     if (parentError) throw parentError;
   }
   log.info("artifact.requested", { notebook_id: id, artifact_id: data as string, type: body.type });
