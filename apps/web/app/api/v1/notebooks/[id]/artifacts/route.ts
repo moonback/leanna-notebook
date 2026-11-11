@@ -7,7 +7,7 @@ import { createServiceClient, createUserClient } from "@/lib/supabase/server";
 type Params = { params: Promise<{ id: string }> };
 
 const createSchema = z.object({
-  type: z.enum(["report", "flashcards", "quiz", "mind_map", "audio", "infographic", "timeline", "comparison", "glossary", "faq", "diagram", "editorial", "study_plan"]),
+  type: z.enum(["report", "flashcards", "quiz", "mind_map", "audio", "infographic", "timeline", "comparison", "glossary", "faq", "diagram", "editorial", "study_plan", "image"]),
   options: z.object({
     template: z.enum(["custom", "briefing", "study_guide", "faq", "blog_post", "specification", "action_plan", "practical_sheet", "detailed_guide"]).optional(),
     language: z.enum(["fr", "en", "es", "de", "it", "pt", "nl"]).optional(),
@@ -21,6 +21,8 @@ const createSchema = z.object({
     visualStyle: z.enum(["auto", "kawaii", "claymation", "sketchnote", "anime", "editorial", "storyboard", "bentogrid", "bricks", "scientific", "professional"]).optional(),
     detailLevel: z.enum(["concise", "standard", "detailed", "very_detailed"]).optional(),
     sourceScope: z.enum(["selected", "all"]).optional(),
+    modelId: z.string().trim().min(3).max(200).optional(),
+    aspectRatio: z.enum(["1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16"]).optional(),
   }).strict().default({}),
   customPrompt: z.string().trim().max(4000, "4 000 caractères maximum.").optional(),
   sourceIds: z.array(z.string().uuid()).max(600).optional(),
@@ -53,7 +55,7 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
   const { id } = await params;
   await requireRole(id, "editor");
   const body = await parseBody(req, createSchema);
-  if (!process.env.OPENROUTER_API_KEY || !process.env.OPENROUTER_CHAT_MODEL) throw new ApiError(503, "ai_not_configured");
+  if (!process.env.OPENROUTER_API_KEY || (body.type !== "image" && !process.env.OPENROUTER_CHAT_MODEL)) throw new ApiError(503, "ai_not_configured");
   const idem = req.headers.get("idempotency-key");
   const { data, error } = await createServiceClient().rpc("create_artifact", {
     p_notebook: id, p_user: user.id, p_type: body.type, p_options: body.options, p_custom_prompt: body.customPrompt || null,
