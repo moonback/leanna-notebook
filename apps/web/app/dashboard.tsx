@@ -21,7 +21,7 @@ const fold = (s: string) => s.normalize("NFD").replace(/\p{Diacritic}/gu, "").to
 const titleOf = (n: NotebookRow) => n.title || "Notebook sans titre";
 const sources = (n: number) => `${n} source${n > 1 ? "s" : ""}`;
 
-export function Dashboard({ initial, loadError, initialView }: { initial: NotebookRow[]; loadError: boolean; initialView: "grid" | "list"; name: string | null }) {
+export function Dashboard({ initial, loadError, initialView, name }: { initial: NotebookRow[]; loadError: boolean; initialView: "grid" | "list"; name: string | null }) {
   const router = useRouter();
   const [items, setItems] = React.useState(initial);
   const [tab, setTab] = React.useState<Tab>("all");
@@ -92,6 +92,17 @@ export function Dashboard({ initial, loadError, initialView }: { initial: Notebo
       <Button size="sm" className="shrink-0" onClick={create} loading={creating}><Plus aria-hidden /> <span className="hidden sm:inline">Nouveau notebook</span><span className="sr-only sm:hidden">Nouveau notebook</span></Button>
     </AppHeader>
     <main className="mobile-dashboard-main mx-auto grid max-w-[var(--page-max-w)] gap-6 px-4 py-8 sm:px-6">
+      <section className="flex flex-col gap-4 rounded-2xl border border-border bg-gradient-to-br from-surface-raised to-surface p-5 sm:flex-row sm:items-end sm:justify-between sm:p-7">
+        <div className="max-w-2xl">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-accent">Votre espace de recherche</p>
+          <h1 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">{name?.trim() ? `Bonjour ${name.trim().split(/\s+/)[0]}` : "Bienvenue dans Leanna Notebook"}</h1>
+          <p className="mt-2 max-w-xl text-sm leading-6 text-text-muted">Retrouvez vos notebooks, explorez vos sources avec Leanna et transformez vos recherches en rapports, synthèses et autres livrables dans le Studio — à l’écrit comme à la voix.</p>
+        </div>
+        <div className="flex shrink-0 items-center gap-3 rounded-xl border border-border bg-bg/80 px-4 py-3">
+          <span className="grid size-9 place-items-center rounded-lg bg-accent-soft text-on-accent-soft"><BookOpen className="size-4" /></span>
+          <span><strong className="block text-lg leading-5 tabular-nums">{items.length}</strong><span className="text-xs text-text-subtle">notebook{items.length > 1 ? "s" : ""}</span></span>
+        </div>
+      </section>
       {loadError && <Alert tone="danger" title="Impossible de charger vos notebooks" action={<Button size="sm" variant="secondary" onClick={() => router.refresh()}>Réessayer</Button>} />}
 
       <div className="mobile-dashboard-toolbar flex flex-wrap items-center justify-between gap-3">
