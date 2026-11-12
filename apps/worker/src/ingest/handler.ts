@@ -61,6 +61,7 @@ export function ingestHandler(db: SupabaseClient, embedder: Embedder | null, opt
           const ocr = openRouterPdfOcr({
             apiKey, model: ocrSettings.model_id,
             engine: ocrSettings.engine as PdfOcrEngine,
+            baseUrl: process.env.OPENROUTER_BASE_URL,
           });
           return ocr.extract(pdf, pageCount);
         },
