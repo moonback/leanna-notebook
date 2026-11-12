@@ -42,6 +42,8 @@ export const UPLOAD_TYPES = {
   docx: ["application/vnd.openxmlformats-officedocument.wordprocessingml.document", "docx"],
   pptx: ["application/vnd.openxmlformats-officedocument.presentationml.presentation", "pptx"],
   epub: ["application/epub+zip", "epub"],
+  mp4: ["video/mp4", "video"], m4v: ["video/mp4", "video"],
+  mov: ["video/quicktime", "video"], mkv: ["video/x-matroska", "video"],
   mp3: ["audio/mpeg", "audio"], wav: ["audio/wav", "audio"], m4a: ["audio/mp4", "audio"],
   aac: ["audio/aac", "audio"], ogg: ["audio/ogg", "audio"], flac: ["audio/flac", "audio"], webm: ["audio/webm", "audio"],
 } as const;
