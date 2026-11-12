@@ -23,7 +23,7 @@ type StudioArtifactType = "report" | "flashcards" | "quiz" | "mind_map" | "infog
 /** Détecte uniquement une demande explicite de création d'un livrable Studio. */
 function detectStudioArtifactRequest(input: string): { type: StudioArtifactType; template?: string } | null {
   const value = input.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-  const action = /\b(cree|creer|gener(e|er|ez)|prepare|produis|realise|redige|rediger|ecris|construis|fabrique|fais-moi|fais moi|fais|make|create|generate)\b/.test(value);
+  const action = /\b(cree|creer|gener(e|er|ez)|prepare|produis|realise|redige|rediger|ecris|construis|fabrique|fais-moi|fais moi|faire|fais|fasse|fait|veux|voudrais|souhaite|aimerais|besoin|make|create|generate)\b/.test(value);
   if (!action) return null;
   const types: Array<[StudioArtifactType, RegExp]> = [
     ["flashcards", /\b(fiches? de revision|flashcards|cartes memoire)\b/],
@@ -36,8 +36,8 @@ function detectStudioArtifactRequest(input: string): { type: StudioArtifactType;
     ["faq", /\b(faq|foire aux questions)\b/],
     ["diagram", /\b(diagramme|schema|flowchart)\b/],
     ["editorial", /\b(newsletter|article de blog|publication|contenu editorial)\b/],
-    ["study_plan", /\b(plan d'etude|planning de revision|programme de revision)\b/],
-    ["report", /\b(rapport|report|synthese|briefing|guide pratique|fiche pratique|guide detaille|document)\b/],
+    ["study_plan", /\b(plan d'etude|plan de revision|planning de revision|programme de revision)\b/],
+    ["report", /\b(rapport|report|synthese|briefing|guide d'etude|study guide|guide pratique|fiche pratique|guide detaille|plan d'action|cahier des charges|specification|document)\b/],
     ["audio", /\b(audio overview|podcast|resume audio)\b/],
     ["image", /\b(image|illustration|visuel|visuelle|affiche)\b/],
   ];
@@ -200,7 +200,7 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
     .map((h, i) => ({ n: i + 1, chunk_id: h.chunk_id, source_id: h.source_id, source_title: titles.get(h.source_id) ?? "source", content: h.content, char_start: h.char_start, char_end: h.char_end, page_start: h.page_start }));
 
   const messages: ChatMessage[] = [
-    { role: "system", content: systemPrompt(nb?.output_language ?? profile?.output_language ?? "fr", nb?.chat_style ?? "default", nb?.chat_custom_prompt ?? null, nb?.response_length ?? "default", passages.length > 0, promptOverride?.content) },
+    { role: "system", content: systemPrompt(nb?.output_language ?? profile?.output_language ?? "fr", nb?.chat_style ?? "default", nb?.chat_custom_prompt ?? null, nb?.response_length ?? "default", passages.length > 0, promptOverride?.content) + (artifactRequest ? "\n\nThe requested Studio artifact is already queued. Acknowledge briefly and do not reproduce the full deliverable in this chat response." : "") },
     ...(history ?? []).reverse().map((m) => ({ role: m.role as "user" | "assistant", content: m.content })),
     { role: "user", content: `<passages>\n${formatPassages(passages)}\n</passages>\n\nQuestion : ${text}` },
   ];
