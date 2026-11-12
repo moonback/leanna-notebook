@@ -2,6 +2,7 @@ import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from "electron";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { BrowserManager } from "./browser/browser-manager";
+import { BrowserDataStore } from "./browser/browser-data-store";
 import { isAllowedWebUrl, isSafeExternalUrl, normalizeFilters } from "./shared/validation";
 import { checkForUpdates, initializeAutoUpdater } from "./updater";
 
@@ -33,9 +34,14 @@ function resolveWebUrl(): string {
 const WEB_URL = resolveWebUrl();
 const allowedOrigin = new URL(WEB_URL).origin;
 let mainWindow: BrowserWindow | null = null;
+let browserDataStore: BrowserDataStore | null = null;
 const browserManager = new BrowserManager((state) => {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send("browser:state", state);
+  }
+}, (visit) => {
+  if (!visit.isPrivate) {
+    void browserDataStore?.addVisit(visit.url, visit.title).catch(() => undefined);
   }
 });
 
@@ -175,6 +181,25 @@ function registerIpcHandlers(): void {
   ipcMain.handle("browser:get-state", (event) =>
     isTrustedRenderer(event) ? browserManager.getState() : { activeTabId: null, tabs: [] },
   );
+  ipcMain.handle("browser:get-history", async (event) =>
+    isTrustedRenderer(event) && browserDataStore ? browserDataStore.getHistory() : [],
+  );
+  ipcMain.handle("browser:clear-history", async (event) => {
+    if (!isTrustedRenderer(event) || !browserDataStore) return false;
+    await browserDataStore.clearHistory();
+    return true;
+  });
+  ipcMain.handle("browser:get-bookmarks", async (event) =>
+    isTrustedRenderer(event) && browserDataStore ? browserDataStore.getBookmarks() : [],
+  );
+  ipcMain.handle("browser:add-bookmark", async (event, input: unknown) => {
+    if (!isTrustedRenderer(event) || !browserDataStore || !input || typeof input !== "object") return null;
+    const args = input as { url?: unknown; title?: unknown };
+    return browserDataStore.addBookmark(args.url, args.title);
+  });
+  ipcMain.handle("browser:remove-bookmark", async (event, id: unknown) =>
+    isTrustedRenderer(event) && browserDataStore ? browserDataStore.removeBookmark(id) : false,
+  );
   ipcMain.handle("browser:create-tab", async (event, input: unknown) => {
     if (!isTrustedRenderer(event)) return null;
     const args = input && typeof input === "object"
@@ -300,6 +325,7 @@ function createMainWindow(): void {
 }
 
 app.whenReady().then(() => {
+  browserDataStore = new BrowserDataStore(app.getPath("userData"));
   registerApplicationMenu();
   registerIpcHandlers();
   createMainWindow();
