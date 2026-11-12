@@ -43,7 +43,8 @@ export function formatPdfPage(items: PdfTextItem[]): string {
       output = output.trimEnd() + "\n";
     } else if (output.length > 0 && !output.endsWith("\n")) {
       const gap = x !== null && previousEndX !== null ? x - previousEndX : 0;
-      if (gap > 1.5 && !output.endsWith(" ")) output += " ";
+      if (gap > 18) output += " | ";
+      else if (gap > 1.5 && !output.endsWith(" ")) output += " ";
     }
     output += value;
     if (item.hasEOL) output += "\n";
