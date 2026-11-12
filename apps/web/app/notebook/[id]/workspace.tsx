@@ -812,6 +812,7 @@ function AddSourcesDialog({ open, onOpenChange, notebookId, onAdded, onWebSearch
       } else if (tab === "url" || tab === "tiktok") {
         const urls = url.split(/\s+/).filter(Boolean);
         if (!urls.length) throw new Error("Collez au moins une adresse.");
+        if (tab === "tiktok" && urls.some((u) => { try { return !/(^|\\.)tiktok\\.com$/i.test(new URL(u).hostname); } catch { return true; } })) throw new Error("Collez uniquement des URL publiques TikTok.");
         await post(urls.map((u) => ({ type: "url", url: u })));
         toast({ title: "Sources ajoutées", description: "Le traitement continue en arrière-plan.", tone: "success" });
       } else {
@@ -844,7 +845,8 @@ function AddSourcesDialog({ open, onOpenChange, notebookId, onAdded, onWebSearch
           <Tabs value={tab} onValueChange={setTab}>
             <TabsList aria-label="Type de source">
               <TabsTrigger value="file"><Upload className="mr-1.5 inline size-3.5" aria-hidden />Fichier / dossier</TabsTrigger>
-              <TabsTrigger value="url"><Globe className="mr-1.5 inline size-3.5" aria-hidden />Page web</TabsTrigger>\n              <TabsTrigger value="tiktok"><AudioLines className="mr-1.5 inline size-3.5" aria-hidden />TikTok</TabsTrigger>\n              <TabsTrigger value="tiktok"><AudioLines className="mr-1.5 inline size-3.5" aria-hidden />TikTok</TabsTrigger>
+              <TabsTrigger value="url"><Globe className="mr-1.5 inline size-3.5" aria-hidden />Page web</TabsTrigger>
+              <TabsTrigger value="tiktok"><AudioLines className="mr-1.5 inline size-3.5" aria-hidden />TikTok</TabsTrigger>
               <TabsTrigger value="text"><Type className="mr-1.5 inline size-3.5" aria-hidden />Texte</TabsTrigger>
             </TabsList>
             <TabsContent value="file" className="grid gap-3 pt-4">
@@ -912,7 +914,13 @@ function AddSourcesDialog({ open, onOpenChange, notebookId, onAdded, onWebSearch
                 <Textarea value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://…" />
               </Field>
             </TabsContent>
-            <TabsContent value="tiktok" className="pt-4">\n              <Field id="tiktok-urls" label="URL publiques TikTok" hint="Une URL par ligne. La vidéo sera téléchargée côté worker, transcrite puis indexée comme source.">\n                <Textarea value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://www.tiktok.com/@compte/video/…" />\n              </Field>\n              <p className="mt-2 text-xs text-text-muted">La vidéo doit être publique et accessible sans connexion. La transcription nécessite DEEPGRAM_API_KEY sur le worker.</p>\n            </TabsContent>\n            <TabsContent value="tiktok" className="pt-4">\n              <Field id="tiktok-urls" label="URL publiques TikTok" hint="Une URL par ligne. La vidéo sera téléchargée côté worker, transcrite puis indexée comme source.">\n                <Textarea value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://www.tiktok.com/@compte/video/…" />\n              </Field>\n              <p className="mt-2 text-xs text-text-muted">La vidéo doit être publique et accessible sans connexion. La transcription nécessite DEEPGRAM_API_KEY sur le worker.</p>\n            </TabsContent>\n            <TabsContent value="text" className="grid gap-3 pt-4">
+            <TabsContent value="tiktok" className="pt-4">
+              <Field id="tiktok-urls" label="URL publiques TikTok" hint="Une URL par ligne. La vidéo sera téléchargée côté worker, transcrite puis indexée comme source.">
+                <Textarea value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://www.tiktok.com/@compte/video/…" />
+              </Field>
+              <p className="mt-2 text-xs text-text-muted">La vidéo doit être publique et accessible sans connexion. La transcription nécessite DEEPGRAM_API_KEY sur le worker.</p>
+            </TabsContent>
+            <TabsContent value="text" className="grid gap-3 pt-4">
               <Field id="paste-title" label="Titre"><Input value={paste.title} maxLength={300} onChange={(e) => setPaste({ ...paste, title: e.target.value })} /></Field>
               <Field id="paste-text" label="Texte"><Textarea value={paste.text} onChange={(e) => setPaste({ ...paste, text: e.target.value })} className="min-h-40" /></Field>
             </TabsContent>
