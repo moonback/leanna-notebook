@@ -35,6 +35,8 @@ const ERRORS: Record<string, string> = {
   unsupported_type: "Type de fichier non pris en charge.",
   transcription_not_configured: "La transcription audio n’est pas configurée côté serveur.",
   transcription_config: "Le service de transcription audio est mal configuré.",
+  tiktok_unavailable: "Cette vidéo TikTok est inaccessible ou ne peut pas être récupérée publiquement.",
+  tiktok_media_invalid: "Le média vidéo fourni par TikTok est invalide.",
   no_speech: "Aucune parole exploitable détectée dans ce fichier audio.",
   embeddings_config: "Indexation impossible : configuration des embeddings invalide.",
   file_missing: "Fichier introuvable : réimportez-le.",
@@ -812,7 +814,7 @@ function AddSourcesDialog({ open, onOpenChange, notebookId, onAdded, onWebSearch
       } else if (tab === "url" || tab === "tiktok") {
         const urls = url.split(/\s+/).filter(Boolean);
         if (!urls.length) throw new Error("Collez au moins une adresse.");
-        if (tab === "tiktok" && urls.some((u) => { try { return !/(^|\\.)tiktok\\.com$/i.test(new URL(u).hostname); } catch { return true; } })) throw new Error("Collez uniquement des URL publiques TikTok.");
+        if (tab === "tiktok" && urls.some((u) => { try { return !/(^|\.)tiktok\.com$/i.test(new URL(u).hostname); } catch { return true; } })) throw new Error("Collez uniquement des URL publiques TikTok.");
         await post(urls.map((u) => ({ type: "url", url: u })));
         toast({ title: "Sources ajoutées", description: "Le traitement continue en arrière-plan.", tone: "success" });
       } else {
