@@ -5,5 +5,7 @@ import { createUserClient } from "@/lib/supabase/server";
 export async function POST(request: NextRequest) {
   const supabase = await createUserClient();
   await supabase.auth.signOut();
-  return NextResponse.redirect(new URL("/login", request.nextUrl.origin), { status: 303 });
+  // Location relative : le navigateur reste sur l'hôte public, même derrière un proxy
+  // où `nextUrl.origin` correspond à l'adresse interne (ex. localhost:8080).
+  return new NextResponse(null, { status: 303, headers: { Location: "/login" } });
 }
