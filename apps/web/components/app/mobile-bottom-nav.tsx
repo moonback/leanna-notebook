@@ -1,6 +1,7 @@
 "use client";
 
-import * as React from "react";\nimport Link from "next/link";
+import * as React from "react";
+import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { BookOpen, Compass, Settings } from "lucide-react";
 
