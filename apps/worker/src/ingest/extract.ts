@@ -65,10 +65,10 @@ async function fromTikTok(url: string, transcriber?: Transcriber | null): Promis
   catch (error) { console.warn("[tiktok-ingest] metadata_parse_failed", { error: error instanceof Error ? error.message : String(error), htmlBytes: page.body.length }); throw error; }
   console.info("[tiktok-ingest] metadata_extracted", { titleLength: metadata.title.length, mediaHost: (() => { try { return new URL(metadata.playAddr).hostname; } catch { return "invalid"; } })() });
   let media: Awaited<ReturnType<typeof safeFetch>>;
-  try { media = await safeFetch(metadata.playAddr, 5, 100 * 1024 * 1024); }
+  try { media = await safeFetch(metadata.playAddr, 5, 100 * 1024 * 1024, { referer: new URL(url).origin + "/", origin: new URL(url).origin, accept: "video/*,*/*;q=0.8", "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36" }); }
   catch (error) {
-    console.warn("[tiktok-ingest] media_fetch_failed", { mediaHost: (() => { try { return new URL(metadata.playAddr).hostname; } catch { return "invalid"; } })(), error: error instanceof Error ? error.message : String(error), elapsedMs: Date.now() - startedAt });
-    if (error instanceof FetchRefused) throw new PermanentError("tiktok_unavailable", "Le fichier vidéo TikTok est inaccessible (" + error.message + ").");
+    console.warn("[tiktok-ingest] media_fetch_failed", { mediaHost: (() => { try { return new URL(metadata.playAddr).hostname; } catch { return "invalid"; } })(), error: error instanceof Error ? error.message : String(error), httpStatus: error instanceof FetchRefused ? error.status : undefined, elapsedMs: Date.now() - startedAt });
+    if (error instanceof FetchRefused) throw new PermanentError("tiktok_unavailable", "Le fichier vidéo TikTok est inaccessible (HTTP " + (error.status ?? "refusé") + ").");
     throw error;
   }
   console.info("[tiktok-ingest] media_fetched", { contentType: media.contentType, bytes: media.body.length, elapsedMs: Date.now() - startedAt });
