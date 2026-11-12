@@ -2,7 +2,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useActionState, useState } from "react";
-import { Eye, EyeOff, LockKeyhole, Mail, ArrowRight, WandSparkles } from "lucide-react";
+import { Eye, EyeOff, ArrowRight, WandSparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { Alert } from "@/components/ui/feedback";
@@ -26,18 +26,16 @@ export function AuthForm({ mode, next }: { mode: "login" | "signup"; next?: stri
       <form action={action} className="grid gap-5" noValidate>
         <input type="hidden" name="next" value={next ?? ""} />
         <Field id="email" label="Adresse email" error={state.errors?.email}>
-          <div className="relative">
-            <Mail aria-hidden className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-text-subtle"/>
-            <Input name="email" type="email" autoComplete="email" required defaultValue={state.email} placeholder="vous@exemple.fr" className="h-11 rounded-lg pl-10"/>
-          </div>
+          <Input name="email" type="email" autoComplete="email" required defaultValue={state.email} placeholder="vous@exemple.fr" className="h-11 rounded-lg"/>
         </Field>
-        <Field id="password" label="Mot de passe" hint={login ? undefined : "10 caractères minimum."} error={state.errors?.password}>
+        <div className="grid gap-1.5">
+          <label htmlFor="password" className="text-sm font-medium text-text">Mot de passe</label>
           <div className="relative">
-            <LockKeyhole aria-hidden className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-text-subtle"/>
-            <Input name="password" type={showPassword ? "text" : "password"} autoComplete={login ? "current-password" : "new-password"} required minLength={10} placeholder={login ? "Votre mot de passe" : "Choisissez un mot de passe"} className="h-11 rounded-lg pl-10 pr-12"/>
-            <button type="button" onClick={()=>setShowPassword(v=>!v)} aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"} aria-pressed={showPassword} className="absolute right-2 top-1/2 grid size-8 -translate-y-1/2 place-items-center rounded-md text-text-subtle transition hover:bg-surface hover:text-text focus-visible:outline-2 focus-visible:outline-focus"><span className="sr-only">{showPassword ? "Masquer" : "Afficher"}</span>{showPassword ? <EyeOff size={16}/> : <Eye size={16}/>}</button>
+            <Input id="password" name="password" type={showPassword ? "text" : "password"} autoComplete={login ? "current-password" : "new-password"} required minLength={10} placeholder={login ? "Votre mot de passe" : "Choisissez un mot de passe"} aria-describedby={state.errors?.password ? "password-error" : !login ? "password-hint" : undefined} aria-invalid={state.errors?.password ? true : undefined} className="h-11 rounded-lg pr-12"/>
+            <button type="button" onClick={()=>setShowPassword(v=>!v)} aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"} aria-pressed={showPassword} className="absolute right-2 top-1/2 grid size-8 -translate-y-1/2 place-items-center rounded-md text-text-subtle transition hover:bg-surface hover:text-text focus-visible:outline-2 focus-visible:outline-focus">{showPassword ? <EyeOff size={16}/> : <Eye size={16}/>}</button>
           </div>
-        </Field>
+          {state.errors?.password ? <p id="password-error" role="alert" className="text-xs font-medium text-danger">{state.errors.password}</p> : !login ? <p id="password-hint" className="text-xs text-text-muted">10 caractères minimum.</p> : null}
+        </div>
         <Button type="submit" size="lg" loading={pending} className="mt-1 h-12 w-full rounded-lg text-sm font-semibold">{login ? "Se connecter" : "Créer mon compte"} <ArrowRight size={16}/></Button>
       </form>
 
