@@ -62,7 +62,7 @@ export const GET = handle(async (req: NextRequest, { params }: Params) => {
     if (artifact.type !== "audio") throw new ApiError(422, "unsupported_export_format");
     const audioPath = (artifact.content as { audio_path?: string } | null)?.audio_path;
     if (!audioPath) throw new ApiError(404, "audio_file_not_found");
-    const { data: audio, error: audioError } = await supabase.storage.from("artifacts").download(audioPath);
+    const { data: audio, error: audioError } = await createServiceClient().storage.from("artifacts").download(audioPath);
     if (audioError || !audio) throw new ApiError(404, "audio_file_not_found");
     return new Response(audio, {
       headers: {
@@ -76,8 +76,11 @@ export const GET = handle(async (req: NextRequest, { params }: Params) => {
 
   const title = artifact.title || "Leanna Notebook";
   const markdown = markdownContent(artifact.type, title, artifact.content);
+  const jsonContent = artifact.type === "audio" && artifact.content && typeof artifact.content === "object"
+    ? Object.fromEntries(Object.entries(artifact.content as Record<string, unknown>).filter(([key]) => key !== "audio_path"))
+    : artifact.content;
   const body = format === "json"
-    ? JSON.stringify({ title, type: artifact.type, content: artifact.content }, null, 2)
+    ? JSON.stringify({ title, type: artifact.type, content: jsonContent }, null, 2)
     : format === "txt"
       ? markdown.replace(/^#{1,6}\s+/gm, "").replace(/\*\*(.*?)\*\*/g, "$1").replace(/^[-*] /gm, "• ")
       : format === "html"
