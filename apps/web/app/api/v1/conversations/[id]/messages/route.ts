@@ -210,7 +210,27 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
     async start(controller) {
       const send = (event: string, data: unknown) => controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
       send("meta", { messageId: answerId, passages: passages.length, vector: Boolean(query) });
-      if (requestedArtifact) send("artifact", { id: requestedArtifact.id, type: requestedArtifact.type });
+      if (requestedArtifact) {
+        send("artifact", { id: requestedArtifact.id, type: requestedArtifact.type });
+        const confirmation = requestedArtifact.type === "image"
+          ? "La création de ton image est lancée dans le Studio. Tu peux suivre sa progression et retrouver le résultat dans l’onglet Studio."
+          : "La génération de ton document est lancée dans le Studio. Tu peux suivre sa progression et retrouver le résultat dans l’onglet Studio.";
+        try {
+          await db.from("chat_messages").update({ content: confirmation, status: "complete", usage: null, model: null }).eq("id", answerId);
+          await db.rpc("settle_usage", { p_id: usageId, p_status: "committed" });
+          await db.from("notebooks").update({ last_activity_at: new Date().toISOString() }).eq("id", conv.notebook_id);
+          send("delta", { text: confirmation });
+          send("done", { messageId: answerId, text: confirmation, thoughts: null, citations: [], usage: null });
+        } catch (e) {
+          await db.from("chat_messages").update({ content: "La génération a été demandée, mais son lancement doit être vérifié dans le Studio.", status: "failed" }).eq("id", answerId);
+          await db.rpc("settle_usage", { p_id: usageId, p_status: "refunded" });
+          log.error("chat.studio_artifact_confirmation_failed", { message_id: answerId, artifact_id: requestedArtifact.id });
+          send("error", { code: "internal" });
+        } finally {
+          controller.close();
+        }
+        return;
+      }
       let raw = "", thoughts = "", usage: unknown = null, model: string | null = null;
       try {
         for await (const evt of streamChat(messages, { signal: req.signal, model: chatPreference?.model_id ?? undefined, reasoning: true })) {
