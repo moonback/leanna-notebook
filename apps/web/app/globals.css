@@ -164,18 +164,18 @@
   }
 
   /* Les contenus de dialogue deviennent des feuilles confortables sur téléphone. */
-  [data-radix-dialog-content] {
+  [role="dialog"] {
     width: calc(100vw - 1rem) !important;
     max-width: calc(100vw - 1rem) !important;
     max-height: calc(100dvh - 1rem - env(safe-area-inset-top) - env(safe-area-inset-bottom));
     border-radius: 1.1rem;
     padding: 1.1rem;
-    animation: mobile-sheet-in 220ms cubic-bezier(.2,.75,.25,1) both;
+    animation: mobile-dialog-in 200ms cubic-bezier(.2,.75,.25,1) both;
   }
 
-  @keyframes mobile-sheet-in {
-    from { opacity: 0; transform: translate3d(0, 12px, 0) scale(.985); }
-    to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+  @keyframes mobile-dialog-in {
+    from { opacity: 0; scale: .985; }
+    to { opacity: 1; scale: 1; }
   }
 
   /* Entrées de listes et cartes : animation courte, sans déplacement de layout. */
@@ -215,7 +215,7 @@
   }
   @media (max-width: 767px) {
     main li,
-    [data-radix-dialog-content] {
+    [role="dialog"] {
       animation: none !important;
     }
   }
