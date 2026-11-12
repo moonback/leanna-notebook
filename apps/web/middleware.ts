@@ -22,12 +22,13 @@ export async function middleware(request: NextRequest) {
   );
   const { data } = await supabase.auth.getUser();
   const path = request.nextUrl.pathname;
-  const isPublic = PUBLIC.some((p) => path === p || path.startsWith(p));
+  // La racine est la vitrine publique ; les autres routes privées restent protégées.
+  const isPublic = path === "/" || PUBLIC.some((p) => path === p || path.startsWith(p));
 
   if (!data.user && !isPublic && !path.startsWith("/api/")) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
-    url.search = path === "/" ? "" : `?next=${encodeURIComponent(path)}`;
+    url.search = `?next=${encodeURIComponent(path)}`;
     return NextResponse.redirect(url);
   }
   if (data.user && (path === "/login" || path === "/signup")) {
