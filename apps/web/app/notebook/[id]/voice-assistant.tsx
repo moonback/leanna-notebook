@@ -533,6 +533,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
 
       <Dialog open={open} onOpenChange={(value) => { if (!value && state !== "idle" && state !== "error") stop(); setOpen(value); if (!value) setExpanded(false); }}>
         <DialogContent
+          className={`mobile-voice-dialog ${expanded ? "mobile-voice-dialog--expanded" : "mobile-voice-dialog--sheet"}`}
           title="Studio vocal"
           description="Une conversation naturelle avec vos sources."
           size="lg"
