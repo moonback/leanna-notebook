@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { credentialsSchema, fieldErrors, profilePatchSchema, safeNext } from "./validation";
+import { credentialsSchema, fieldErrors, profilePatchSchema, safeNext, uploadTypeOf } from "./validation";
 
 describe("credentialsSchema", () => {
   it("normalise l'email", () => {
@@ -33,4 +33,10 @@ describe("safeNext", () => {
     expect(safeNext("https://evil.example")).toBe("/");
     expect(safeNext(null)).toBe("/");
   });
+});
+
+describe("video upload types", () => {
+  it.each([["clip.mp4", "mp4"], ["clip.m4v", "m4v"], ["clip.mov", "mov"], ["clip.mkv", "mkv"]])(
+    "accepts %s as %s", (filename, expected) => expect(uploadTypeOf(filename)).toBe(expected));
+  it("rejects unsupported video extensions", () => expect(uploadTypeOf("clip.avi")).toBeNull());
 });
