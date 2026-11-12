@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, ArrowUpRight, AudioLines, BookOpen, Check, ChevronRight, FileSearch, FileText, Globe2, Headphones, Layers3, LockKeyhole, MessageCircleQuestion, Mic, Network, Quote, Search, Sparkles, UploadCloud, Workflow } from "lucide-react";
+import { ArrowRight, ArrowUpRight, AudioLines, BookOpen, Check, ChevronRight, FileSearch, FileText, Headphones, Layers3, LockKeyhole, MessageCircleQuestion, Mic, Network, Quote, Search, Sparkles, UploadCloud } from "lucide-react";
 import { createUserClient, getUser } from "@/lib/supabase/server";
 import { Dashboard, type NotebookRow } from "./dashboard";
 
