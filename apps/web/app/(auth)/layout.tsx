@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, BookOpen, Check, FileSearch, LockKeyhole, Network, Sparkles } from "lucide-react";
+import { ArrowLeft, Check, FileSearch, LockKeyhole, Network, Sparkles } from "lucide-react";
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -11,7 +11,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           <div className="absolute inset-0 opacity-[0.07]" style={{ backgroundImage: "radial-gradient(#fff 0.7px, transparent 0.7px)", backgroundSize: "19px 19px" }} />
         </div>
         <Link href="/" className="relative z-10 inline-flex w-fit items-center gap-3" aria-label="Leanna Notebook, accueil">
-          <span className="grid size-10 place-items-center rounded-xl bg-white text-[#17334a]"><BookOpen size={21} /></span>
+          <span className="grid size-12 place-items-center overflow-hidden rounded-xl bg-white p-1.5 shadow-sm"><img src="/logo.png" alt="" className="size-full object-contain" /></span>
           <span className="text-lg font-semibold tracking-tight">Leanna<span className="font-normal text-white/65"> Notebook</span></span>
         </Link>
         <div className="relative z-10 my-auto max-w-xl py-16">
@@ -30,11 +30,11 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       <section className="relative flex min-h-dvh flex-col px-5 py-6 sm:px-10 lg:px-12 xl:px-16">
         <header className="mx-auto flex w-full max-w-[480px] items-center justify-between lg:mx-0 lg:max-w-none">
           <Link href="/" className="inline-flex items-center gap-2 text-sm text-text-muted transition hover:text-text"><ArrowLeft size={16}/> Retour à l’accueil</Link>
-          <Link href="/" className="inline-flex items-center gap-2 font-semibold tracking-tight lg:hidden"><span className="grid size-8 place-items-center rounded-lg bg-accent text-on-accent"><BookOpen size={17}/></span> Leanna Notebook</Link>
+          <Link href="/" className="inline-flex items-center gap-2 font-semibold tracking-tight lg:hidden"><span className="grid size-9 place-items-center overflow-hidden rounded-lg bg-white p-1 shadow-sm"><img src="/logo.png" alt="" className="size-full object-contain"/></span> Leanna Notebook</Link>
         </header>
         <div className="mx-auto flex w-full max-w-[440px] flex-1 flex-col justify-center py-12 lg:mx-auto lg:max-w-[440px]">
           <div className="mb-8">
-            <div className="mb-5 hidden size-11 place-items-center rounded-xl bg-accent text-on-accent shadow-sm lg:grid"><BookOpen size={21}/></div>
+            <div className="mb-5 hidden size-14 place-items-center overflow-hidden rounded-xl bg-white p-1.5 shadow-sm lg:grid"><img src="/logo.png" alt="Logo Leanna Notebook" className="size-full object-contain"/></div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">Leanna Notebook</p>
             <div className="mt-3">{children}</div>
           </div>
