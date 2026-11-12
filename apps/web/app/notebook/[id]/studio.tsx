@@ -95,6 +95,12 @@ export function Studio({ notebookId, canEdit, sourceIds, sourceTitle, onOpenCita
     } catch { setFailedLoad(true); }
   }, [notebookId]);
   React.useEffect(() => { void load(); }, [load]);
+  // ouverture demandée ailleurs dans le notebook (ex. rapport de recherche approfondie)
+  React.useEffect(() => {
+    const openArtifact = (e: Event) => { const id = (e as CustomEvent<string>).detail; if (id) { void load(); setOpen(id); } };
+    window.addEventListener("notebook:open-artifact", openArtifact);
+    return () => window.removeEventListener("notebook:open-artifact", openArtifact);
+  }, [load]);
   React.useEffect(() => {
     const refresh = () => { void load(); };
     window.addEventListener("notebook:artifact-created", refresh);

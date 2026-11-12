@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import { createPortal } from "react-dom";
-import { AlertTriangle, ArrowUp, AudioLines, Bold, BookmarkPlus, BrainCircuit, Code, Eraser, Heading2, Italic, List, ListOrdered, Quote, Settings2, ThumbsDown, ThumbsUp, FileText, Globe, Inbox, Lock, NotebookPen, Pencil, Plus, Square, Sparkles, Trash2, Type, Upload, Search, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, FolderOpen } from "lucide-react";
+import { AlertTriangle, ArrowUp, AudioLines, Bold, BookmarkPlus, BrainCircuit, Code, Eraser, Heading2, Italic, List, ListOrdered, Quote, Settings2, ThumbsDown, ThumbsUp, FileText, Globe, Inbox, Lock, NotebookPen, Pencil, Plus, Square, Sparkles, Trash2, Type, Upload, Search, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, FolderOpen, Telescope, Network, Scale, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Textarea } from "@/components/ui/field";
 import { Alert, Badge, EmptyState, Progress, Skeleton } from "@/components/ui/feedback";
@@ -16,6 +16,9 @@ import { Studio } from "./studio";
 import { NotebookActionsMenu } from "./notebook-actions-menu";
 import { FastResearch } from "./fast-research";
 import { VoiceAssistant } from "./voice-assistant";
+import { DeepResearch } from "./deep-research";
+import { KnowledgeGraph } from "./knowledge-graph";
+import { Contradictions } from "./contradictions";
 import type { NumberedVoicePassage } from "./voice-turn";
 
 export type Role = "chat" | "viewer" | "editor" | "owner";
@@ -72,6 +75,7 @@ export function Workspace({ notebookId, initialTitle, role, allowCopies }: { not
   const [noteEditor, setNoteEditor] = React.useState<{ id?: string } | null>(null);
   const [renaming, setRenaming] = React.useState<Source | null>(null);
   const [mobileTab, setMobileTab] = React.useState("chat");
+  const [center, setCenter] = React.useState<"chat" | "research" | "graph" | "contradictions">("chat");
   const mobileSwipeStart = React.useRef<{ x: number; y: number } | null>(null);
   const handleMobileSwipeStart = (event: React.TouchEvent<HTMLDivElement>) => {
     const touch = event.touches[0];
@@ -271,6 +275,41 @@ export function Workspace({ notebookId, initialTitle, role, allowCopies }: { not
       onAsk={ask} onImported={() => void load()} />
   );
 
+  // Espaces centraux : Chat, Recherche approfondie, Graphe de connaissances, Contradictions.
+  // Le chat reste monté (masqué) pour ne pas interrompre une réponse en cours.
+  const openPassage = (sourceId: string, start: number, end: number) => setViewer({ sourceId, range: [start, end] });
+  const openReport = (artifactId: string) => {
+    setStudioCollapsed(false); setMobileTab("studio");
+    window.dispatchEvent(new CustomEvent("notebook:open-artifact", { detail: artifactId }));
+  };
+  const sourceList = (sources ?? []).map((s) => ({ id: s.id, title: s.title }));
+  const CENTER = [
+    { id: "chat", label: "Chat", icon: <Sparkles aria-hidden /> },
+    { id: "research", label: "Recherche approfondie", short: "Recherche", icon: <Telescope aria-hidden /> },
+    { id: "graph", label: "Graphe de connaissances", short: "Graphe", icon: <Network aria-hidden /> },
+    { id: "contradictions", label: "Contradictions", icon: <Scale aria-hidden /> },
+  ] as const;
+  const centerPanel = (
+    <div className="flex h-full min-h-0 min-w-0 flex-col gap-2">
+      <div role="tablist" aria-label="Espaces du notebook" className="flex shrink-0 gap-1 overflow-x-auto rounded-lg border bg-surface-raised p-1">
+        {CENTER.map((t) => (
+          <button key={t.id} type="button" role="tab" id={`center-tab-${t.id}`} aria-selected={center === t.id} aria-controls={`center-panel-${t.id}`} onClick={() => setCenter(t.id)}
+            className={cn("inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md px-3 text-sm transition-colors [&_svg]:size-4", center === t.id ? "bg-accent-soft font-medium text-on-accent-soft" : "text-text-muted hover:bg-surface hover:text-text")}>
+            {t.icon}<span className="hidden sm:inline">{t.label}</span><span className="sm:hidden">{"short" in t ? t.short : t.label}</span>
+          </button>
+        ))}
+      </div>
+      <div id="center-panel-chat" role="tabpanel" aria-labelledby="center-tab-chat" hidden={center !== "chat"} className="min-h-0 flex-1">{chatPanel}</div>
+      {center !== "chat" && (
+        <div id={`center-panel-${center}`} role="tabpanel" aria-labelledby={`center-tab-${center}`} className={cn("min-h-0 flex-1 rounded-xl border bg-surface-raised", center === "graph" ? "overflow-hidden" : "overflow-y-auto")}>
+          {center === "research" && <DeepResearch notebookId={notebookId} canEdit={canEdit} onOpenSource={(id) => setViewer({ sourceId: id })} onOpenReport={openReport} onSourcesChanged={() => void load()} />}
+          {center === "graph" && <KnowledgeGraph notebookId={notebookId} canEdit={canEdit} sources={sourceList} onOpenPassage={openPassage} onShowContradictions={() => setCenter("contradictions")} />}
+          {center === "contradictions" && <Contradictions notebookId={notebookId} canEdit={canEdit} sources={sourceList} onOpenPassage={openPassage} />}
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <>
       {confirmDialog}
@@ -363,7 +402,9 @@ export function Workspace({ notebookId, initialTitle, role, allowCopies }: { not
             />
           )}
 
-          {chatPanel}
+          {centerPanel}
+          {/* 1024–1279 px : Studio sans colonne ; monté masqué pour que ses modales (rapports) restent accessibles */}
+          {!wideDesktop && <div className="hidden">{studioPanel}</div>}
 
           {wideDesktop && !studioCollapsed && (
             <div
@@ -421,7 +462,7 @@ export function Workspace({ notebookId, initialTitle, role, allowCopies }: { not
         <Tabs value={mobileTab} onValueChange={setMobileTab} className="flex min-h-0 flex-1 flex-col" onTouchStart={handleMobileSwipeStart} onTouchEnd={handleMobileSwipeEnd}>
           <div className="min-h-0 flex-1 p-2">
             <TabsContent value="sources" className="h-full">{sourcesPanel}</TabsContent>
-            <TabsContent value="chat" className="h-full">{chatPanel}</TabsContent>
+            <TabsContent value="chat" className="h-full">{centerPanel}</TabsContent>
             <TabsContent value="studio" className="h-full">{studioPanel}</TabsContent>
           </div>
           <TabsList aria-label="Panneaux" className="mobile-workspace-tabs grid h-14 shrink-0 grid-cols-3 border-t bg-surface-raised px-2">
@@ -950,7 +991,7 @@ function AddSourcesDialog({ open, onOpenChange, notebookId, onAdded, onWebSearch
 /* --------------------------------------------------------- Visionneuse ---- */
 
 function SourceViewer({ state, onClose, onAsk }: { state: { sourceId: string; range?: [number, number]; timeStartMs?: number } | null; onClose: () => void; onAsk: (text: string) => void }) {
-  const [source, setSource] = React.useState<{ title: string; kind: string; extracted_text: string | null; guide: { summary: string; topics: string[] } | null } | null>(null);
+  const [source, setSource] = React.useState<{ title: string; kind: string; origin_url: string | null; extracted_text: string | null; guide: { summary: string; topics: string[] } | null } | null>(null);
   const [audioSegments, setAudioSegments] = React.useState<Array<{ ordinal: number; content: string; time_start_ms: number; time_end_ms: number }>>([]);
   const [failed, setFailed] = React.useState(false);
   const mark = React.useRef<HTMLElement>(null);
@@ -980,6 +1021,11 @@ function SourceViewer({ state, onClose, onAsk }: { state: { sourceId: string; ra
   return (
     <Dialog open={Boolean(state)} onOpenChange={(o) => !o && onClose()}>
       <DialogContent size="lg" className="mobile-source-viewer-dialog" title={source?.title ?? "Source"} description={state?.range ? "Le passage cité est surligné." : undefined}>
+        {source?.origin_url && /^https?:\/\//i.test(source.origin_url) && (
+          <a href={source.origin_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 justify-self-start text-sm text-accent underline-offset-2 hover:underline">
+            <ExternalLink className="size-3.5" aria-hidden /> Ouvrir la page originale
+          </a>
+        )}
         <div className="mobile-source-viewer-content max-h-[65dvh] overflow-y-auto rounded-lg bg-surface p-5">
           {failed ? <Alert tone="danger" title="Source indisponible" /> : !source ? (
             <div className="grid gap-2" aria-busy="true"><Skeleton className="h-4" /><Skeleton className="h-4 w-5/6" /><Skeleton className="h-4 w-4/6" /></div>
