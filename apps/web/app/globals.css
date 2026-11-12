@@ -539,3 +539,61 @@
   .mobile-studio-actions button { font-size: 0.73rem; padding-inline: 0.5rem; }
   .mobile-source-viewer-content, .mobile-artifact-content { padding: 0.75rem; }
 }
+
+
+/* Recherche web rapide : formulaire et résultats optimisés pour le tactile. */
+@media (max-width: 767px) {
+  .mobile-fast-research-dialog[role="dialog"] {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    padding: 1rem;
+    overflow: hidden;
+  }
+  .mobile-fast-research-form {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 0.65rem;
+  }
+  .mobile-fast-research-form > div { width: 100%; }
+  .mobile-fast-research-form button { width: 100%; min-height: 2.9rem; }
+  .mobile-fast-research-results {
+    min-height: 0;
+    max-height: min(46dvh, 28rem);
+    padding: 0.1rem 0.1rem 0.35rem;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+  .mobile-fast-research-result {
+    min-width: 0;
+    gap: 0.7rem;
+    padding: 0.85rem;
+    border-radius: 0.9rem;
+    transition: border-color 160ms ease, background-color 160ms ease, transform 160ms ease;
+  }
+  .mobile-fast-research-result:active { transform: scale(0.99); }
+  .mobile-fast-research-result input[type="checkbox"] {
+    width: 1.15rem;
+    height: 1.15rem;
+    flex: 0 0 1.15rem;
+    margin-top: 0.15rem;
+    accent-color: var(--accent);
+  }
+  .mobile-fast-research-result > span { min-width: 0; overflow-wrap: anywhere; }
+  .mobile-fast-research-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    display: grid;
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.4fr);
+    gap: 0.5rem;
+    margin: 0 -0.15rem -0.15rem;
+    padding: 0.65rem 0.15rem max(0.15rem, env(safe-area-inset-bottom));
+    background: var(--surface-raised);
+  }
+  .mobile-fast-research-actions button { min-width: 0; min-height: 2.85rem; padding-inline: 0.55rem; white-space: normal; line-height: 1.2; }
+}
+@media (max-width: 380px) {
+  .mobile-fast-research-dialog[role="dialog"] { padding: 0.85rem; }
+  .mobile-fast-research-actions { grid-template-columns: 1fr; }
+}

@@ -91,8 +91,8 @@ export function FastResearch({ notebookId, onImported, open, onOpenChange: setOp
   return (
     <>
       <Dialog open={open} onOpenChange={(v) => { if (!busy) setOpen(v); }}>
-        <DialogContent title="Recherche web rapide" description="Trouvez des pages pertinentes, puis choisissez celles à ajouter aux sources du notebook." size="lg">
-          <form onSubmit={search} className="flex items-end gap-2">
+        <DialogContent title="Recherche web rapide" description="Trouvez des pages pertinentes, puis choisissez celles à ajouter aux sources du notebook." size="lg" className="mobile-fast-research-dialog">
+          <form onSubmit={search} className="mobile-fast-research-form flex items-end gap-2">
             <div className="min-w-0 flex-1">
               <Field id="fast-research-query" label="Votre recherche">
                 <Input value={query} maxLength={300} onChange={(e) => setQuery(e.target.value)} placeholder="Ex. : dernières avancées de l’énergie solaire" disabled={busy} />
@@ -103,10 +103,10 @@ export function FastResearch({ notebookId, onImported, open, onOpenChange: setOp
           {busy && <p className="text-sm text-text-muted" role="status">{stage || "Recherche en cours…"}</p>}
           {error && <Alert tone="danger" title={error} />}
           {results.length > 0 && (
-            <div className="max-h-[50dvh] space-y-2 overflow-y-auto">
+            <div className="mobile-fast-research-results max-h-[50dvh] space-y-2 overflow-y-auto">
               <div className="flex items-center justify-between text-sm text-text-muted"><span>{results.length} résultats (maximum 5)</span><span>{selected.size} sélectionné(s)</span></div>
               {results.map((r) => (
-                <label key={r.url} className="flex cursor-pointer gap-3 rounded-lg border p-3 hover:bg-surface">
+                <label key={r.url} className="mobile-fast-research-result flex cursor-pointer gap-3 rounded-lg border p-3 hover:bg-surface">
                   <input type="checkbox" checked={selected.has(r.url)} onChange={(e) => setSelected((old) => { const next = new Set(old); if (e.target.checked) next.add(r.url); else next.delete(r.url); return next; })} className="mt-1" />
                   <span className="min-w-0">
                     <span className="block text-sm font-medium">{r.title}</span>
@@ -118,7 +118,7 @@ export function FastResearch({ notebookId, onImported, open, onOpenChange: setOp
               ))}
             </div>
           )}
-          <div className="flex justify-end gap-2">
+          <div className="mobile-fast-research-actions flex justify-end gap-2">
             <Button type="button" variant="secondary" disabled={busy} onClick={() => setOpen(false)}>Fermer</Button>
             <Button type="button" disabled={busy || selected.size === 0} loading={importing} onClick={() => void importSelected()}>Importer la sélection ({selected.size})</Button>
           </div>
