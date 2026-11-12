@@ -559,8 +559,8 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
                 </div>
               ) : null}
               <div className="mobile-voice-controls flex shrink-0 items-center gap-1.5">
-                <Button size="sm" variant={roxaneEnabled ? "secondary" : "ghost"} onClick={toggleRoxane} aria-pressed={roxaneEnabled} title={roxaneEnabled ? "Désactiver Roxane" : "Activer Roxane"} className="hidden sm:inline-flex">
-                  <Sparkles aria-hidden /> {roxaneEnabled ? "Roxane" : "Ajouter Roxane"}
+                <Button size="sm" variant={roxaneEnabled ? "secondary" : "ghost"} onClick={toggleRoxane} aria-pressed={roxaneEnabled} title={roxaneEnabled ? "Désactiver Roxane" : "Activer Roxane"} className="mobile-voice-roxane-toggle">
+                  <Sparkles aria-hidden /> <span className="hidden sm:inline">{roxaneEnabled ? "Roxane" : "Ajouter Roxane"}</span>
                 </Button>
                 {state === "idle" || state === "error" ? (
                   <Button size="sm" onClick={() => void start()} disabled={disabled}><Mic aria-hidden /> <span className="hidden sm:inline">Démarrer</span><span className="sm:hidden">Parler</span></Button>
