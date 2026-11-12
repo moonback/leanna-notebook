@@ -196,7 +196,7 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
         }
         const resolved = resolveCitations(raw, passages);
         const artifactLink = requestedArtifact
-          ? `\n\n**Livrable lancé dans le Studio** — [Ouvrir le notebook](/notebook/${conv.notebook_id}) · [Markdown](/api/v1/artifacts/${requestedArtifact.id}/export?format=md) · [TXT](/api/v1/artifacts/${requestedArtifact.id}/export?format=txt) · [HTML](/api/v1/artifacts/${requestedArtifact.id}/export?format=html) · [JSON](/api/v1/artifacts/${requestedArtifact.id}/export?format=json)`
+          ? `\n\n**Livrable lancé dans le Studio** — [Ouvrir le notebook](/notebook/${conv.notebook_id}) · [Markdown](/api/v1/artifacts/${requestedArtifact.id}/export?format=md) · [TXT](/api/v1/artifacts/${requestedArtifact.id}/export?format=txt) · [HTML](/api/v1/artifacts/${requestedArtifact.id}/export?format=html) · [JSON](/api/v1/artifacts/${requestedArtifact.id}/export?format=json)${requestedArtifact.type === "audio" ? ` · [MP3](/api/v1/artifacts/${requestedArtifact.id}/export?format=mp3)` : ""}`
           : "";
         const final = resolved.text + artifactLink;
         const citations = resolved.citations;
