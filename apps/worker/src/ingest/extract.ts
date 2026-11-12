@@ -16,7 +16,7 @@ type TikTokVideoData = { playAddr: string; title: string };
 
 /** Extrait les métadonnées d'une vidéo publique depuis l'état JSON embarqué par TikTok. */
 export function parseTikTokVideoData(html: string): TikTokVideoData {
-  const script = html.match(/<script[^>]+id=["']__UNIVERSAL_DATA_FOR_REHYDRATION__["'][^>]*>([\\s\\S]*?)<\\/script>/i)?.[1];
+  const script = html.match(/<script[^>]+id=["']__UNIVERSAL_DATA_FOR_REHYDRATION__["'][^>]*>([\s\S]*?)<\/script>/i)?.[1];
   if (!script) throw new PermanentError("tiktok_unavailable", "TikTok n'a pas exposé les données de cette vidéo publique.");
   let root: unknown;
   try { root = JSON.parse(script.replace(/&quot;/g, '"').replace(/&amp;/g, "&")); }
@@ -47,7 +47,7 @@ export function parseTikTokVideoData(html: string): TikTokVideoData {
 async function fromTikTok(url: string, transcriber?: Transcriber | null): Promise<Extracted> {
   if (!transcriber) throw new PermanentError("transcription_not_configured", "Configurez DEEPGRAM_API_KEY pour transcrire les vidéos TikTok.");
   const parsed = new URL(url);
-  if (!/(^|\\.)tiktok\\.com$/i.test(parsed.hostname)) throw new PermanentError("url_refused");
+  if (!/(^|\.)tiktok\.com$/i.test(parsed.hostname)) throw new PermanentError("url_refused");
   const page = await safeFetch(url);
   if (!page.contentType.includes("html")) throw new PermanentError("tiktok_unavailable", "La page TikTok n'est pas accessible publiquement.");
   const metadata = parseTikTokVideoData(page.body.toString("utf8"));
@@ -138,6 +138,7 @@ export async function extract(kind: string, data: { file?: Uint8Array; url?: str
       } catch { throw new PermanentError("unreadable_file"); }
     }
     case "web": {
+      if (data.url && /(^|\.)tiktok\.com$/i.test(new URL(data.url).hostname)) return fromTikTok(data.url, transcriber);
       let res;
       try { res = await safeFetch(data.url!); } catch (e) {
         if (e instanceof FetchRefused) throw new PermanentError(e.message === "paywall" ? "paywall" : "url_refused", e.message);
