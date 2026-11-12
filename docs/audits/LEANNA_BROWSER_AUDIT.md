@@ -114,3 +114,29 @@ La liste finale des chemins sera confirmée au fur et à mesure de l'inspection 
 - Aucune migration SQL n'est justifiée à ce stade : les sources web et leur ingestion existent déjà.
 - Les routes exactes de chat/IA, le mécanisme de sélection du modèle et le routage principal de l'application doivent être inspectés avant de figer l'API d'analyse de page.
 - Les capacités avancées d'automatisation (clic, saisie, formulaires) restent conditionnées à un modèle de permissions explicite et à des tests de sécurité dédiés.
+
+
+## 7. État d'implémentation — 12 novembre 2026
+
+Les éléments suivants ont été ajoutés sur `feat/leanna-browser` après l'audit initial :
+
+- Moteur `WebContentsView` isolé dans le processus Main, avec sessions persistantes normales et partitions privées éphémères.
+- Navigation multi-onglets, recherche/adresse, retour/avance, rechargement/arrêt, synchronisation des dimensions et masquage de la vue hors de la route Browser.
+- Contrat IPC typé dans `DesktopApi`, exposition via `contextBridge`, validation de l'origine du renderer principal et contrôles de navigation HTTP(S).
+- Refus par défaut des permissions des sites (caméra, microphone, géolocalisation et autres permissions Electron).
+- Téléchargements autorisés uniquement après ouverture d'une boîte de dialogue native « Enregistrer sous » ; aucun téléchargement silencieux.
+- Favoris et historique enregistrés localement dans `app.getPath("userData")/browser-data.json`, avec écriture atomique et limites de taille. Les visites en mode privé ne sont pas enregistrées.
+- Extraction bornée du texte visible de la page active par une commande Main contrôlée. Aucun objet `WebContents` n'est exposé au renderer.
+- Route `/notebook/[id]/browser` et bouton depuis l'espace Notebook. L'import d'une page capture son texte et le transmet à l'API existante en tant que source texte, avec l'URL originale indiquée dans le contenu ; le contrôle de rôle `editor` et le pipeline d'ingestion existant restent appliqués.
+- Tests unitaires ajoutés pour le stockage local et les validations d'adresse/onglets.
+
+### Capacités restant à réaliser
+
+- Interface de gestion des permissions par origine avec consentement explicite ; pour le moment, les permissions restent refusées.
+- Restauration des onglets normaux à la réouverture de l'application.
+- Dossiers et édition des favoris, suppression sélective de l'historique et commandes « effacer les données du site ».
+- Synthèse IA, questions sur la page, comparaison de plusieurs pages et ajout de citations/liens de source dans le chat.
+- Automatisation agentique (clic/saisie/formulaires) avec permissions par action, confirmations et journal d'audit.
+- Tests réels du cycle de vie Electron, tests de navigation sur Windows et validation complète du build/typecheck.
+
+**Validation :** les tests ont été écrits mais n'ont pas été exécutés dans cet environnement. Aucun build Electron/Next.js ni parcours manuel n'est déclaré réussi. Le code doit donc être considéré comme une implémentation en cours, et non comme une version prête pour la production.
