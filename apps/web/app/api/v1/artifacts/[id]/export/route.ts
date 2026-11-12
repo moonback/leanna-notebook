@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import type { NextRequest } from "next/server";
 import { ApiError, handle, requireRole, requireUser } from "@/lib/api";
 import { createServiceClient, createUserClient } from "@/lib/supabase/server";
 
