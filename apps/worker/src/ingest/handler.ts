@@ -74,7 +74,7 @@ export function ingestHandler(db: SupabaseClient, embedder: Embedder | null, opt
         p_source: src.id,
         p_chunks: chunks.map((c, i) => ({ ...c, embedding: vectors ? `[${vectors[i].join(",")}]` : null, embedding_model: embedder?.model ?? null })),
         p_extracted_text: text, p_language: lang, p_fts_config: FTS_CONFIG[lang] ?? "simple",
-        p_word_count: text.split(/\\s+/).filter(Boolean).length, p_page_count: ex.pageCount,
+        p_word_count: text.split(/\s+/).filter(Boolean).length, p_page_count: ex.pageCount,
       });
       if (e2) throw e2;
       if (ex.title && src.kind === "web") await db.from("sources").update({ title: ex.title.slice(0, 300) }).eq("id", src.id);
