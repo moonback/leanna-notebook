@@ -339,7 +339,10 @@ export function Workspace({ notebookId, initialTitle, role, allowCopies, disable
         titleSlot,
       )}
       {actionsSlot && createPortal(
-        <NotebookActionsMenu notebookId={notebookId} allowCopies={allowCopies} canCopy={role === "owner" || (role !== "chat" && allowCopies)} canShare={role === "owner"} />,
+        <>
+          <NotebookActionsMenu notebookId={notebookId} allowCopies={allowCopies} canCopy={role === "owner" || (role !== "chat" && allowCopies)} canShare={role === "owner"} />
+          {canEdit && <a href={"/notebook/" + encodeURIComponent(notebookId) + "/browser"} aria-label="Ouvrir le navigateur web" title="Ouvrir le navigateur web"><Button type="button" size="icon-sm" variant="ghost"><Globe aria-hidden /></Button></a>}
+        </>,
         actionsSlot,
       )}
 
