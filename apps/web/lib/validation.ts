@@ -16,7 +16,7 @@ export const THEMES = ["light", "dark", "system"] as const;
 
 /** Colonnes de `profiles` modifiables par l'utilisateur (liste blanche). */
 /** Fonctionnalités que l'utilisateur peut désactiver (Réglages → Fonctionnalités) ; même liste que la contrainte SQL. */
-export const OPTIONAL_FEATURES = ["deep_research", "knowledge_graph", "contradictions"] as const;
+export const OPTIONAL_FEATURES = ["deep_research", "knowledge_graph", "contradictions", "prompt_suggestions"] as const;
 export type OptionalFeature = typeof OPTIONAL_FEATURES[number];
 
 export const profilePatchSchema = z

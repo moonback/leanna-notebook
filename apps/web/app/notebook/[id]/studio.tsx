@@ -226,6 +226,10 @@ function CreateDialog({ type, notebookId, sourceIds, referenceImageId, onClose, 
   const [opts, setOpts] = React.useState<Record<string, string>>({});
   const [prompt, setPrompt] = React.useState("");
   const [sending, setSending] = React.useState(false);
+  const [ideas, setIdeas] = React.useState<AiReportModel[]>([]);
+  const [ideasLoading, setIdeasLoading] = React.useState(false);
+  const [ideasError, setIdeasError] = React.useState(false);
+  const ideasRequest = React.useRef(0);
   const [aiModels, setAiModels] = React.useState<AiReportModel[]>([]);
   const [aiModelsLoading, setAiModelsLoading] = React.useState(false);
   const [aiModelsError, setAiModelsError] = React.useState(false);
@@ -352,8 +356,24 @@ function CreateDialog({ type, notebookId, sourceIds, referenceImageId, onClose, 
     const base = { language: "fr", sourceScope: "selected" };
     setOpts(type === "report" ? { ...base, template: "briefing", reportFormat: "document" } : type === "flashcards" || type === "quiz" || type === "faq" || type === "glossary" ? { ...base, difficulty: "medium", count: "standard" } : type === "audio" ? { format: "deep_dive", duration: "standard", style: "accessible" } : type === "infographic" ? { language: "fr", orientation: "landscape", visualStyle: "auto", detailLevel: "standard", sourceScope: "selected" } : type === "image" ? { orientation: "landscape", sourceScope: "selected" } : type === "study_plan" ? { ...base, days: "7" } : type === "editorial" ? { ...base, editorialFormat: "blog_post", style: "accessible" } : type === "diagram" ? { ...base, direction: "TD" } : base);
     setPrompt("");
+    ideasRequest.current++; // ignore une réponse arrivée après un changement de format
+    setIdeas([]); setIdeasError(false); setIdeasLoading(false);
   }, [type]);
   if (!type) return null;
+  async function suggestIdeas() {
+    const request = ++ideasRequest.current;
+    setIdeasLoading(true); setIdeasError(false);
+    try {
+      const r = await fetch(`/api/v1/notebooks/${notebookId}/artifacts/suggestions`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ sourceIds, type }) });
+      if (!r.ok) throw new Error("suggestions_unavailable");
+      const j = await r.json() as { suggestions: AiReportModel[] };
+      if (request === ideasRequest.current) setIdeas(j.suggestions);
+    } catch {
+      if (request === ideasRequest.current) setIdeasError(true);
+    } finally {
+      if (request === ideasRequest.current) setIdeasLoading(false);
+    }
+  }
   const choice = (key: string, text: string, values: [string, string][]) => (
     <Field id={`opt-${key}`} label={text}>
       <select className="h-10 w-full rounded-md border border-border-input bg-surface-raised px-3 text-sm" value={opts[key] ?? values[0][0]} onChange={(e) => setOpts({ ...opts, [key]: e.target.value })}>
@@ -534,6 +554,19 @@ function CreateDialog({ type, notebookId, sourceIds, referenceImageId, onClose, 
           <Field id="opt-prompt" label={type === "image" ? "Décrivez l’image à générer" : type === "infographic" ? "Décrivez l’infographie que vous souhaitez créer" : type === "report" ? "Personnaliser le modèle (facultatif)" : type === "flashcards" || type === "quiz" ? "Quel est le thème ?" : type === "comparison" ? "Décrivez la table de données que vous souhaitez créer" : "Consignes (facultatif)"} hint={type === "image" ? "Choisissez une idée proposée ou décrivez votre propre image." : type === "infographic" ? undefined : type === "report" ? "Public visé, ton, plan souhaité, longueur ou éléments à mettre en avant…" : "Public visé, angle, thèmes à privilégier…"}>
             <Textarea value={prompt} maxLength={4000} onChange={(e) => setPrompt(e.target.value)} placeholder={type === "image" ? "Choisissez une idée ci-dessus ou décrivez l’image souhaitée…" : type === "infographic" ? "Indiquez le style, la couleur ou le thème principal : « Utilise un thème de couleurs bleu et mets en avant les… »" : type === "report" ? "Ex. : rédiger pour une direction, avec une synthèse exécutive et des recommandations concrètes." : type === "flashcards" ? "Utilisez le recto pour le nom de la fonctionnalité et le verso pour ses prérequis." : type === "comparison" ? "Colonnes souhaitées, critères de comparaison, regroupements…" : "Ex. : pour un public débutant, insister sur la sécurité."} />
           </Field>
+          {type !== "image" && <section className="grid gap-2" aria-live="polite">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs text-text-muted">Besoin d’inspiration ? Leanna propose 3 consignes adaptées à vos sources.</p>
+              <Button type="button" variant="secondary" size="sm" loading={ideasLoading} disabled={!sourceIds.length} onClick={() => void suggestIdeas()}><Sparkles aria-hidden className="size-3.5" /> {ideas.length ? "Autres suggestions" : "Suggérer avec l’IA"}</Button>
+            </div>
+            {ideasError && <p className="text-xs text-danger">Suggestions indisponibles. Vérifiez la configuration OpenRouter ou réessayez.</p>}
+            {ideas.length > 0 && <div className="grid gap-2 sm:grid-cols-3">
+              {ideas.map((idea) => <button key={idea.id} type="button" onClick={() => setPrompt(idea.instruction)} className={cn("grid content-start gap-1 rounded-lg border p-3 text-left transition-colors hover:border-accent hover:bg-accent-soft/40", prompt === idea.instruction ? "border-accent bg-accent-soft" : "border-border bg-surface")}>
+                <span className="text-sm font-medium">{idea.title}</span>
+                <span className="line-clamp-3 text-xs leading-5 text-text-muted">{idea.instruction}</span>
+              </button>)}
+            </div>}
+          </section>}
           {type === "comparison" && <section className="grid gap-2">
             <h3 className="text-sm font-medium">À essayer</h3>
             {[
