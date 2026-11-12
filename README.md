@@ -9,7 +9,7 @@ Leanna Notebook est une application SaaS multi-utilisateur fondée sur Next.js, 
 | Domaine | Capacités repérées dans le code | Réserve |
 |---|---|---|
 | Notebooks | Organisation, membres, liens de partage, visites et copie | Parcours de bout en bout non retesté ici |
-| Sources | Import, traitement, sélection, recherche et citations | OCR des PDF scannés non confirmé |
+| Sources | Import de fichiers, pages web, URL publiques TikTok avec transcription automatique Deepgram, sélection, recherche et citations | Les vidéos privées, bloquées ou non accessibles sans connexion ne peuvent pas être transcrites ; OCR des PDF scannés non confirmé |
 | Chat | Streaming SSE, recherche hybride, citations résolues et notes | Dépend de la configuration Supabase/IA |
 | Studio | Rapports, fiches, quiz, cartes mentales, infographies, chronologies, comparatifs, glossaires, FAQ, diagrammes, contenus éditoriaux et plans d'étude | 13 types acceptés par l'API ; résultats visuels non validés exhaustivement |
 | Audio Overview | Script dialogué à deux voix, TTS segmenté, mixage ffmpeg et MP3 privé | Nécessite les identifiants TTS et ffmpeg sur le worker |
@@ -97,7 +97,7 @@ Les variables principales sont :
 | `OPENROUTER_EMBEDDINGS_MODEL`, `EMBEDDINGS_PROVIDER`, `EMBEDDINGS_MODEL`, `EMBEDDINGS_API_KEY` | Embeddings |
 | `GEMINI_API_KEY` | Gemini Live |
 | `TAVILY_API_KEY` | Fast Research |
-| `DEEPGRAM_API_KEY`, `STT_MODEL`, `STT_LANGUAGE` | Transcription audio |
+| `DEEPGRAM_API_KEY`, `STT_MODEL`, `STT_LANGUAGE` | Transcription audio et des vidéos TikTok publiques importées par URL |
 | `ELEVENLABS_API_KEY`, `AUDIO_OVERVIEW_HOST_VOICE_ID`, `AUDIO_OVERVIEW_GUEST_VOICE_ID`, `FFMPEG_PATH` | Audio Overview |
 | `APP_URL`, `BILLING_MODE` | URL publique et mode de facturation |
 | `NEXT_PUBLIC_LEGAL_ENTITY`, `NEXT_PUBLIC_LEGAL_EMAIL` | Informations des pages légales |
