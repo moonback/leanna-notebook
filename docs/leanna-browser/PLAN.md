@@ -125,7 +125,13 @@ local, UI minimale, route `/browser`. Constats vérifiés :
 - [x] Phase 1 — audit et plan
 - [x] Phase 2 — moteur, onglets, navigation (29 tests unitaires, 12 E2E Electron)
 - [x] Phase 3 — interface : onglets, barre d'adresse, états d'erreur, raccourcis (4 E2E sur l'UI réelle)
-- [ ] Phase 4 — extraction et services IA
+- [ ] Phase 4 — extraction et services IA — **EN COURS, interrompue (limite d'usage)**.
+  Écrit : `page-scripts.ts`, `browser-extract.ts`, IPC `extractPage` / `getSelection`, 7 tests unitaires (passent).
+  **Bug ouvert** : dans Electron réel, `extractPage` renvoie `status: "unavailable"` (2 tests E2E en échec dans
+  `e2e/browser.e2e.cjs`). Première chose à faire : afficher `page.reason` ; pistes = prélude Readability dans
+  `executeJavaScriptInIsolatedWorld`, ou `fn.toString()` du script compilé qui référence un symbole hors fonction.
+  Reste : `streamChat` avec outils, `lib/browser/context.ts` (bloc `<untrusted_web_content>`), route
+  `api/v1/browser/agent`, panneau IA.
 - [ ] Phase 5 — agent, outils, prompts
 - [ ] Phase 6 — Notebook
 - [ ] Phase 7 — persistance, réglages, téléchargements

@@ -1,5 +1,6 @@
 import { ipcMain, type IpcMainInvokeEvent } from "electron";
 import type { BrowserDataStore } from "./browser-data-store";
+import { extractPage, getSelection } from "./browser-extract";
 import type { BrowserManager } from "./browser-manager";
 import { BROWSER_COMMANDS, matchShortcut, type BrowserCommand } from "./browser-shortcuts";
 import { isTabId } from "./browser-validation";
@@ -92,6 +93,9 @@ export function browserHandlers({ manager, store }: BrowserIpcDeps): Record<stri
     cancelDownload: (id) => typeof id === "string" && manager.cancelDownload(id),
     showDownloadInFolder: (id) => typeof id === "string" && manager.showDownloadInFolder(id),
     removeDownload: (id) => typeof id === "string" ? manager.removeDownload(id) : false,
+
+    extractPage: (id, options) => extractPage(manager, tab(id), { full: record(options).full === true }),
+    getSelection: (id) => getSelection(manager, tab(id)),
 
     getPermissions: () => store.getPermissions(),
     setPermission: (origin, permission, decision) => manager.setSitePermission(origin, permission, decision),

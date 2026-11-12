@@ -202,6 +202,47 @@ test("sécurité : schémas dangereux et redirections malveillantes bloqués", a
   await loaded("/article");
 });
 
+test("extraction : contenu principal, métadonnées, titres, liens, tableaux, date — borné et sans le bruit de la page", async () => {
+  const tab = await tabByUrl("/article");
+  const page = await call("extractPage", tab.id);
+  assert.equal(page.status, "ok");
+  assert.equal(page.url, `${site.url}/article`);
+  assert.equal(page.title, "Les marées expliquées");
+  assert.equal(page.description, "Pourquoi la mer monte et descend deux fois par jour.");
+  assert.equal(page.publishedAt, "2026-03-14T08:00:00Z");
+  assert.equal(page.author, "Camille Durand");
+  assert.equal(page.canonicalUrl, "https://exemple-maree.test/marees");
+  assert.equal(page.lang, "fr");
+  assert.equal(page.method, "readability");
+  assert.match(page.text, /attraction gravitationnelle de la Lune/);
+  assert.match(page.text, /baie de Fundy/);
+  assert.doesNotMatch(page.text, /Publicité|Mentions légales/, "navigation, publicité et pied de page exclus du texte principal");
+  assert.doesNotMatch(page.text, /<\w+[^>]*>/, "aucun balisage HTML dans le contexte");
+  assert.deepEqual(page.headings.map((h) => h.text), ["Les marées expliquées", "Le rôle de la Lune", "Quelques chiffres"]);
+  assert.ok(page.links.some((l) => l.url === `${site.url}/produit-a`) && page.links.some((l) => l.url === "https://example.com/reference"));
+  assert.deepEqual(page.tables[0], { caption: "Marnages", rows: [["Lieu", "Marnage"], ["Baie de Fundy", "16 m"], ["Mont-Saint-Michel", "14 m"]] });
+  assert.ok(page.text.length <= 24_000);
+
+  // Le script tourne en monde isolé : la page ne voit ni Readability ni nos fonctions.
+  assert.equal(await inPage("/article", "typeof Readability + '/' + typeof extractPageScript"), "undefined/undefined");
+
+  // Sélection de texte de l'utilisateur.
+  await inPage("/article", "const r = document.createRange(); r.selectNodeContents(document.querySelector('h2')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); true");
+  assert.equal(await call("getSelection", tab.id), "Le rôle de la Lune");
+});
+
+test("extraction : une page inaccessible ou vide est signalée, pas inventée", async () => {
+  const tab = await call("createTab", { url: "http://127.0.0.1:9/hors-ligne" });
+  await waitFor(async () => (await state()).tabs.find((t) => t.id === tab.id)?.error, "échec de chargement");
+  const failed = await call("extractPage", tab.id);
+  assert.deepEqual([failed.status, failed.reason, failed.text], ["unavailable", "page_load_failed", ""]);
+  await call("navigate", tab.id, `${site.url}/vide`);
+  await loaded("/vide");
+  assert.equal((await call("extractPage", tab.id)).status, "empty");
+  await call("closeTab", tab.id);
+  await assert.rejects(call("extractPage", "pas-un-id"), /invalid_tab_id/);
+});
+
 test("pop-ups : ouvertes comme onglets, jamais comme fenêtres ; bloquées si le réglage le demande", async () => {
   const tab = await call("createTab", { url: `${site.url}/popup` });
   await loaded("/popup");

@@ -77,6 +77,28 @@ export interface DesktopBrowserSettings {
   aiPanelOpen: boolean;
 }
 
+export interface DesktopPageContent {
+  /** ok = contenu exploitable ; empty = page sans texte ; unavailable = page inaccessible (voir `reason`). */
+  status: "ok" | "empty" | "unavailable";
+  reason?: string;
+  url: string;
+  title: string;
+  description: string;
+  siteName: string;
+  author: string;
+  lang: string;
+  publishedAt: string | null;
+  canonicalUrl: string | null;
+  text: string;
+  truncated: boolean;
+  totalChars: number;
+  wordCount: number;
+  method: "readability" | "fallback" | "none";
+  headings: { level: number; text: string }[];
+  links: { text: string; url: string }[];
+  tables: { caption: string; rows: string[][] }[];
+}
+
 export interface DesktopBrowserVisit { id: string; url: string; title: string; visitedAt: number }
 export interface DesktopBrowserBookmark { id: string; url: string; title: string; folder: string; createdAt: number }
 export type DesktopPermissionDecision = "allow" | "deny";
@@ -123,6 +145,9 @@ export interface DesktopBrowserInvokeApi {
   cancelDownload(id: string): Promise<boolean>;
   showDownloadInFolder(id: string): Promise<boolean>;
   removeDownload(id: string): Promise<boolean>;
+  /** Contenu nettoyé et borné de l'onglet (`full` : texte complet, pour l'enregistrement dans le Notebook). */
+  extractPage(id: string, options?: { full?: boolean }): Promise<DesktopPageContent>;
+  getSelection(id: string): Promise<string>;
   getPermissions(): Promise<Record<string, Record<string, DesktopPermissionDecision>>>;
   setPermission(origin: string, permission: string, decision: DesktopPermissionDecision | null): Promise<boolean>;
   clearBrowsingData(): Promise<boolean>;
