@@ -40,7 +40,7 @@ export default async function ProfilePage() {
   const emailVerified = Boolean(user.email_confirmed_at);
 
   return (
-    <div className="min-h-dvh bg-surface/40">
+    <div className="min-h-dvh var(--bg)">
       <AppHeader><h1 className="truncate text-lg font-semibold">Mon profil</h1></AppHeader>
       <main className="mx-auto grid max-w-5xl gap-6 px-4 py-6 sm:px-6 sm:py-9">
         <section className="relative isolate overflow-hidden rounded-2xl border border-border bg-surface-raised shadow-xs">

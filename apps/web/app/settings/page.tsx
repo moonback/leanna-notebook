@@ -45,7 +45,7 @@ export default async function SettingsPage() {
   const initials = name.split(/\s+/).map((s: string) => s[0]).join("").slice(0, 2).toUpperCase();
 
   return (
-    <div className="min-h-dvh bg-surface/40">
+    <div className="min-h-dvh var(--bg)">
       <AppHeader><h1 className="truncate text-lg">Réglages</h1></AppHeader>
       <main className="mobile-settings-main mx-auto grid max-w-6xl grid-cols-1 gap-8 px-4 py-8 sm:px-6">
         <section aria-label="Compte" className="mobile-settings-account flex flex-wrap items-center gap-4 rounded-lg border bg-surface-raised p-5 shadow-xs">
