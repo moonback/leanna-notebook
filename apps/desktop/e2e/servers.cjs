@@ -126,7 +126,7 @@ async function startSite() {
  *  - POST /api/v1/browser/agent : rejoue `model.script`, une file de fonctions (corps de requête) → événements SSE ;
  *  - /api/v1/notebooks… : enregistre ce que l'interface envoie au Notebook.
  */
-async function startApp({ bundlePath } = {}) {
+async function startApp({ bundlePath, cssPath } = {}) {
   const model = { script: [], requests: [] };
   const notebook = { sources: [], notes: [] };
   const readJson = (req) => new Promise((resolve) => {
@@ -165,8 +165,14 @@ async function startApp({ bundlePath } = {}) {
         ? { sources: [{ id: "22222222-2222-4222-8222-222222222222", title: "ok", status: "pending" }] }
         : { note: { id: "33333333-3333-4333-8333-333333333333" } });
     }
+    if (url.pathname === "/bundle.css" && cssPath) {
+      res.writeHead(200, { "content-type": "text/css; charset=utf-8" });
+      return res.end(fs.readFileSync(cssPath));
+    }
     res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-    res.end(html("Leanna Browser (test)", `<div id="root"></div>${bundlePath ? '<script src="/bundle.js"></script>' : ""}`));
+    res.end(html("Leanna Browser (test)",
+      `<div id="root"></div>${bundlePath ? '<script src="/bundle.js"></script>' : ""}`,
+      cssPath ? '<link rel="stylesheet" href="/bundle.css">' : ""));
   });
   return { ...app, model, notebook };
 }

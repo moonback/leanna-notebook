@@ -123,8 +123,8 @@ local, UI minimale, route `/browser`. Constats vérifiés :
 ## 5. Avancement
 
 - [x] Phase 1 — audit et plan
-- [ ] Phase 2 — moteur, onglets, navigation
-- [ ] Phase 3 — interface
+- [x] Phase 2 — moteur, onglets, navigation (29 tests unitaires, 12 E2E Electron)
+- [x] Phase 3 — interface : onglets, barre d'adresse, états d'erreur, raccourcis (4 E2E sur l'UI réelle)
 - [ ] Phase 4 — extraction et services IA
 - [ ] Phase 5 — agent, outils, prompts
 - [ ] Phase 6 — Notebook
@@ -134,4 +134,15 @@ local, UI minimale, route `/browser`. Constats vérifiés :
 
 ## 6. Journal des décisions prises en cours de route
 
-(complété au fil des phases)
+- **Téléchargements** : dialogues natifs *synchrones* dans `will-download` (le chemin doit être fixé avant
+  la fin du gestionnaire, sinon Electron choisit lui-même). Fichier à risque = avertissement préalable.
+- **Cookies** : Electron n'offre pas de blocage fiable des cookies tiers ; le réglage proposé est
+  « conserver » ou « effacer à chaque démarrage », plus une action « effacer les données de navigation ».
+- **Raccourcis** : table unique dans Main (`browser-shortcuts.ts`). L'UI ne garde qu'un filtre synchrone
+  (`shouldForwardKey`) pour intercepter Ctrl+W / Ctrl+R avant le menu de l'application ; un test vérifie
+  son équivalence avec la table.
+- **Banc E2E de l'UI** : la vraie UI React est compilée (esbuild + Tailwind) et servie par un serveur local
+  de confiance ; l'API serveur est simulée. `BrowserWindow.capturePage()` n'inclut pas la vue native :
+  les captures sont prises en deux images (interface, page).
+- **Types partagés** : l'UI web importe *les types* de `apps/desktop/src/shared/desktop-api.ts`
+  (aucun code desktop dans le bundle web).
