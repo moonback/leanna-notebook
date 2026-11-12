@@ -38,6 +38,9 @@
 }
 
 
+/* Navigation mobile masquée par défaut : aucun impact sur le desktop. */
+.mobile-bottom-nav { display: none; }
+
 /* --------------------------------------------------------------------------
    Mobile experience — isolated below 768px. Desktop styles remain untouched.
    -------------------------------------------------------------------------- */
@@ -51,8 +54,11 @@
   body {
     min-width: 320px;
     overflow-x: clip;
-    padding-bottom: calc(4.75rem + env(safe-area-inset-bottom));
     overscroll-behavior-x: none;
+  }
+
+  body:has(.mobile-bottom-nav) {
+    padding-bottom: calc(4.75rem + env(safe-area-inset-bottom));
   }
 
   button, [role="button"], a, input, select, textarea {
