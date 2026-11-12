@@ -20,7 +20,7 @@ type Plan = {
   price_cents: number;
   currency: string;
   billing_interval: string;
-  limits?: unknown;
+  limits?: PlanLimits | null;
 };
 
 function formatPrice(plan: Plan) {
@@ -78,7 +78,7 @@ export function PlanCard({ workspaceId, current, plans }: { workspaceId: string;
 
   const activePlan = plans.find((plan) => plan.id === current);
   const sortedPlans = [...plans].sort((a, b) => a.price_cents - b.price_cents);
-  const activeLimits = limitRows(activePlan?.limits as PlanLimits | null | undefined);
+  const activeLimits = limitRows(activePlan?.limits);
 
   return (
     <div className="grid gap-5">
@@ -126,7 +126,7 @@ export function PlanCard({ workspaceId, current, plans }: { workspaceId: string;
         {sortedPlans.map((plan) => {
           const active = plan.id === current;
           const price = formatPrice(plan);
-          const limits = limitRows(plan.limits as PlanLimits | null | undefined);
+          const limits = limitRows(plan.limits);
           const isBusy = busy === plan.id || busy === "cancel";
           return (
             <li key={plan.id} className={cn(
