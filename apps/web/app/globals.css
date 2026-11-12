@@ -514,3 +514,28 @@
 @media (prefers-reduced-motion: reduce) {
   .mobile-dashboard-card { animation: none !important; transition: none !important; }
 }
+
+
+/* Notebook — Sources, aperçu documentaire et Studio sur mobile uniquement. */
+@media (max-width: 767px) {
+  .mobile-source-panel, .mobile-studio-panel { min-width: 0; min-height: 0; overflow: hidden; }
+  .mobile-source-list, .mobile-studio-artifacts { min-width: 0; padding: 0.55rem; }
+  .mobile-source-list > div, .mobile-studio-artifacts > li { min-width: 0; border-radius: 0.75rem; }
+  .mobile-source-list [role="listitem"], .mobile-studio-artifacts [role="listitem"] { min-width: 0; gap: 0.55rem; }
+  .mobile-source-list button[aria-label^="Supprimer"], .mobile-source-list button[aria-label^="Renommer"], .mobile-studio-artifacts button[aria-label] { min-width: 2.65rem; min-height: 2.65rem; }
+  .mobile-studio-actions { gap: 0.55rem; padding: 0.75rem; }
+  .mobile-studio-actions button { min-width: 0; min-height: 2.8rem; justify-content: flex-start; gap: 0.45rem; padding-inline: 0.65rem; font-size: 0.78rem; line-height: 1.2; white-space: normal; text-align: left; }
+  .mobile-studio-actions button svg { flex: 0 0 auto; }
+  .mobile-studio-actions button.col-span-2 { grid-column: 1 / -1; }
+  .mobile-source-dialog[role="dialog"], .mobile-source-viewer-dialog[role="dialog"], .mobile-artifact-dialog[role="dialog"] { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+  .mobile-source-import-form, .mobile-source-viewer-content, .mobile-artifact-content { min-height: 0; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+  .mobile-source-import-form { overflow-y: auto; padding-bottom: max(0.25rem, env(safe-area-inset-bottom)); }
+  .mobile-source-viewer-content, .mobile-artifact-content { max-height: min(72dvh, 48rem); padding: 0.9rem; }
+  .mobile-source-viewer-content audio, .mobile-artifact-content audio { position: sticky; top: 0; z-index: 1; border-radius: 0.75rem; background: var(--surface); }
+  .mobile-source-viewer-content button, .mobile-artifact-content button { min-height: 2.65rem; }
+}
+@media (max-width: 380px) {
+  .mobile-studio-actions { gap: 0.4rem; padding: 0.6rem; }
+  .mobile-studio-actions button { font-size: 0.73rem; padding-inline: 0.5rem; }
+  .mobile-source-viewer-content, .mobile-artifact-content { padding: 0.75rem; }
+}

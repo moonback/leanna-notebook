@@ -193,7 +193,7 @@ export function Workspace({ notebookId, initialTitle, role, allowCopies }: { not
   const allSelected = ready.length > 0 && selectedCount === ready.length;
 
   const sourcesPanel = (
-    <Panel id="sources" title="Sources" className="h-full" actions={canEdit && <span className="flex flex-wrap items-center gap-1"><Button size="sm" variant="soft" onClick={() => setAdding(true)}><Plus aria-hidden /> Ajouter</Button></span>}>
+    <Panel id="sources" title="Sources" className="mobile-source-panel h-full" actions={canEdit && <span className="flex flex-wrap items-center gap-1"><Button size="sm" variant="soft" onClick={() => setAdding(true)}><Plus aria-hidden /> Ajouter</Button></span>}>
       {loadError ? (
         <div className="p-4"><Alert tone="danger" title="Sources indisponibles" action={<Button size="sm" variant="secondary" onClick={load}>Réessayer</Button>} /></div>
       ) : sources === null ? (
@@ -828,7 +828,7 @@ function AddSourcesDialog({ open, onOpenChange, notebookId, onAdded, onWebSearch
 
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!busy) onOpenChange(next); }}>
-      <DialogContent title="Ajouter des sources" description="Les réponses s’appuieront uniquement sur ces documents.">
+      <DialogContent className="mobile-source-dialog" title="Ajouter des sources" description="Les réponses s’appuieront uniquement sur ces documents.">
         <div className="grid gap-2 sm:grid-cols-2">
           <button type="button" onClick={onWebSearch} className="flex items-start gap-3 rounded-xl border border-border bg-surface p-3 text-left transition-colors hover:bg-surface-raised focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
             <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-accent-soft text-on-accent-soft"><Search className="size-4" aria-hidden /></span>
@@ -960,8 +960,8 @@ function SourceViewer({ state, onClose, onAsk }: { state: { sourceId: string; ra
   const [a, b] = state?.range ?? [0, 0];
   return (
     <Dialog open={Boolean(state)} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent size="lg" title={source?.title ?? "Source"} description={state?.range ? "Le passage cité est surligné." : undefined}>
-        <div className="max-h-[65dvh] overflow-y-auto rounded-lg bg-surface p-5">
+      <DialogContent size="lg" className="mobile-source-viewer-dialog" title={source?.title ?? "Source"} description={state?.range ? "Le passage cité est surligné." : undefined}>
+        <div className="mobile-source-viewer-content max-h-[65dvh] overflow-y-auto rounded-lg bg-surface p-5">
           {failed ? <Alert tone="danger" title="Source indisponible" /> : !source ? (
             <div className="grid gap-2" aria-busy="true"><Skeleton className="h-4" /><Skeleton className="h-4 w-5/6" /><Skeleton className="h-4 w-4/6" /></div>
           ) : (

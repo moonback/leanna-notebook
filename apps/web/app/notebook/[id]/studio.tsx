@@ -130,10 +130,10 @@ export function Studio({ notebookId, canEdit, sourceIds, sourceTitle, onOpenCita
   }
 
   return (
-    <Panel id="studio" title="Studio" className="h-full">
+    <Panel id="studio" title="Studio" className="mobile-studio-panel h-full">
       {confirmDialog}
       {canEdit && (
-        <div className="grid grid-cols-2 gap-2 border-b p-3">
+        <div className="mobile-studio-actions grid grid-cols-2 gap-2 border-b p-3">
           {(["report", "flashcards", "quiz", "mind_map", "infographic", "timeline", "comparison", "glossary", "faq", "diagram", "editorial", "study_plan", ...(imageGenerationEnabled ? ["image" as const] : [])] as ArtType[]).map((t) => (
             <Button key={t} variant="secondary" className="justify-start" disabled={!readyCount} title={readyCount ? TYPES[t].hint : "Ajoutez d’abord une source"} onClick={() => setCreating(t)}>
               {TYPES[t].icon} {TYPES[t].label}
@@ -161,7 +161,7 @@ export function Studio({ notebookId, canEdit, sourceIds, sourceTitle, onOpenCita
             : "Ajoutez une source, puis générez rapports, fiches, quiz ou cartes mentales."}
         </EmptyState>
       ) : (
-        <ul className="grid min-w-0 gap-0.5 p-2">
+        <ul className="mobile-studio-artifacts grid min-w-0 gap-0.5 p-2">
           {arts.map((a) => (
             <li key={a.id} className="grid min-w-0 gap-1">
               <ListRow
@@ -595,10 +595,10 @@ function ArtifactViewer({ id, canShare, onImported, onEditImage, onClose, source
   const art = data?.artifact;
   return (
     <Dialog open={Boolean(id)} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent size="lg" title={art ? (art.title || TYPES[art.type].label) : "Contenu du Studio"}>
+      <DialogContent size="lg" className="mobile-artifact-dialog" title={art ? (art.title || TYPES[art.type].label) : "Contenu du Studio"}>
         {id && canShare && <ImportAsSourceButton artifactId={id} disabled={!art} onImported={onImported} />}
         {id && canShare && <ArtifactShareButton artifactId={id} disabled={!art} />}
-        <div className="max-h-[70dvh] overflow-y-auto pr-1">
+        <div className="mobile-artifact-content max-h-[70dvh] overflow-y-auto pr-1">
           {art?.custom_prompt && !art.custom_prompt.startsWith(AUDIO_OVERVIEW_MARKER) && <p className="mb-4 rounded-md bg-surface px-3 py-2 text-xs text-text-muted"><span className="font-medium">Consignes de génération :</span> {art.custom_prompt}</p>}
           {failed ? <Alert tone="danger" title="Contenu indisponible" />
             : !art ? <div className="grid gap-2" aria-busy="true" aria-label="Chargement"><Skeleton className="h-5 w-2/3" /><Skeleton className="h-4" /><Skeleton className="h-4 w-5/6" /></div>
