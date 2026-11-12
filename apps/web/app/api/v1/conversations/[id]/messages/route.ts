@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { ApiError, handle, parseBody, requireRole, requireUser } from "@/lib/api";
 import { AiNotConfigured, AiUpstreamError, embedQuery, streamChat, type ChatMessage } from "@/lib/ai/openrouter";
-import { CHAT_DEFAULT_INSTRUCTIONS, chatFixedRules } from "@/lib/ai/prompts/chat";
+import { CHAT_DEFAULT_INSTRUCTIONS, chatFixedRules, stripCitationMarkers } from "@/lib/ai/prompts/chat";
 import { formatPassages, resolveCitations, type Passage } from "@notebook/core/citations";
 import { log } from "@/lib/log";
 import { createServiceClient, createUserClient } from "@/lib/supabase/server";
@@ -17,7 +17,7 @@ const askSchema = z.object({
   sourceIds: z.array(z.string().uuid()).max(600).optional(),
 }).strict();
 
-const LANG_NAMES: Record<string, string> = { fr: "français", en: "English", es: "español", de: "Deutsch", it: "italiano", pt: "português", nl: "Nederlands" };
+const LANG_NAMES: Record<string, string> = { fr: "French", en: "English", es: "Spanish", de: "German", it: "Italian", pt: "Portuguese", nl: "Dutch" };
 
 type StudioArtifactType = "report" | "flashcards" | "quiz" | "mind_map" | "infographic" | "timeline" | "comparison" | "glossary" | "faq" | "diagram" | "editorial" | "study_plan" | "audio" | "image";
 
@@ -82,15 +82,17 @@ const LENGTH_EN: Record<string, string> = {
   long: "Tone and style instruction: give a detailed response that develops each point with examples drawn from the passages.",
 };
 
-/** Prompt système : instructions par défaut (ou personnalisées) + ton/style du notebook + règles fixes. */
-function systemPrompt(lang: string, style: string, custom: string | null, length: string, hasPassages: boolean, override?: string | null) {
+/**
+ * Prompt système : instructions par défaut (ou personnalisées) + ton/style du notebook + règles fixes.
+ * Uniquement des éléments stables par notebook (préfixe cachable) ; le variable va dans le message user.
+ */
+function systemPrompt(lang: string, style: string, custom: string | null, length: string, override?: string | null) {
   return [
     override?.trim() || CHAT_DEFAULT_INSTRUCTIONS,
     style === "learning_guide" ? "Tone and style instruction: be pedagogical, explain step by step and end with one question that lets me check my understanding." : "",
     style === "custom" && custom ? `Tone and style instruction: ${custom}` : "",
     LENGTH_EN[length] ?? "",
-    hasPassages ? "" : "No relevant passage was found for this query: say that the information is not in the selected sources.",
-    chatFixedRules(LANG_NAMES[lang] ?? "français"),
+    chatFixedRules(LANG_NAMES[lang] ?? "French"),
   ].filter(Boolean).join("\n\n");
 }
 
@@ -202,9 +204,14 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
     .map((h, i) => ({ n: i + 1, chunk_id: h.chunk_id, source_id: h.source_id, source_title: titles.get(h.source_id) ?? "source", content: h.content, char_start: h.char_start, char_end: h.char_end, page_start: h.page_start }));
 
   const messages: ChatMessage[] = [
-    { role: "system", content: systemPrompt(nb?.output_language ?? profile?.output_language ?? "fr", nb?.chat_style ?? "default", nb?.chat_custom_prompt ?? null, nb?.response_length ?? "default", passages.length > 0, promptOverride?.content) + (artifactRequest ? "\n\nThe requested Studio artifact is already queued. Acknowledge briefly and do not reproduce the full deliverable in this chat response." : "") },
-    ...(history ?? []).reverse().map((m) => ({ role: m.role as "user" | "assistant", content: m.content })),
-    { role: "user", content: `<passages>\n${formatPassages(passages)}\n</passages>\n\nQuestion : ${text}` },
+    { role: "system", content: systemPrompt(nb?.output_language ?? profile?.output_language ?? "fr", nb?.chat_style ?? "default", nb?.chat_custom_prompt ?? null, nb?.response_length ?? "default", promptOverride?.content) },
+    ...(history ?? []).reverse().map((m) => ({ role: m.role as "user" | "assistant", content: m.role === "assistant" ? stripCitationMarkers(m.content) : m.content })),
+    { role: "user", content: [
+      `<passages>\n${formatPassages(passages)}\n</passages>`,
+      passages.length ? "" : "No relevant passage was found for this query: say that the information is not in the selected sources.",
+      artifactRequest ? "The requested Studio artifact is already queued. Acknowledge briefly and do not reproduce the full deliverable in this chat response." : "",
+      `Question : ${text}`,
+    ].filter(Boolean).join("\n\n") },
   ];
 
   const encoder = new TextEncoder();
