@@ -1,5 +1,10 @@
 import { contextBridge, ipcRenderer } from "electron";
-import type { DesktopApi, DesktopFileFilter, DesktopUpdateStatus } from "./shared/desktop-api";
+import type {
+  DesktopApi,
+  DesktopBrowserState,
+  DesktopFileFilter,
+  DesktopUpdateStatus,
+} from "./shared/desktop-api";
 
 const api: DesktopApi = {
   getVersion: () => ipcRenderer.invoke("desktop:app-version"),
@@ -14,6 +19,25 @@ const api: DesktopApi = {
   saveFile: (defaultPath?: string, filters?: DesktopFileFilter[]) =>
     ipcRenderer.invoke("desktop:save-file", { defaultPath, filters }),
   openExternal: (url: string) => ipcRenderer.invoke("desktop:open-external", url),
+
+  getBrowserState: () => ipcRenderer.invoke("browser:get-state"),
+  onBrowserState: (callback: (state: DesktopBrowserState) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, state: DesktopBrowserState) => callback(state);
+    ipcRenderer.on("browser:state", listener);
+    return () => ipcRenderer.removeListener("browser:state", listener);
+  },
+  createBrowserTab: (url?: string, isPrivate = false) =>
+    ipcRenderer.invoke("browser:create-tab", { url, isPrivate }),
+  activateBrowserTab: (id: string) => ipcRenderer.invoke("browser:activate-tab", id),
+  closeBrowserTab: (id: string) => ipcRenderer.invoke("browser:close-tab", id),
+  navigateBrowserTab: (id: string, address: string) =>
+    ipcRenderer.invoke("browser:navigate", { id, address }),
+  browserGoBack: (id: string) => ipcRenderer.invoke("browser:go-back", id),
+  browserGoForward: (id: string) => ipcRenderer.invoke("browser:go-forward", id),
+  browserReload: (id: string) => ipcRenderer.invoke("browser:reload", id),
+  browserStop: (id: string) => ipcRenderer.invoke("browser:stop", id),
+  setBrowserBounds: (bounds) => ipcRenderer.invoke("browser:set-bounds", bounds),
+  setBrowserVisible: (visible: boolean) => ipcRenderer.invoke("browser:set-visible", visible),
 };
 
 contextBridge.exposeInMainWorld("leannaDesktop", api);
