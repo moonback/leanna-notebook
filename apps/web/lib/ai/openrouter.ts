@@ -51,14 +51,18 @@ export async function embedQuery(text: string): Promise<{ vector: number[]; mode
  * Chat en streaming : rend chaque fragment de texte, puis l'usage final.
  * `signal` permet d'interrompre la génération (bouton Stop / client déconnecté).
  */
-export async function* streamChat(messages: ChatMessage[], opts: { signal?: AbortSignal; maxTokens?: number; model?: string } = {}):
-  AsyncGenerator<{ type: "delta"; text: string } | { type: "usage"; usage: ChatUsage; model: string }> {
+export async function* streamChat(messages: ChatMessage[], opts: { signal?: AbortSignal; maxTokens?: number; model?: string; reasoning?: boolean } = {}):
+  AsyncGenerator<{ type: "delta"; text: string } | { type: "thought"; text: string } | { type: "usage"; usage: ChatUsage; model: string }> {
   const { key, chatModel } = config();
   const selectedModel = opts.model ?? chatModel;
   if (!selectedModel) throw new AiNotConfigured("Aucun modèle de conversation n’est configuré.");
   const res = await fetch(`${BASE}/chat/completions`, {
     method: "POST", headers: headers(key), signal: opts.signal,
-    body: JSON.stringify({ model: selectedModel, messages, stream: true, max_tokens: opts.maxTokens ?? 2000, usage: { include: true } }),
+    body: JSON.stringify({
+      model: selectedModel, messages, stream: true, max_tokens: opts.maxTokens ?? 2000, usage: { include: true },
+      // Ignoré sans effet par les modèles qui ne supportent pas le raisonnement.
+      ...(opts.reasoning ? { reasoning: { effort: "medium" } } : {}),
+    }),
   });
   if (!res.ok || !res.body) throw new AiUpstreamError(res.status);
 
@@ -77,10 +81,12 @@ export async function* streamChat(messages: ChatMessage[], opts: { signal?: Abor
       if (!line.startsWith("data:")) continue; // commentaires SSE « : OPENROUTER PROCESSING »
       const data = line.slice(5).trim();
       if (data === "[DONE]") return;
-      let evt: { model?: string; error?: { code?: number }; choices?: { delta?: { content?: string } }[]; usage?: ChatUsage };
+      let evt: { model?: string; error?: { code?: number }; choices?: { delta?: { content?: string; reasoning?: string } }[]; usage?: ChatUsage };
       try { evt = JSON.parse(data); } catch { continue; }
       if (evt.error) throw new AiUpstreamError(evt.error.code ?? 502);
       if (evt.model) model = evt.model;
+      const thought = evt.choices?.[0]?.delta?.reasoning;
+      if (thought) yield { type: "thought", text: thought };
       const text = evt.choices?.[0]?.delta?.content;
       if (text) yield { type: "delta", text };
       if (evt.usage) yield { type: "usage", usage: evt.usage, model };

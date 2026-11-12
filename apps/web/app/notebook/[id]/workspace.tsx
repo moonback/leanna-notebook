@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import { createPortal } from "react-dom";
-import { AlertTriangle, ArrowUp, AudioLines, BookmarkPlus, Eraser, Settings2, ThumbsDown, ThumbsUp, FileText, Globe, Inbox, Lock, NotebookPen, Pencil, Plus, Square, Sparkles, Trash2, Type, Upload, Search, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, FolderOpen } from "lucide-react";
+import { AlertTriangle, ArrowUp, AudioLines, BookmarkPlus, BrainCircuit, Eraser, Settings2, ThumbsDown, ThumbsUp, FileText, Globe, Inbox, Lock, NotebookPen, Pencil, Plus, Square, Sparkles, Trash2, Type, Upload, Search, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, FolderOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Textarea } from "@/components/ui/field";
 import { Alert, Badge, EmptyState, Progress, Skeleton } from "@/components/ui/feedback";
@@ -22,7 +22,7 @@ export type Role = "chat" | "viewer" | "editor" | "owner";
 type Source = { id: string; kind: string; title: string; status: string; error_code: string | null; word_count: number | null };
 type Cite = { marker: number; source_id: string; quote_text: string; char_start: number; char_end: number; verified: boolean };
 type Overview = { text: string | null; questions: string[]; pending: boolean; readySources: number };
-type Message = { id: string; role: "user" | "assistant"; content: string; status: string; citations?: Cite[]; feedback?: number | null };
+type Message = { id: string; role: "user" | "assistant"; content: string; status: string; citations?: Cite[]; feedback?: number | null; thoughts?: string | null };
 
 const ERRORS: Record<string, string> = {
   protected_pdf: "PDF protégé : retirez la protection puis réimportez-le.",
@@ -502,7 +502,8 @@ function Chat({ notebookId, readyCount, onOpenCitation, onOpenPassage, canViewSo
           const event = /^event: (.*)$/m.exec(block)?.[1];
           const data = JSON.parse(/^data: (.*)$/m.exec(block)?.[1] ?? "null");
           if (event === "delta") setMessages((m) => m!.map((x) => x.id === "pending" ? { ...x, content: x.content + data.text } : x));
-          if (event === "done") setMessages((m) => m!.map((x) => x.id === "pending" ? { id: data.messageId, role: "assistant", content: data.text, status: "complete", citations: data.citations } : x));
+          if (event === "thought") setMessages((m) => m!.map((x) => x.id === "pending" ? { ...x, thoughts: (x.thoughts ?? "") + data.text } : x));
+          if (event === "done") setMessages((m) => m!.map((x) => x.id === "pending" ? { id: data.messageId, role: "assistant", content: data.text, status: "complete", citations: data.citations, thoughts: data.thoughts } : x));
           if (event === "error") { setError({ title: "La réponse a échoué", body: "Votre crédit a été restitué. Réessayez." }); setMessages((m) => m!.map((x) => x.id === "pending" ? { ...x, status: "failed" } : x)); }
         }
       }
@@ -555,7 +556,8 @@ function Chat({ notebookId, readyCount, onOpenCitation, onOpenPassage, canViewSo
             <div key={m.id} className="max-w-[85%] justify-self-end whitespace-pre-wrap rounded-xl rounded-br-xs bg-surface px-4 py-2.5 text-sm">{m.content}</div>
           ) : (
             <div key={m.id} className="grid gap-2">
-              {m.content ? <Answer text={m.content} citations={m.citations ?? []} sourceTitle={sourceTitle} onOpen={canViewSources ? onOpenCitation : undefined} /> : <div className="grid gap-2" aria-label="Réponse en cours"><Skeleton className="h-4 w-11/12" /><Skeleton className="h-4 w-9/12" /></div>}
+              {m.thoughts && <Thoughts text={m.thoughts} streaming={m.status === "streaming" && !m.content} />}
+              {m.content ? <Answer text={m.content} citations={m.citations ?? []} sourceTitle={sourceTitle} onOpen={canViewSources ? onOpenCitation : undefined} /> : m.thoughts ? null : <div className="grid gap-2" aria-label="Réponse en cours"><Skeleton className="h-4 w-11/12" /><Skeleton className="h-4 w-9/12" /></div>}
               {canSaveNote && m.status === "complete" && m.id !== "pending" && m.content && (
                 <div><Button size="sm" variant="ghost" disabled={saved.has(m.id)} onClick={() => void saveNote(m.id)}><BookmarkPlus aria-hidden /> {saved.has(m.id) ? "Enregistrée en note" : "Enregistrer en note"}</Button></div>
               )}
@@ -584,6 +586,18 @@ function Chat({ notebookId, readyCount, onOpenCitation, onOpenPassage, canViewSo
         <p className="mt-2 text-center text-xs text-text-subtle">Les réponses peuvent contenir des erreurs : vérifiez les citations.</p>
       </div>
     </section>
+  );
+}
+
+/** Réflexion du modèle (reasoning tokens) : repliable, ouverte par défaut pendant le flux. */
+function Thoughts({ text, streaming }: { text: string; streaming: boolean }) {
+  return (
+    <details open={streaming} className="rounded-lg border border-border-subtle p-3">
+      <summary className="flex cursor-pointer items-center gap-1.5 text-sm font-medium text-text-muted">
+        <BrainCircuit aria-hidden className="size-4" /> Réflexion {streaming && <span className="text-text-subtle">en cours…</span>}
+      </summary>
+      <p className="mt-2 whitespace-pre-wrap text-xs leading-6 text-text-muted">{text}</p>
+    </details>
   );
 }
 

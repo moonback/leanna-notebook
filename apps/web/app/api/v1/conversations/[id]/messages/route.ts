@@ -34,7 +34,7 @@ export const GET = handle(async (_req: NextRequest, { params }: Params) => {
   await ownConversation(id, user.id);
   const supabase = await createUserClient();
   const { data, error } = await supabase.from("chat_messages")
-    .select("id, role, content, status, feedback, created_at, citations(marker, source_id, quote_text, char_start, char_end, verified)")
+    .select("id, role, content, status, feedback, thoughts, created_at, citations(marker, source_id, quote_text, char_start, char_end, verified)")
     .eq("conversation_id", id).order("created_at");
   if (error) throw error;
   return NextResponse.json({ messages: data });
@@ -124,14 +124,15 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
     async start(controller) {
       const send = (event: string, data: unknown) => controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
       send("meta", { messageId: answerId, passages: passages.length, vector: Boolean(query) });
-      let raw = "", usage: unknown = null, model: string | null = null;
+      let raw = "", thoughts = "", usage: unknown = null, model: string | null = null;
       try {
-        for await (const evt of streamChat(messages, { signal: req.signal, model: chatPreference?.model_id ?? undefined })) {
+        for await (const evt of streamChat(messages, { signal: req.signal, model: chatPreference?.model_id ?? undefined, reasoning: true })) {
           if (evt.type === "delta") { raw += evt.text; send("delta", { text: evt.text }); }
+          else if (evt.type === "thought") { thoughts += evt.text; send("thought", { text: evt.text }); }
           else { usage = evt.usage; model = evt.model; }
         }
         const { text: final, citations, dropped } = resolveCitations(raw, passages);
-        await db.from("chat_messages").update({ content: final, status: "complete", usage, model }).eq("id", answerId);
+        await db.from("chat_messages").update({ content: final, status: "complete", usage, model, thoughts: thoughts || null }).eq("id", answerId);
         if (citations.length) {
           await db.from("citations").insert(citations.map((c) => ({
             workspace_id: conv.workspace_id, notebook_id: conv.notebook_id, message_id: answerId, marker: c.marker,
@@ -141,12 +142,12 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
         await db.rpc("settle_usage", { p_id: usageId, p_status: "committed" });
         await db.from("notebooks").update({ last_activity_at: new Date().toISOString() }).eq("id", conv.notebook_id);
         log.info("chat.answered", { notebook_id: conv.notebook_id, message_id: answerId, passages: passages.length, citations: citations.length, dropped_markers: dropped, model });
-        send("done", { messageId: answerId, text: final, citations, usage });
+        send("done", { messageId: answerId, text: final, thoughts: thoughts || null, citations, usage });
       } catch (e) {
         const aborted = req.signal.aborted;
         // texte partiel conservé ; ses citations sont vérifiées comme pour une réponse complète
         const partial = resolveCitations(raw, passages);
-        await db.from("chat_messages").update({ content: partial.text, status: aborted ? "stopped" : "failed" }).eq("id", answerId);
+        await db.from("chat_messages").update({ content: partial.text, status: aborted ? "stopped" : "failed", thoughts: thoughts || null }).eq("id", answerId);
         if (partial.citations.length) {
           await db.from("citations").insert(partial.citations.map((c) => ({
             workspace_id: conv.workspace_id, notebook_id: conv.notebook_id, message_id: answerId, marker: c.marker,
