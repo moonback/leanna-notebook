@@ -22,6 +22,7 @@ export function llmFromEnv(env = process.env): Llm | null {
           model: selectedModel, messages, max_tokens: opts.maxTokens ?? 4000, usage: { include: true },
           ...(opts.json ? { response_format: { type: "json_object" } } : {}),
         }),
+        signal: AbortSignal.timeout(Number(env.OPENROUTER_TIMEOUT_MS) || 180_000),
       });
       if (res.status !== 429 && res.status < 500) break;
       await new Promise((r) => setTimeout(r, 2000 * 2 ** attempt));

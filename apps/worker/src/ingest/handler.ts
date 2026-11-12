@@ -6,6 +6,7 @@ import { extract } from "./extract.ts";
 import { enqueueSummaries } from "../studio/summaries.ts";
 import type { Transcriber } from "../ai/transcription.ts";
 import { openRouterPdfOcr, type PdfOcrEngine } from "../ai/ocr.ts";
+import { enqueueKnowledge } from "../knowledge/extract.ts";
 
 const FTS_CONFIG: Record<string, string> = { fr: "french", en: "english", es: "spanish", de: "german", it: "italian", pt: "portuguese", nl: "dutch" };
 
@@ -22,7 +23,7 @@ export function detectLanguage(text: string): string {
  * Job ingest_source : télécharge l'original, extrait page par page, découpe, embedde,
  * puis remplace les chunks en UNE transaction (replace_chunks). Les étapes sont publiées.
  */
-export function ingestHandler(db: SupabaseClient, embedder: Embedder | null, opts: { summaries?: boolean; transcriber?: Transcriber | null } = {}): Handler {
+export function ingestHandler(db: SupabaseClient, embedder: Embedder | null, opts: { summaries?: boolean; knowledge?: boolean; transcriber?: Transcriber | null } = {}): Handler {
   return async (job, ctx) => {
     const { data: src, error } = await db.from("sources").select("id, kind, storage_path, origin_url, notebook_id, workspace_id, created_by, note_body, mime_type")
       .eq("id", job.target_id!).single();
@@ -98,6 +99,8 @@ export function ingestHandler(db: SupabaseClient, embedder: Embedder | null, opt
       if (e2) throw e2;
       if (ex.title && src.kind === "web") await db.from("sources").update({ title: ex.title.slice(0, 300) }).eq("id", src.id);
       if (opts.summaries) await enqueueSummaries(db, { workspace_id: src.workspace_id, notebook_id: src.notebook_id, source_id: src.kind === "note" ? undefined : src.id });
+      // graphe de connaissances : même déclenchement pour les imports manuels et Deep Research
+      if (opts.knowledge) await enqueueKnowledge(db, { workspace_id: src.workspace_id, notebook_id: src.notebook_id, source_id: src.id, text });
       return { chunks: chunks.length, embedded: Boolean(vectors), language: lang, pages: ex.pageCount };
     } catch (e) {
       const code = e instanceof PermanentError ? e.code : "temporary_error";
