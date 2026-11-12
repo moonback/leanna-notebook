@@ -106,8 +106,7 @@ export function Dashboard({ initial, loadError, initialView, name }: { initial: 
             </p>
           </div>
           <div className="flex shrink-0 flex-wrap gap-2">
-            <Button onClick={create} loading={creating}><Plus aria-hidden /> Créer un notebook</Button>
-            <Button asChild variant="secondary"><Link href="/discover"><Compass aria-hidden /> Découvrir</Link></Button>
+            <Button asChild variant="secondary"><Link href="/discover"><Compass aria-hidden /> Découvrir les notebooks</Link></Button>
           </div>
         </div>
         <div className="mt-6 grid gap-3 border-t border-border pt-5 sm:grid-cols-3">
