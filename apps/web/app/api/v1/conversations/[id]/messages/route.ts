@@ -18,7 +18,7 @@ const askSchema = z.object({
 
 const LANG_NAMES: Record<string, string> = { fr: "français", en: "English", es: "español", de: "Deutsch", it: "italiano", pt: "português", nl: "Nederlands" };
 
-type StudioArtifactType = "report" | "flashcards" | "quiz" | "mind_map" | "infographic" | "timeline" | "comparison" | "glossary" | "faq" | "diagram" | "editorial" | "study_plan" | "audio";
+type StudioArtifactType = "report" | "flashcards" | "quiz" | "mind_map" | "infographic" | "timeline" | "comparison" | "glossary" | "faq" | "diagram" | "editorial" | "study_plan" | "audio" | "image";
 
 /** Détecte uniquement une demande explicite de création d'un livrable Studio. */
 function detectStudioArtifactRequest(input: string): { type: StudioArtifactType; template?: string } | null {
@@ -38,6 +38,7 @@ function detectStudioArtifactRequest(input: string): { type: StudioArtifactType;
     ["editorial", /\b(newsletter|article de blog|publication|contenu editorial)\b/],
     ["study_plan", /\b(plan d'etude|planning de revision|programme de revision)\b/],
     ["audio", /\b(audio overview|podcast|resume audio)\b/],
+    ["image", /\b(image|illustration|visuel|visuelle|affiche)\b/],
     ["report", /\b(rapport|report|synthese|briefing|guide pratique|fiche pratique|guide detaille|document)\b/],
   ];
   const match = types.find(([, pattern]) => pattern.test(value));
@@ -127,6 +128,19 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
   if (artifactRequest) {
     await requireRole(conv.notebook_id, "editor");
     if (!process.env.OPENROUTER_API_KEY || !process.env.OPENROUTER_CHAT_MODEL) throw new ApiError(503, "ai_not_configured");
+    if (artifactRequest.type === "image") {
+      const { data: imagePrefs } = await db.from("ai_image_preferences")
+        .select("enabled,default_model_id,default_orientation").eq("user_id", user.id).maybeSingle();
+      if (imagePrefs?.enabled === false) throw new ApiError(403, "image_generation_disabled");
+      const modelId = imagePrefs?.default_model_id || process.env.OPENROUTER_IMAGE_MODEL || "google/gemini-3.1-flash-image";
+      const catalogResponse = await fetch("https://openrouter.ai/api/v1/images/models", {
+        headers: { authorization: "Bearer " + process.env.OPENROUTER_API_KEY, "X-Title": "Leanna Notebook" },
+        next: { revalidate: 1800 },
+      });
+      if (!catalogResponse.ok) throw new ApiError(502, "image_model_catalog_unavailable");
+      const catalog = await catalogResponse.json() as { data?: { id?: string }[] };
+      if (!(catalog.data ?? []).some((model) => model.id === modelId)) throw new ApiError(422, "unsupported_image_model");
+    }
   }
   const { data: usageId, error: qe } = await db.rpc("reserve_usage", { p_ws: conv.workspace_id, p_user: user.id, p_feature: "chat" });
   if (qe) throw qe;
@@ -136,9 +150,19 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
   const artifactRequest = detectStudioArtifactRequest(text);
   let requestedArtifact: { id: string; type: StudioArtifactType } | null = null;
   if (artifactRequest) {
-    const options = artifactRequest.template
-      ? { template: artifactRequest.template, language: nb?.output_language ?? profile?.output_language ?? "fr", reportFormat: "document", sourceScope: "selected" }
-      : { language: nb?.output_language ?? profile?.output_language ?? "fr", sourceScope: "selected" };
+    const options = artifactRequest.type === "image"
+      ? await (async () => {
+          const { data: imagePrefs } = await db.from("ai_image_preferences")
+            .select("default_model_id,default_orientation").eq("user_id", user.id).maybeSingle();
+          return {
+            modelId: imagePrefs?.default_model_id || process.env.OPENROUTER_IMAGE_MODEL || "google/gemini-3.1-flash-image",
+            orientation: imagePrefs?.default_orientation ?? "landscape",
+            sourceScope: "selected",
+          };
+        })()
+      : artifactRequest.template
+        ? { template: artifactRequest.template, language: nb?.output_language ?? profile?.output_language ?? "fr", reportFormat: "document", sourceScope: "selected" }
+        : { language: nb?.output_language ?? profile?.output_language ?? "fr", sourceScope: "selected" };
     const { data: artifactId, error: artifactError } = await db.rpc("create_artifact", {
       p_notebook: conv.notebook_id,
       p_user: user.id,
