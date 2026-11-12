@@ -831,8 +831,13 @@ function AddSourcesDialog({ open, onOpenChange, notebookId, onAdded, onWebSearch
   const [dragging, setDragging] = React.useState(false);
   const fileRef = React.useRef<HTMLInputElement>(null);
   const folderRef = React.useRef<HTMLInputElement>(null);
+<<<<<<< HEAD
   const ACCEPT = ".pdf,.docx,.pptx,.epub,.txt,.md,.csv,.mp3,.wav,.m4a,.aac,.ogg,.flac,.webm,.mp4,.m4v,.mov,.mkv";
   const supportedExtensions = new Set(["pdf", "docx", "pptx", "epub", "txt", "md", "csv", "mp3", "wav", "m4a", "aac", "ogg", "flac", "webm", "mp4", "m4v", "mov", "mkv"]);
+=======
+  const ACCEPT = ".pdf,.docx,.pptx,.epub,.txt,.md,.csv,.mp3,.wav,.m4a,.aac,.ogg,.flac,.weba,.webm,.mp4,.m4v,.mov,.mkv";
+  const supportedExtensions = new Set(["pdf", "docx", "pptx", "epub", "txt", "md", "csv", "mp3", "wav", "m4a", "aac", "ogg", "flac", "weba", "webm", "mp4", "m4v", "mov", "mkv"]);
+>>>>>>> 65fdac847fbb3cb3909204603b981aa97876041d
   const folderFiles = selectedFiles.map((file) => {
     const relativePath = (file as File & { webkitRelativePath?: string }).webkitRelativePath || file.name;
     const extension = file.name.toLowerCase().split(".").pop() ?? "";

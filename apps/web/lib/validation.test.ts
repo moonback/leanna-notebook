@@ -36,7 +36,11 @@ describe("safeNext", () => {
 });
 
 describe("video upload types", () => {
+<<<<<<< HEAD
   it.each([["clip.mp4", "mp4"], ["clip.m4v", "m4v"], ["clip.mov", "mov"], ["clip.mkv", "mkv"]])(
+=======
+  it.each([["clip.mp4", "mp4"], ["clip.m4v", "m4v"], ["clip.mov", "mov"], ["clip.mkv", "mkv"], ["clip.webm", "webm"], ["clip.weba", "weba"]])(
+>>>>>>> 65fdac847fbb3cb3909204603b981aa97876041d
     "accepts %s as %s", (filename, expected) => expect(uploadTypeOf(filename)).toBe(expected));
   it("rejects unsupported video extensions", () => expect(uploadTypeOf("clip.avi")).toBeNull());
 });
