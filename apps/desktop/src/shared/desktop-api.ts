@@ -41,6 +41,20 @@ export interface DesktopBrowserState {
 
 export type DesktopBrowserBounds = { x: number; y: number; width: number; height: number };
 
+export interface DesktopBrowserVisit {
+  id: string;
+  url: string;
+  title: string;
+  visitedAt: number;
+}
+
+export interface DesktopBrowserBookmark {
+  id: string;
+  url: string;
+  title: string;
+  createdAt: number;
+}
+
 export interface DesktopApi {
   getVersion(): Promise<string>;
   checkForUpdates(): Promise<{ started: boolean }>;
@@ -61,6 +75,11 @@ export interface DesktopApi {
   browserStop(id: string): Promise<boolean>;
   setBrowserBounds(bounds: DesktopBrowserBounds): Promise<boolean>;
   setBrowserVisible(visible: boolean): Promise<boolean>;
+  getBrowserHistory(): Promise<DesktopBrowserVisit[]>;
+  clearBrowserHistory(): Promise<boolean>;
+  getBrowserBookmarks(): Promise<DesktopBrowserBookmark[]>;
+  addBrowserBookmark(url: string, title: string): Promise<DesktopBrowserBookmark | null>;
+  removeBrowserBookmark(id: string): Promise<boolean>;
 }
 
 declare global {
