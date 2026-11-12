@@ -66,7 +66,7 @@ async function fromTikTok(url: string, transcriber?: Transcriber | null): Promis
     throw new PermanentError("tiktok_media_invalid", "TikTok n'a pas fourni un fichier vidéo exploitable.");
   }
   const transcript = await transcriber.transcribe(new Uint8Array(media.body), "video/mp4");
-  const text = transcript.segments.length ? transcript.segments.map((s) => normalize(s.text)).join("\\n\\n") : normalize(transcript.text);
+  const text = transcript.segments.length ? transcript.segments.map((s) => normalize(s.text)).join("\n\n") : normalize(transcript.text);
   const timeRanges: ChunkTimeRange[] = [];
   let offset = 0;
   for (const [index, segment] of transcript.segments.entries()) {
