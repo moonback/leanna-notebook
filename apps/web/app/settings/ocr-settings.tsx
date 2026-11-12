@@ -32,7 +32,7 @@ export function OcrSettings() {
       if (!alive) return;
       const compatible = catalog.filter((model) => model.compatibleFeatures.includes("chat"));
       setModels(compatible);
-      setSettings({ ...saved, modelId: saved.modelId ?? compatible[0]?.id ?? null });
+      setSettings({ ...saved, modelId: compatible.some((model) => model.id === saved.modelId) ? saved.modelId : compatible[0]?.id ?? null });
     }).catch((e) => alive && setError(e instanceof Error ? e.message : "Erreur inattendue."))
       .finally(() => alive && setLoading(false));
     return () => { alive = false; };
@@ -87,7 +87,7 @@ export function OcrSettings() {
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/60 pt-4">
-        <p className="max-w-xl text-xs text-text-muted">La clé API reste côté serveur. Les préférences sont personnelles. Limite actuelle : 40 Mo par PDF OCR et 32 000 tokens de sortie par requête.</p>
+        <p className="max-w-xl text-xs text-text-muted">Le PDF est transmis à OpenRouter pour OCR. La clé API reste côté serveur et les préférences sont personnelles. Limite : 40 Mo par PDF et 32 000 tokens de sortie.</p>
         <Button onClick={save} disabled={loading || saving || (settings.enabled && (!settings.modelId || !models.length))}>{saving ? "Enregistrement…" : "Enregistrer les réglages OCR"}</Button>
       </div>
       {error && <p role="alert" className="text-sm text-danger">{error}</p>}
