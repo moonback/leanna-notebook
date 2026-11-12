@@ -12,6 +12,7 @@ import { SettingsTabs } from "./settings-tabs";
 import { SettingsRow, SettingsSection } from "./settings-ui";
 import { UsageCard, type PlanLimits } from "./usage-card";
 import { OpenRouterSettings } from "./openrouter-settings";
+import { OcrSettings } from "./ocr-settings";
 import { ImageGenerationSettings } from "./image-generation-settings";
 import { SystemPromptsSettings } from "./system-prompts";
 
@@ -86,7 +87,7 @@ export default async function SettingsPage() {
               label: "Intelligence artificielle",
               description: "Modèles, clés et génération d’images.",
               icon: <Sparkles />,
-              content: <div className="grid gap-5"><OpenRouterSettings /><ImageGenerationSettings /></div>,
+              content: <div className="grid gap-5"><OpenRouterSettings /><OcrSettings /><ImageGenerationSettings /></div>,
             },
             {
               id: "prompts",
