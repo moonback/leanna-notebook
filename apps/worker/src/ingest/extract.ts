@@ -12,6 +12,62 @@ export type Extracted = { text: string; pageStarts: number[]; pageCount: number 
 
 const MAX_WORDS = 500_000;
 
+type TikTokVideoData = { playAddr: string; title: string };
+
+/** Extrait les métadonnées d'une vidéo publique depuis l'état JSON embarqué par TikTok. */
+export function parseTikTokVideoData(html: string): TikTokVideoData {
+  const script = html.match(/<script[^>]+id=["']__UNIVERSAL_DATA_FOR_REHYDRATION__["'][^>]*>([\\s\\S]*?)<\\/script>/i)?.[1];
+  if (!script) throw new PermanentError("tiktok_unavailable", "TikTok n'a pas exposé les données de cette vidéo publique.");
+  let root: unknown;
+  try { root = JSON.parse(script.replace(/&quot;/g, '"').replace(/&amp;/g, "&")); }
+  catch { throw new PermanentError("tiktok_unavailable", "Les métadonnées TikTok sont illisibles."); }
+
+  const seen = new Set<object>();
+  let found: TikTokVideoData | null = null;
+  const visit = (value: unknown) => {
+    if (!value || typeof value !== "object" || seen.has(value as object) || found) return;
+    seen.add(value as object);
+    const obj = value as Record<string, unknown>;
+    const video = obj.video && typeof obj.video === "object" ? obj.video as Record<string, unknown> : null;
+    const playAddr = video?.playAddr ?? video?.downloadAddr;
+    if (typeof playAddr === "string" && /^https:\/\//i.test(playAddr)) {
+      const desc = typeof obj.desc === "string" ? obj.desc : "";
+      const author = obj.author && typeof obj.author === "object" && typeof (obj.author as Record<string, unknown>).uniqueId === "string"
+        ? String((obj.author as Record<string, unknown>).uniqueId) : "";
+      found = { playAddr, title: [author ? `TikTok @${author}` : "Vidéo TikTok", desc].filter(Boolean).join(" — ").slice(0, 300) };
+      return;
+    }
+    for (const child of Object.values(obj)) visit(child);
+  };
+  visit(root);
+  if (!found) throw new PermanentError("tiktok_unavailable", "Impossible de récupérer le média de cette vidéo TikTok.");
+  return found;
+}
+
+async function fromTikTok(url: string, transcriber?: Transcriber | null): Promise<Extracted> {
+  if (!transcriber) throw new PermanentError("transcription_not_configured", "Configurez DEEPGRAM_API_KEY pour transcrire les vidéos TikTok.");
+  const parsed = new URL(url);
+  if (!/(^|\\.)tiktok\\.com$/i.test(parsed.hostname)) throw new PermanentError("url_refused");
+  const page = await safeFetch(url);
+  if (!page.contentType.includes("html")) throw new PermanentError("tiktok_unavailable", "La page TikTok n'est pas accessible publiquement.");
+  const metadata = parseTikTokVideoData(page.body.toString("utf8"));
+  const media = await safeFetch(metadata.playAddr, 5, 100 * 1024 * 1024);
+  if (!media.contentType.startsWith("video/") && !media.contentType.includes("octet-stream")) {
+    throw new PermanentError("tiktok_media_invalid", "TikTok n'a pas fourni un fichier vidéo exploitable.");
+  }
+  const transcript = await transcriber.transcribe(new Uint8Array(media.body), "video/mp4");
+  const text = transcript.segments.length ? transcript.segments.map((s) => normalize(s.text)).join("\\n\\n") : normalize(transcript.text);
+  const timeRanges: ChunkTimeRange[] = [];
+  let offset = 0;
+  for (const [index, segment] of transcript.segments.entries()) {
+    const clean = normalize(segment.text);
+    timeRanges.push({ char_start: offset, char_end: offset + clean.length, start_ms: segment.start_ms, end_ms: segment.end_ms });
+    offset += clean.length + (index < transcript.segments.length - 1 ? 2 : 0);
+  }
+  return finalize({ text, pageStarts: [], pageCount: null, title: metadata.title, timeRanges });
+}
+
+
 function finalize(e: Extracted): Extracted {
   const words = e.text.split(/\s+/).filter(Boolean).length;
   if (words === 0) throw new PermanentError("empty_content", "Aucun texte exploitable dans cette source.");
