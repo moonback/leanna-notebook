@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import * as React from "react";
 import { forceCenter, forceCollide, forceLink, forceManyBody, forceSimulation, type Simulation, type SimulationLinkDatum, type SimulationNodeDatum } from "d3-force";
 import { ArrowRight, Check, ChevronsDownUp, ChevronsUpDown, ExternalLink, Focus, GitMerge, Maximize2, Minimize2, Network, RefreshCw, ScanSearch, Scissors, Share2, SlidersHorizontal, TriangleAlert, X } from "lucide-react";
@@ -170,18 +170,49 @@ export function KnowledgeGraph({ notebookId, canEdit, sources, onOpenPassage, on
 
   return (
     <div className={cn("flex min-h-0 flex-col", fullscreen ? "fixed inset-0 z-[45] bg-surface-raised" : "h-full")}>
-      <div className="grid gap-3 border-b p-3 sm:p-4">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-2 border-b px-3 py-2 sm:px-4">
         {stats && (
-          <dl className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-text-muted">
-            <Stat label="sources" value={stats.sources} /><Stat label="entités" value={totals?.entities ?? 0} /><Stat label="relations" value={totals?.relations ?? 0} />
-            <button type="button" onClick={onShowContradictions} className="inline-flex items-center gap-1 hover:text-text"><TriangleAlert className="size-3" aria-hidden /><Stat label="contradictions à vérifier" value={stats.contradictions.open} /></button>
-            <span>Dernière synchronisation : {stats.lastSync ? new Date(stats.lastSync).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" }) : "jamais"}</span>
-            {stats.extraction.pending > 0 && <span className="text-accent">{stats.extraction.pending} source(s) en cours d’analyse</span>}
-            {stats.extraction.failed > 0 && <span className="text-danger">{stats.extraction.failed} échec(s) d’extraction</span>}
-            {stats.activeResearch > 0 && <span>{stats.activeResearch} recherche(s) en cours</span>}
-          </dl>
+          <>
+            <dl className="flex items-center gap-1.5">
+              <Stat label="Sources" value={stats.sources} />
+              <Stat label="Entités" value={totals?.entities ?? 0} />
+              <Stat label="Relations" value={totals?.relations ?? 0} />
+              <Stat
+                label="Contradictions"
+                value={stats.contradictions.open}
+                icon={<TriangleAlert className="size-3" aria-hidden />}
+                warn={stats.contradictions.open > 0}
+                onClick={onShowContradictions}
+                title="Voir les contradictions à vérifier"
+              />
+            </dl>
+            {stats.extraction.pending > 0 && (
+              <span role="status" className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-accent/30 bg-accent/10 px-2.5 py-1 text-xs font-medium text-accent">
+                <span className="relative flex size-2" aria-hidden>
+                  <span className="absolute inline-flex size-full animate-ping rounded-full bg-accent opacity-60" />
+                  <span className="relative inline-flex size-2 rounded-full bg-accent" />
+                </span>
+                {stats.extraction.pending} source{stats.extraction.pending > 1 ? "s" : ""} en cours d’analyse
+              </span>
+            )}
+            {stats.extraction.failed > 0 && (
+              <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-danger/30 bg-danger/10 px-2.5 py-1 text-xs font-medium text-danger">
+                <TriangleAlert className="size-3" aria-hidden />
+                {stats.extraction.failed} échec{stats.extraction.failed > 1 ? "s" : ""} d’extraction
+              </span>
+            )}
+            {stats.activeResearch > 0 && (
+              <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border bg-surface px-2.5 py-1 text-xs text-text-muted">
+                <ScanSearch className="size-3" aria-hidden />
+                {stats.activeResearch} recherche{stats.activeResearch > 1 ? "s" : ""} en cours
+              </span>
+            )}
+            <span className="hidden whitespace-nowrap text-[11px] text-text-muted xl:inline" title="Dernière synchronisation">
+              Synchronisé : {stats.lastSync ? new Date(stats.lastSync).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" }) : "jamais"}
+            </span>
+          </>
         )}
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="ml-auto flex items-center gap-2">
           <EntitySearch notebookId={notebookId} onPick={(id) => void focusEntity(id)} />
           <Dialog open={filtersOpen} onOpenChange={setFiltersOpen}>
             <Button size="sm" variant="secondary" onClick={() => setFiltersOpen(true)}>
@@ -220,7 +251,7 @@ export function KnowledgeGraph({ notebookId, canEdit, sources, onOpenPassage, on
             </DialogContent>
           </Dialog>
           <Tooltip label={fullscreen ? "Quitter le plein écran" : "Plein écran"}>
-            <Button size="icon-sm" variant="ghost" className="ml-auto" aria-label={fullscreen ? "Quitter le plein écran" : "Plein écran"} aria-pressed={fullscreen} onClick={() => setFullscreen((v) => !v)}>
+            <Button size="icon-sm" variant="ghost" aria-label={fullscreen ? "Quitter le plein écran" : "Plein écran"} aria-pressed={fullscreen} onClick={() => setFullscreen((v) => !v)}>
               {fullscreen ? <Minimize2 aria-hidden /> : <Maximize2 aria-hidden />}
             </Button>
           </Tooltip>
@@ -277,8 +308,14 @@ export function KnowledgeGraph({ notebookId, canEdit, sources, onOpenPassage, on
   );
 }
 
-function Stat({ label, value }: { label: string; value: number }) {
-  return <span><dd className="inline font-semibold tabular-nums text-text">{value.toLocaleString("fr-FR")}</dd> <dt className="inline">{label}</dt></span>;
+function Stat({ label, value, icon, warn, onClick, title }: { label: string; value: number; icon?: React.ReactNode; warn?: boolean; onClick?: () => void; title?: string }) {
+  return (
+    <div className={cn("relative flex items-center gap-1.5 whitespace-nowrap rounded-full border bg-surface px-2.5 py-1 text-xs", warn && "border-danger/30 bg-danger/5", onClick && "transition-colors hover:bg-surface-raised")}>
+      <dd className={cn("order-2 font-semibold tabular-nums", warn ? "text-danger" : "text-text")}>{value.toLocaleString("fr-FR")}</dd>
+      <dt className="order-1 flex items-center gap-1 text-text-muted">{icon}{label}</dt>
+      {onClick && <button type="button" onClick={onClick} title={title} aria-label={title ?? label} className="absolute inset-0 rounded-lg focus-visible:outline-2 focus-visible:outline-accent" />}
+    </div>
+  );
 }
 
 function EntitySearch({ notebookId, onPick, placeholder = "Rechercher une entité…", exclude }: { notebookId: string; onPick: (id: string, name: string) => void; placeholder?: string; exclude?: string }) {
