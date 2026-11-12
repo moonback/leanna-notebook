@@ -72,6 +72,24 @@ export function Workspace({ notebookId, initialTitle, role, allowCopies }: { not
   const [noteEditor, setNoteEditor] = React.useState<{ id?: string } | null>(null);
   const [renaming, setRenaming] = React.useState<Source | null>(null);
   const [mobileTab, setMobileTab] = React.useState("chat");
+  const mobileSwipeStart = React.useRef<{ x: number; y: number } | null>(null);
+  const handleMobileSwipeStart = (event: React.TouchEvent<HTMLDivElement>) => {
+    const touch = event.touches[0];
+    mobileSwipeStart.current = touch ? { x: touch.clientX, y: touch.clientY } : null;
+  };
+  const handleMobileSwipeEnd = (event: React.TouchEvent<HTMLDivElement>) => {
+    const start = mobileSwipeStart.current;
+    mobileSwipeStart.current = null;
+    const touch = event.changedTouches[0];
+    if (!start || !touch) return;
+    const dx = touch.clientX - start.x;
+    const dy = touch.clientY - start.y;
+    if (Math.abs(dx) < 56 || Math.abs(dx) < Math.abs(dy) * 1.35) return;
+    const tabs = ["sources", "chat", "studio"];
+    const current = tabs.indexOf(mobileTab);
+    const next = dx < 0 ? Math.min(tabs.length - 1, current + 1) : Math.max(0, current - 1);
+    if (next !== current) setMobileTab(tabs[next]);
+  };
   const [draft, setDraft] = React.useState<{ text: string } | null>(null); // question pré-remplie depuis le Studio
   const desktop = useMediaQuery("(min-width: 1024px)");
   const wideDesktop = useMediaQuery("(min-width: 1280px)");
@@ -400,7 +418,7 @@ export function Workspace({ notebookId, initialTitle, role, allowCopies }: { not
           ))}
         </div>
       ) : (
-        <Tabs value={mobileTab} onValueChange={setMobileTab} className="flex min-h-0 flex-1 flex-col">
+        <Tabs value={mobileTab} onValueChange={setMobileTab} className="flex min-h-0 flex-1 flex-col" onTouchStart={handleMobileSwipeStart} onTouchEnd={handleMobileSwipeEnd}>
           <div className="min-h-0 flex-1 p-2">
             <TabsContent value="sources" className="h-full">{sourcesPanel}</TabsContent>
             <TabsContent value="chat" className="h-full">{chatPanel}</TabsContent>
