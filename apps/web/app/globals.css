@@ -416,3 +416,101 @@
     padding-left: 1rem;
   }
 }
+
+
+/* Tableau de bord : navigation et cartes pensées pour le tactile, uniquement mobile. */
+@media (max-width: 767px) {
+  .mobile-dashboard-main {
+    gap: 1.15rem;
+    padding-top: 1rem;
+    padding-bottom: 1.5rem;
+  }
+
+  .mobile-dashboard-toolbar {
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+
+  .mobile-dashboard-toolbar > :first-child {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .mobile-dashboard-tabs {
+    display: flex;
+    width: 100%;
+    max-width: 100%;
+    gap: 0.3rem;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    padding: 0.2rem;
+    scrollbar-width: none;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+  }
+  .mobile-dashboard-tabs::-webkit-scrollbar { display: none; }
+  .mobile-dashboard-tabs > * {
+    flex: 0 0 auto;
+    min-height: 2.7rem;
+    scroll-snap-align: start;
+  }
+
+  .mobile-dashboard-view-controls {
+    justify-content: flex-end;
+  }
+  .mobile-dashboard-view-controls [aria-label="Grille"],
+  .mobile-dashboard-view-controls [aria-label="Liste"] {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+  }
+
+  .mobile-dashboard-grid {
+    gap: 0.7rem;
+  }
+  .mobile-dashboard-card {
+    gap: 1rem;
+    padding: 1rem;
+    border-radius: 1rem;
+    transition: border-color 180ms ease, background-color 180ms ease, transform 180ms ease;
+    animation: mobile-card-in 220ms ease both;
+  }
+  .mobile-dashboard-card:active {
+    transform: scale(0.992);
+  }
+  .mobile-dashboard-card a {
+    overflow-wrap: anywhere;
+  }
+
+  .mobile-dashboard-list {
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+  }
+  .mobile-dashboard-list table {
+    width: 100%;
+    min-width: 0;
+    table-layout: fixed;
+  }
+  .mobile-dashboard-list td,
+  .mobile-dashboard-list th {
+    padding-inline: 0.65rem;
+  }
+  .mobile-dashboard-list td:last-child,
+  .mobile-dashboard-list th:last-child {
+    width: 3.25rem;
+  }
+}
+
+@keyframes mobile-card-in {
+  from { opacity: 0; transform: translate3d(0, 5px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@media (max-width: 380px) {
+  .mobile-dashboard-main { padding-inline: 0.75rem; }
+  .mobile-dashboard-card { padding: 0.85rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-dashboard-card { animation: none !important; transition: none !important; }
+}
