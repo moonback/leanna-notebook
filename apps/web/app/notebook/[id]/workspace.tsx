@@ -516,21 +516,21 @@ function Chat({ notebookId, readyCount, onOpenCitation, onOpenPassage, canViewSo
   React.useEffect(() => { setHeaderSlot(document.getElementById("app-header-actions")); }, []);
 
   return (
-    <section aria-label="Conversation" className="flex h-full min-h-0 flex-col rounded-xl border bg-surface-raised">
+    <section aria-label="Conversation" className="mobile-chat-panel flex h-full min-h-0 flex-col rounded-xl border bg-surface-raised">
       {headerSlot && createPortal(
         <VoiceAssistant notebookId={notebookId} conversationId={conversationId ?? ""} disabled={!canViewSources || readyCount === 0 || !conversationId} onOpenCitation={onOpenPassage} />,
         headerSlot,
       )}
-      <div className="flex h-11 shrink-0 items-center justify-end gap-1 border-b px-2">
+      <div className="mobile-chat-toolbar flex h-11 shrink-0 items-center justify-end gap-1 border-b px-2">
         {canConfigure && <Button size="sm" variant="ghost" onClick={() => setConfiguring(true)}><Settings2 aria-hidden /> Configurer</Button>}
         <Button size="sm" variant="ghost" disabled={!messages?.length || streaming} onClick={() => void clearHistory()}><Eraser aria-hidden /> Effacer l’historique</Button>
         {confirmDialog}
       </div>
       <ChatSettingsDialog open={configuring} onClose={() => setConfiguring(false)} notebookId={notebookId} />
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-6 sm:px-6">
-        <div className="mx-auto grid max-w-[var(--chat-max-w)] gap-6" aria-live="polite" aria-busy={streaming}>
+      <div className="mobile-chat-scroll min-h-0 flex-1 overflow-y-auto px-4 py-6 sm:px-6">
+        <div className="mobile-chat-thread mx-auto grid max-w-[var(--chat-max-w)] gap-6" aria-live="polite" aria-busy={streaming}>
           {messages === null ? (
-            <div className="grid gap-2" aria-busy="true" aria-label="Chargement"><Skeleton className="h-4 w-2/3" /><Skeleton className="h-4 w-1/2" /></div>
+            <div className="mobile-chat-loading grid gap-2" aria-busy="true" aria-label="Chargement"><Skeleton className="h-4 w-2/3" /><Skeleton className="h-4 w-1/2" /></div>
           ) : messages.length === 0 ? (
             overview?.text && readyCount ? (
               <div className="grid gap-4">
@@ -553,11 +553,11 @@ function Chat({ notebookId, readyCount, onOpenCitation, onOpenPassage, canViewSo
               </EmptyState>
             )
           ) : messages.map((m) => m.role === "user" ? (
-            <div key={m.id} className="max-w-[85%] justify-self-end whitespace-pre-wrap rounded-xl rounded-br-xs bg-surface px-4 py-2.5 text-sm">{m.content}</div>
+            <div key={m.id} className="mobile-chat-user-message max-w-[85%] justify-self-end whitespace-pre-wrap rounded-xl rounded-br-xs bg-surface px-4 py-2.5 text-sm">{m.content}</div>
           ) : (
-            <div key={m.id} className="grid gap-2">
+            <div key={m.id} className="mobile-chat-assistant-message grid gap-2">
               {m.thoughts && <Thoughts text={m.thoughts} streaming={m.status === "streaming" && !m.content} />}
-              {m.content ? <Answer text={m.content} citations={m.citations ?? []} sourceTitle={sourceTitle} onOpen={canViewSources ? onOpenCitation : undefined} /> : m.thoughts ? null : <div className="grid gap-2" aria-label="Réponse en cours"><Skeleton className="h-4 w-11/12" /><Skeleton className="h-4 w-9/12" /></div>}
+              {m.content ? <Answer text={m.content} citations={m.citations ?? []} sourceTitle={sourceTitle} onOpen={canViewSources ? onOpenCitation : undefined} /> : m.thoughts ? null : <div className="mobile-chat-loading grid gap-2" aria-label="Réponse en cours"><Skeleton className="h-4 w-11/12" /><Skeleton className="h-4 w-9/12" /></div>}
               {canSaveNote && m.status === "complete" && m.id !== "pending" && m.content && (
                 <div><Button size="sm" variant="ghost" disabled={saved.has(m.id)} onClick={() => void saveNote(m.id)}><BookmarkPlus aria-hidden /> {saved.has(m.id) ? "Enregistrée en note" : "Enregistrer en note"}</Button></div>
               )}
