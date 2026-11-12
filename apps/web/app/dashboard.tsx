@@ -95,7 +95,7 @@ export function Dashboard({ initial, loadError, initialView, name }: { initial: 
       <section className="flex flex-col gap-4 rounded-2xl border border-border bg-gradient-to-br from-surface-raised to-surface p-5 sm:flex-row sm:items-end sm:justify-between sm:p-7">
         <div className="max-w-2xl">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-accent">Votre espace de recherche</p>
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">{name?.trim() ? `Bonjour ${name.trim().split(/\\s+/)[0]}` : "Bienvenue dans Leanna Notebook"}</h1>
+          <h1 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">{name?.trim() ? `Bonjour ${name.trim().split(/\s+/)[0]}` : "Bienvenue dans Leanna Notebook"}</h1>
           <p className="mt-2 max-w-xl text-sm leading-6 text-text-muted">Retrouvez vos notebooks, explorez vos sources avec Leanna et transformez vos recherches en rapports, synthèses et autres livrables dans le Studio — à l’écrit comme à la voix.</p>
         </div>
         <div className="flex shrink-0 items-center gap-3 rounded-xl border border-border bg-bg/80 px-4 py-3">
