@@ -260,4 +260,6 @@ end $$;
 alter table public.ai_model_preferences drop constraint if exists ai_model_preferences_feature_key_check;
 alter table public.ai_model_preferences add constraint ai_model_preferences_feature_key_check
   check (feature_key in ('chat','report','flashcards','quiz','mind_map','audio_overview',
-                         'deep_research','knowledge_extraction','contradictions'));
+                         'deep_research','knowledge_extraction','contradictions'))
+  not valid;  -- NOT VALID : des lignes existantes hors liste (clés ajoutées hors migration) ne bloquent plus l'ajout ;
+              -- la contrainte reste appliquée à toute nouvelle écriture ou modification.
