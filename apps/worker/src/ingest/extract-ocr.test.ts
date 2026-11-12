@@ -5,7 +5,7 @@ describe("parseOcrPages", () => {
   it("preserves page boundaries and offsets for PDF citations", () => {
     expect(parseOcrPages("[PAGE 1]\nPremière page\n[PAGE 2]\nDeuxième page", 2)).toEqual({
       text: "Première page\n\nDeuxième page",
-      pageStarts: [0, 16],
+      pageStarts: [0, 15],
       pageCount: 2,
     });
   });
