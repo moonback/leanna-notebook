@@ -53,8 +53,8 @@ const shortLabel = (a: Art) => {
 };
 const fmt = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
-export function Studio({ notebookId, canEdit, sourceIds, sourceTitle, onOpenCitation, onAsk, onImported, promptSuggestions = true }: {
-  notebookId: string; canEdit: boolean; sourceIds: string[]; onImported?: () => void; promptSuggestions?: boolean;
+export function Studio({ notebookId, canEdit, sourceIds, sourceTitle, onOpenCitation, onAsk, onImported, promptSuggestions = true, audioOverview = true }: {
+  notebookId: string; canEdit: boolean; sourceIds: string[]; onImported?: () => void; promptSuggestions?: boolean; audioOverview?: boolean;
   sourceTitle: (id: string) => string | undefined; onOpenCitation?: (c: Cite) => void; onAsk: (text: string) => void;
 }) {
   const [arts, setArts] = React.useState<Art[] | null>(null);
@@ -150,7 +150,7 @@ export function Studio({ notebookId, canEdit, sourceIds, sourceTitle, onOpenCita
               {TYPES[t].icon} {TYPES[t].label}
             </Button>
           ))}
-          <Button
+          {audioOverview && <Button
             variant="secondary"
             className="col-span-2 justify-start"
             disabled={!readyCount}
@@ -158,7 +158,7 @@ export function Studio({ notebookId, canEdit, sourceIds, sourceTitle, onOpenCita
             onClick={() => setCreating("audio")}
           >
             <AudioLines aria-hidden /> Audio Overview · Podcast à deux voix
-          </Button>
+          </Button>}
         </div>
       )}
       {failedLoad ? (

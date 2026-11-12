@@ -6,6 +6,7 @@ import { CHAT_DEFAULT_INSTRUCTIONS, chatFixedRules } from "@/lib/ai/prompts/chat
 import { formatPassages, resolveCitations, type Passage } from "@notebook/core/citations";
 import { log } from "@/lib/log";
 import { createServiceClient, createUserClient } from "@/lib/supabase/server";
+import { disabledFeatures } from "@/lib/ownership";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -143,6 +144,7 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
       if (!(catalog.data ?? []).some((model) => model.id === modelId)) throw new ApiError(422, "unsupported_image_model");
     }
   }
+  if (artifactRequest?.type === "audio" && (await disabledFeatures(user.id)).includes("audio_overview")) throw new ApiError(403, "feature_disabled");
   const { data: usageId, error: qe } = await db.rpc("reserve_usage", { p_ws: conv.workspace_id, p_user: user.id, p_feature: "chat" });
   if (qe) throw qe;
 

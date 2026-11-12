@@ -3,6 +3,7 @@ import { z } from "zod";
 import { ApiError, handle, parseBody, requireRole, requireUser } from "@/lib/api";
 import { log } from "@/lib/log";
 import { createServiceClient, createUserClient } from "@/lib/supabase/server";
+import { disabledFeatures } from "@/lib/ownership";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -60,6 +61,7 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
   const { id } = await params;
   await requireRole(id, "editor");
   const body = await parseBody(req, createSchema);
+  if (body.type === "audio" && (await disabledFeatures(user.id)).includes("audio_overview")) throw new ApiError(403, "feature_disabled");
   if (!process.env.OPENROUTER_API_KEY || (body.type !== "image" && !process.env.OPENROUTER_CHAT_MODEL)) throw new ApiError(503, "ai_not_configured");
   if (body.type === "image") {
     const { data: imagePrefs } = await createServiceClient().from("ai_image_preferences")

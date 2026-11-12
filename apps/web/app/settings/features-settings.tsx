@@ -9,6 +9,7 @@ const FEATURES: Record<OptionalFeature, { label: string; description: string }> 
   deep_research: { label: "Recherche approfondie", description: "Agent de recherche web autonome, rapport cité dans le Studio et suivi flottant des recherches." },
   knowledge_graph: { label: "Graphe de connaissances", description: "Extraction des entités et relations de vos sources (consomme des crédits IA à chaque import)." },
   contradictions: { label: "Contradictions", description: "Comparaison des affirmations entre vos sources. S’appuie sur le graphe de connaissances." },
+  audio_overview: { label: "Audio Overview", description: "Podcast dialogué à deux voix dans le Studio, le chat et l’assistant vocal." },
   prompt_suggestions: { label: "Suggestions de consignes", description: "Bouton « Suggérer avec l’IA » sous les consignes du Studio : 3 idées adaptées à vos sources, à la demande." },
 };
 
