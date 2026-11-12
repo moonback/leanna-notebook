@@ -1,4 +1,4 @@
-import { extractText, getDocumentProxy } from "unpdf";
+import { getDocumentProxy } from "unpdf";
 import mammoth from "mammoth";
 import { Readability } from "@mozilla/readability";
 import { parseHTML } from "linkedom";
@@ -9,8 +9,37 @@ import type { Transcriber } from "../ai/transcription.ts";
 import { normalize, type ChunkTimeRange } from "./chunker.ts";
 
 export type Extracted = { text: string; pageStarts: number[]; pageCount: number | null; title?: string; timeRanges?: ChunkTimeRange[] };
+export type PdfProgress = (page: number, total: number) => Promise<void> | void;
+export type PdfOcr = (file: Uint8Array, pageCount: number) => Promise<string>;
+
+export function parseOcrPages(recognized: string, pageCount: number): Pick<Extracted, "text" | "pageStarts" | "pageCount"> {
+  const markers = [...recognized.matchAll(/^\[PAGE\s+(\d+)\]\s*$/gim)];
+  if (!markers.length) {
+    const text = normalize(recognized);
+    if (!text) throw new PermanentError("ocr_empty_result");
+    return { text, pageStarts: [0], pageCount };
+  }
+  const pages: string[] = [];
+  for (let index = 0; index < markers.length; index++) {
+    const marker = markers[index]!;
+    const start = marker.index! + marker[0].length;
+    const end = markers[index + 1]?.index ?? recognized.length;
+    pages.push(normalize(recognized.slice(start, end)));
+  }
+  const pageStarts: number[] = [];
+  let text = "";
+  for (const [index, page] of pages.entries()) {
+    if (index > 0) text += PDF_PAGE_SEPARATOR;
+    pageStarts.push(text.length);
+    text += page;
+  }
+  if (!text.replace(/[\s\p{C}]/gu, "")) throw new PermanentError("ocr_empty_result");
+  return { text, pageStarts, pageCount };
+}
+
 
 const MAX_WORDS = 500_000;
+const PDF_PAGE_SEPARATOR = "\n\n";
 
 function finalize(e: Extracted): Extracted {
   const words = e.text.split(/\s+/).filter(Boolean).length;
@@ -19,19 +48,92 @@ function finalize(e: Extracted): Extracted {
   return e;
 }
 
-async function fromPdf(buf: Uint8Array): Promise<Extracted> {
+type PdfTextItem = { str?: string; transform?: number[]; width?: number; hasEOL?: boolean };
+
+/**
+ * Reconstruit les lignes à partir des coordonnées PDF. L'ordre des items fourni par
+ * PDF.js est conservé (important pour les colonnes) ; les coordonnées servent à
+ * rétablir les espaces et les retours à la ligne sans aplatir tout le contenu.
+ */
+export function formatPdfPage(items: PdfTextItem[]): string {
+  let output = "";
+  let previousY: number | null = null;
+  let previousEndX: number | null = null;
+
+  for (const item of items) {
+    const value = (item.str ?? "").replace(/[\t ]+/g, " ");
+    if (!value) continue;
+    const x = Number.isFinite(item.transform?.[4]) ? item.transform![4] : null;
+    const y = Number.isFinite(item.transform?.[5]) ? item.transform![5] : null;
+    const newLine = output.length > 0 && y !== null && previousY !== null && Math.abs(y - previousY) > 2.5;
+    if (newLine) {
+      output = output.trimEnd() + "\n";
+    } else if (output.length > 0 && !output.endsWith("\n")) {
+      const gap = x !== null && previousEndX !== null ? x - previousEndX : 0;
+      if (gap > 18) output += " | ";
+      else if (gap > 1.5 && !output.endsWith(" ")) output += " ";
+    }
+    output += value;
+    if (item.hasEOL) output += "\n";
+    previousY = y ?? previousY;
+    previousEndX = x !== null ? x + (item.width ?? 0) : null;
+  }
+  return output.trim();
+}
+
+/**
+ * Extraction page par page : évite de matérialiser simultanément les structures
+ * de texte de toutes les pages. Le callback permet au worker de publier la progression.
+ */
+async function fromPdf(buf: Uint8Array, onProgress?: PdfProgress, ocr?: PdfOcr): Promise<Extracted> {
   let pdf;
-  try { pdf = await getDocumentProxy(buf); } catch (e) {
+  try {
+    pdf = await getDocumentProxy(buf);
+  } catch (e) {
     throw new PermanentError(/password/i.test(String(e)) ? "protected_pdf" : "unreadable_file");
   }
-  const { text } = await extractText(pdf, { mergePages: false });
-  const pages = text as string[];
+
+  const pageTexts: string[] = [];
+  let extractedWords = 0;
+  const pageCount = pdf.numPages;
+
+  try {
+    for (let pageNumber = 1; pageNumber <= pageCount; pageNumber++) {
+      await onProgress?.(pageNumber, pageCount);
+      const page = await pdf.getPage(pageNumber);
+      try {
+        const content = await page.getTextContent();
+        const items = (content.items ?? []) as PdfTextItem[];
+        const pageText = formatPdfPage(items);
+        extractedWords += pageText.split(/\s+/).filter(Boolean).length;
+        if (extractedWords > MAX_WORDS) throw new PermanentError("too_many_words", "Plus de 500 000 mots.");
+        pageTexts.push(pageText);
+      } finally {
+        page.cleanup?.();
+      }
+    }
+  } catch (e) {
+    if (e instanceof PermanentError) throw e;
+    throw new PermanentError("pdf_page_extraction_failed", e instanceof Error ? e.message.slice(0, 300) : undefined);
+  } finally {
+    pdf.cleanup?.();
+  }
+
+  const normalizedPages = pageTexts.map((page) => normalize(page));
   const pageStarts: number[] = [];
-  let acc = "";
-  for (const p of pages) { pageStarts.push(acc.length); acc += p.trim() + "\n\n"; }
-  // PDF scanné (pas de couche texte) : OCR non disponible à ce jalon → erreur explicite, pas de faux succès
-  if (acc.replace(/\s/g, "").length < 20 * Math.max(1, pages.length) / 10) throw new PermanentError("needs_ocr", "PDF sans texte (scan) : l'OCR n'est pas encore disponible.");
-  return { text: acc, pageStarts, pageCount: pages.length };
+  let text = "";
+  for (const [index, page] of normalizedPages.entries()) {
+    if (index > 0) text += PDF_PAGE_SEPARATOR;
+    pageStarts.push(text.length);
+    text += page;
+  }
+  const printable = text.replace(/[\s\p{C}]/gu, "").length;
+  if (printable < Math.max(20, pageCount * 2)) {
+    if (!ocr) throw new PermanentError("needs_ocr", "PDF sans couche texte détectable : activez l'OCR OpenRouter dans les réglages pour traiter ce document.");
+    const recognized = await ocr(buf, pageCount);
+    return parseOcrPages(recognized, pageCount);
+  }
+  return { text, pageStarts, pageCount };
 }
 
 function fromHtml(html: string): Extracted {
@@ -42,7 +144,13 @@ function fromHtml(html: string): Extracted {
 }
 
 /** Texte brut d'une source, selon son type. Les erreurs attendues sont des PermanentError (code stable). */
-export async function extract(kind: string, data: { file?: Uint8Array; url?: string; noteText?: string; mimeType?: string }, transcriber?: Transcriber | null): Promise<Extracted> {
+export async function extract(
+  kind: string,
+  data: { file?: Uint8Array; url?: string; noteText?: string; mimeType?: string },
+  transcriber?: Transcriber | null,
+  onPdfProgress?: PdfProgress,
+  onPdfOcr?: PdfOcr,
+): Promise<Extracted> {
   switch (kind) {
     case "audio": {
       if (!transcriber) throw new PermanentError("transcription_not_configured", "La transcription audio n’est pas configurée côté serveur.");
@@ -65,19 +173,23 @@ export async function extract(kind: string, data: { file?: Uint8Array; url?: str
     case "txt": case "md": case "csv": case "text":
       return finalize({ text: new TextDecoder("utf-8").decode(data.file), pageStarts: [], pageCount: null });
     case "pdf":
-      return finalize(await fromPdf(data.file!));
+      if (!data.file) throw new PermanentError("file_missing");
+      return finalize(await fromPdf(data.file, onPdfProgress, onPdfOcr));
     case "pptx": {
-      const r = fromPptx(data.file!);
+      if (!data.file) throw new PermanentError("file_missing");
+      const r = fromPptx(data.file);
       return finalize({ text: r.text, pageStarts: r.pageStarts, pageCount: r.pageCount });
     }
     case "epub": {
-      const r = fromEpub(data.file!);
+      if (!data.file) throw new PermanentError("file_missing");
+      const r = fromEpub(data.file);
       return finalize({ text: r.text, pageStarts: [], pageCount: null, title: r.title });
     }
     case "docx": {
-      readZip(data.file!, () => false); // plafonds anti « zip bomb » avant de confier l'archive à mammoth
+      if (!data.file) throw new PermanentError("file_missing");
+      readZip(data.file, () => false); // plafonds anti « zip bomb » avant de confier l'archive à mammoth
       try {
-        const { value } = await mammoth.extractRawText({ buffer: Buffer.from(data.file!) });
+        const { value } = await mammoth.extractRawText({ buffer: Buffer.from(data.file) });
         return finalize({ text: value, pageStarts: [], pageCount: null });
       } catch { throw new PermanentError("unreadable_file"); }
     }
@@ -87,7 +199,7 @@ export async function extract(kind: string, data: { file?: Uint8Array; url?: str
         if (e instanceof FetchRefused) throw new PermanentError(e.message === "paywall" ? "paywall" : "url_refused", e.message);
         throw e; // réseau : nouvelle tentative
       }
-      if (res.contentType.includes("pdf")) return finalize(await fromPdf(new Uint8Array(res.body)));
+      if (res.contentType.includes("pdf")) return finalize(await fromPdf(new Uint8Array(res.body), onPdfProgress, onPdfOcr));
       if (!res.contentType.includes("html") && !res.contentType.includes("text/plain")) throw new PermanentError("unsupported_type");
       return finalize(res.contentType.includes("html") ? fromHtml(res.body.toString("utf8")) : { text: res.body.toString("utf8"), pageStarts: [], pageCount: null });
     }
