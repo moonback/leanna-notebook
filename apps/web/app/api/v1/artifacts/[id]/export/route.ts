@@ -38,7 +38,7 @@ function markdownContent(type: string, title: string, value: unknown): string {
     walk(content.root, 0);
     return lines.join("\n") + "\n";
   }
-  return `# ${title}\n\n`` `` `json\n${JSON.stringify(value, null, 2)}\n```\n`;
+  return "# " + title + "\n\n```json\n" + JSON.stringify(value, null, 2) + "\n```\n";
 }
 
 function escapeHtml(value: string) {
