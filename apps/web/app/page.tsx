@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, ArrowUpRight, BookOpen, Check, ChevronRight, FileSearch, FileText, Globe2, Layers3, LockKeyhole, Network, Quote, Search, Sparkles, UploadCloud, Workflow } from "lucide-react";
+import { ArrowRight, ArrowUpRight, AudioLines, BookOpen, Check, ChevronRight, FileSearch, FileText, Globe2, Headphones, Layers3, LockKeyhole, MessageCircleQuestion, Mic, Network, Quote, Search, Sparkles, UploadCloud, Workflow } from "lucide-react";
 import { createUserClient, getUser } from "@/lib/supabase/server";
 import { Dashboard, type NotebookRow } from "./dashboard";
 
@@ -37,6 +37,7 @@ function PublicHome() {
           </Link>
           <nav aria-label="Navigation principale" className="hidden items-center gap-8 text-sm text-text-muted md:flex">
             <a href="#fonctionnalites" className="transition-colors hover:text-text">Fonctionnalités</a>
+            <a href="#studio-vocal" className="transition-colors hover:text-text">Studio vocal</a>
             <a href="#methode" className="transition-colors hover:text-text">Comment ça marche</a>
             <a href="#confiance" className="transition-colors hover:text-text">Confidentialité</a>
           </nav>
@@ -62,7 +63,7 @@ function PublicHome() {
               Vos sources ont des réponses. <span className="text-accent">Faites-les parler.</span>
             </h1>
             <p className="mt-7 max-w-xl text-base leading-8 text-text-muted sm:text-lg">
-              Centralisez vos PDF, pages web et contenus, interrogez vos documents avec l’IA et retrouvez les passages qui justifient chaque réponse. De la première source au dossier structuré, gardez le fil de vos recherches.
+              Centralisez vos PDF, pages web et contenus, interrogez vos documents avec l’IA — à l’écrit comme à la voix — et retrouvez les passages qui justifient chaque réponse. De la première source au dossier structuré, gardez le fil de vos recherches.
             </p>
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
               <Link href="/signup" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-accent px-6 py-3 text-sm font-semibold text-on-accent shadow-[0_8px_24px_rgba(15,76,138,0.18)] transition hover:-translate-y-0.5 hover:bg-accent-hover">Commencer gratuitement <ArrowRight size={17} /></Link>
@@ -128,6 +129,68 @@ function PublicHome() {
           <Feature icon={FileText} number="04" title="Produisez des livrables" desc="Transformez votre travail en documents structurés : synthèses, notes, plans, analyses et supports prêts à être retravaillés." tags={["Synthèse","Analyse","Documents"]}/>
           <Feature icon={Globe2} number="05" title="Explorez et partagez" desc="Découvrez des notebooks rendus publics par leurs auteurs et partagez vos propres travaux lorsque vous choisissez de les rendre accessibles." tags={["Découverte","Liens publics","Contrôle d’accès"]}/>
           <Feature icon={Workflow} number="06" title="Suivez une méthode claire" desc="Conservez le contexte de votre recherche, passez des sources aux conclusions et revenez aux éléments qui étayent votre raisonnement." tags={["Traçabilité","Organisation","Continuité"]}/>
+        </div>
+      </section>
+
+
+      <section id="studio-vocal" className="relative overflow-hidden border-y border-border bg-surface/60">
+        <div aria-hidden className="pointer-events-none absolute -right-24 top-0 size-[28rem] rounded-full bg-accent/10 blur-[100px]" />
+        <div className="relative mx-auto grid max-w-[var(--page-max-w)] items-center gap-12 px-5 py-20 sm:px-8 lg:grid-cols-[1fr_0.9fr] lg:gap-16 lg:py-28">
+          <div>
+            <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-accent"><AudioLines size={15}/> Le studio vocal</p>
+            <h2 className="mt-4 max-w-2xl font-serif text-4xl leading-tight tracking-tight sm:text-5xl">Ne faites pas que lire vos sources. <span className="text-accent">Discutez-en.</span></h2>
+            <p className="mt-5 max-w-xl text-base leading-7 text-text-muted">Passez en conversation vocale avec Leanna Notebook. Posez vos questions naturellement, écoutez les analyses de vos documents et gardez le fil de l’échange sans rester devant votre clavier.</p>
+            <div className="mt-8 grid gap-5 sm:grid-cols-2">
+              <div className="flex items-start gap-3">
+                <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-on-accent-soft"><Headphones size={19}/></span>
+                <div><h3 className="text-sm font-semibold">Leanna, votre spécialiste documentaire</h3><p className="mt-1 text-xs leading-5 text-text-muted">Elle explore votre notebook, synthétise les informations et vous répond en s’appuyant sur vos sources.</p></div>
+              </div>
+              <div className="flex items-start gap-3">
+                <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-surface-raised text-accent ring-1 ring-border"><MessageCircleQuestion size={19}/></span>
+                <div><h3 className="text-sm font-semibold">Roxane, le regard complémentaire</h3><p className="mt-1 text-xs leading-5 text-text-muted">Activez cette seconde voix quand vous le souhaitez. Elle questionne les raisonnements, relève les nuances et apporte un autre angle quand c’est utile.</p></div>
+              </div>
+            </div>
+            <ul className="mt-8 grid gap-2 text-xs text-text-muted sm:grid-cols-2">
+              <li className="flex items-center gap-2"><Check size={14} className="text-success"/> Conversation naturelle à la voix</li>
+              <li className="flex items-center gap-2"><Check size={14} className="text-success"/> Roxane activable à la demande</li>
+              <li className="flex items-center gap-2"><Check size={14} className="text-success"/> Réponses ancrées dans vos documents</li>
+              <li className="flex items-center gap-2"><Check size={14} className="text-success"/> Échange et écoute sans les mains</li>
+            </ul>
+            <Link href="/signup" className="mt-9 inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-accent px-6 py-3 text-sm font-semibold text-on-accent shadow-sm transition hover:-translate-y-0.5 hover:bg-accent-hover">Découvrir Leanna Notebook <ArrowRight size={17}/></Link>
+          </div>
+
+          <div className="relative mx-auto w-full max-w-[520px]">
+            <div aria-hidden className="absolute -inset-5 rounded-[2rem] bg-accent/10 blur-2xl"/>
+            <div className="relative overflow-hidden rounded-[1.6rem] border border-border-strong bg-surface-raised shadow-[0_24px_80px_rgba(28,27,25,0.13)]">
+              <div className="flex items-center justify-between border-b border-border px-5 py-4">
+                <div><p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-accent">Conversation en direct</p><h3 className="mt-1 text-sm font-semibold">Votre studio vocal</h3></div>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-success-soft px-2.5 py-1 text-[10px] font-semibold text-success"><span className="size-1.5 rounded-full bg-success"/> Prêt à échanger</span>
+              </div>
+              <div className="space-y-4 p-5 sm:p-6">
+                <div className="flex items-center gap-3 rounded-xl border border-border bg-bg p-3.5">
+                  <span className="grid size-11 shrink-0 place-items-center rounded-full bg-accent text-on-accent"><Headphones size={20}/></span>
+                  <div className="min-w-0 flex-1"><p className="text-sm font-semibold">Leanna</p><p className="text-[11px] text-text-subtle">Analyse vos sources et vous répond</p></div>
+                  <span className="rounded-full bg-success-soft px-2 py-1 text-[9px] font-semibold text-success">Principale</span>
+                </div>
+                <div className="flex items-center gap-3 rounded-xl border border-border bg-bg p-3.5">
+                  <span className="grid size-11 shrink-0 place-items-center rounded-full bg-[#e9e1f4] text-[#624b86]"><MessageCircleQuestion size={20}/></span>
+                  <div className="min-w-0 flex-1"><p className="text-sm font-semibold">Roxane</p><p className="text-[11px] text-text-subtle">Seconde voix, activée à votre demande</p></div>
+                  <span className="rounded-full bg-surface px-2 py-1 text-[9px] font-semibold text-text-muted">Optionnelle</span>
+                </div>
+                <div className="rounded-xl bg-bg p-4">
+                  <p className="mb-3 text-[9px] font-semibold uppercase tracking-[0.14em] text-text-subtle">Exemple d’échange</p>
+                  <div className="mb-3 flex gap-2.5"><span className="grid size-6 shrink-0 place-items-center rounded-lg bg-accent-soft text-on-accent-soft"><Headphones size={13}/></span><div><p className="text-[10px] font-semibold text-accent">Leanna</p><p className="mt-1 text-xs leading-5 text-text-muted">« Dans les documents, les investissements progressent, mais cette hausse concerne surtout deux périodes précises. Je peux vous montrer les passages concernés. »</p></div></div>
+                  <div className="flex gap-2.5"><span className="grid size-6 shrink-0 place-items-center rounded-lg bg-[#e9e1f4] text-[#624b86]"><MessageCircleQuestion size={13}/></span><div><p className="text-[10px] font-semibold text-[#8064a8]">Roxane</p><p className="mt-1 text-xs leading-5 text-text-muted">« Est-ce que cette progression est constante, ou dépend-elle d’un événement ponctuel ? Il faudrait comparer les périodes avant de conclure. »</p></div></div>
+                </div>
+                <div className="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface px-4 py-4">
+                  <span className="grid size-9 place-items-center rounded-full bg-accent text-on-accent"><Mic size={17}/></span>
+                  <div className="flex gap-1 items-center" aria-label="Visualisation sonore"><span className="h-3 w-1 rounded-full bg-accent/50"/><span className="h-6 w-1 rounded-full bg-accent"/><span className="h-4 w-1 rounded-full bg-accent/70"/><span className="h-7 w-1 rounded-full bg-accent"/><span className="h-3 w-1 rounded-full bg-accent/50"/><span className="h-5 w-1 rounded-full bg-accent/80"/><span className="h-2 w-1 rounded-full bg-accent/50"/></div>
+                  <span className="text-[10px] font-medium text-text-muted">Parlez à vos sources</span>
+                </div>
+                <p className="text-center text-[9px] text-text-subtle">Illustration d’une expérience vocale · Exemple de dialogue</p>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
