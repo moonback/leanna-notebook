@@ -18,6 +18,41 @@ const askSchema = z.object({
 
 const LANG_NAMES: Record<string, string> = { fr: "français", en: "English", es: "español", de: "Deutsch", it: "italiano", pt: "português", nl: "Nederlands" };
 
+type StudioArtifactType = "report" | "flashcards" | "quiz" | "mind_map" | "infographic" | "timeline" | "comparison" | "glossary" | "faq" | "diagram" | "editorial" | "study_plan" | "audio";
+
+/** Détecte uniquement une demande explicite de création d'un livrable Studio. */
+function detectStudioArtifactRequest(input: string): { type: StudioArtifactType; template?: string } | null {
+  const value = input.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase();
+  const action = /\\b(cree|gener(e|er|ez)|prepare|produis|realise|construis|fabrique|fais-moi|fais moi|make|create|generate|prepare)\\b/.test(value);
+  if (!action) return null;
+  const types: Array<[StudioArtifactType, RegExp]> = [
+    ["flashcards", /\\b(fiches? de revision|flashcards|cartes memoire)\\b/],
+    ["quiz", /\\b(quiz|qcm|questionnaire)\\b/],
+    ["mind_map", /\\b(carte mentale|mind ?map)\\b/],
+    ["infographic", /\\b(infographie|infographic)\\b/],
+    ["timeline", /\\b(chronologie|frise chronologique|timeline)\\b/],
+    ["comparison", /\\b(comparatif|comparaison|tableau comparatif)\\b/],
+    ["glossary", /\\b(glossaire)\\b/],
+    ["faq", /\\b(faq|foire aux questions)\\b/],
+    ["diagram", /\\b(diagramme|schema|flowchart)\\b/],
+    ["editorial", /\\b(newsletter|article de blog|publication|contenu editorial)\\b/],
+    ["study_plan", /\\b(plan d'etude|planning de revision|programme de revision)\\b/],
+    ["audio", /\\b(audio overview|podcast|resume audio)\\b/],
+    ["report", /\\b(rapport|report|synthese|briefing|guide pratique|fiche pratique|guide detaille|document)\\b/],
+  ];
+  const match = types.find(([, pattern]) => pattern.test(value));
+  if (!match) return null;
+  if (match[0] !== "report") return { type: match[0] };
+  const template = /\\b(guide d'etude|study guide)\\b/.test(value) ? "study_guide"
+    : /\\b(article de blog)\\b/.test(value) ? "blog_post"
+    : /\\b(plan d'action)\\b/.test(value) ? "action_plan"
+    : /\\b(guide pratique|fiche pratique)\\b/.test(value) ? "practical_sheet"
+    : /\\b(guide detaille)\\b/.test(value) ? "detailed_guide"
+    : /\\b(specification|cahier des charges)\\b/.test(value) ? "specification"
+    : "briefing";
+  return { type: "report", template };
+}
+
 /** Conversation de l'utilisateur courant uniquement (une conversation est privée). */
 async function ownConversation(id: string, userId: string) {
   if (!/^[0-9a-f-]{36}$/i.test(id)) throw new ApiError(404, "not_found");
@@ -80,6 +115,30 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
   const selected = (ready ?? []).filter((s) => (sourceIds ? sourceIds.includes(s.id) : !off.has(s.id)));
   if (selected.length === 0) throw new ApiError(422, "no_sources");
 
+  // Une demande explicite de livrable déclenche le moteur Studio existant depuis le chat.
+  // Les mêmes contrôles de rôle, de notebook, de sources et de quota que le Studio s'appliquent.
+  const artifactRequest = detectStudioArtifactRequest(text);
+  let requestedArtifact: { id: string; type: StudioArtifactType } | null = null;
+  if (artifactRequest) {
+    await requireRole(conv.notebook_id, "editor");
+    if (!process.env.OPENROUTER_API_KEY || !process.env.OPENROUTER_CHAT_MODEL) throw new ApiError(503, "ai_not_configured");
+    const options = artifactRequest.template
+      ? { template: artifactRequest.template, language: nb?.output_language ?? profile?.output_language ?? "fr", reportFormat: "document", sourceScope: "selected" }
+      : { language: nb?.output_language ?? profile?.output_language ?? "fr", sourceScope: "selected" };
+    const { data: artifactId, error: artifactError } = await db.rpc("create_artifact", {
+      p_notebook: conv.notebook_id,
+      p_user: user.id,
+      p_type: artifactRequest.type,
+      p_options: options,
+      p_custom_prompt: text,
+      p_source_ids: selected.map((s) => s.id),
+      p_idempotency_key: null,
+    });
+    if (artifactError) throw artifactError;
+    requestedArtifact = { id: artifactId as string, type: artifactRequest.type };
+    log.info("chat.studio_artifact_requested", { notebook_id: conv.notebook_id, artifact_id: artifactId, type: artifactRequest.type });
+  }
+
   // Configuration IA vérifiée AVANT de consommer du quota
   const { data: chatPreference } = await db.from("ai_model_preferences")
     .select("model_id").eq("user_id", user.id).eq("feature_key", "chat").maybeSingle();
@@ -131,7 +190,13 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
           else if (evt.type === "thought") { thoughts += evt.text; send("thought", { text: evt.text }); }
           else { usage = evt.usage; model = evt.model; }
         }
-        const { text: final, citations, dropped } = resolveCitations(raw, passages);
+        const resolved = resolveCitations(raw, passages);
+        const artifactLink = requestedArtifact
+          ? `\\n\\n**Livrable lancé dans le Studio** — [Ouvrir le notebook](/notebook/${conv.notebook_id}) · [Télécharger le résultat](/api/v1/artifacts/${requestedArtifact.id}/export?format=${["flashcards", "quiz", "mind_map"].includes(requestedArtifact.type) ? "json" : "md"})`
+          : "";
+        const final = resolved.text + artifactLink;
+        const citations = resolved.citations;
+        const dropped = resolved.dropped;
         await db.from("chat_messages").update({ content: final, status: "complete", usage, model, thoughts: thoughts || null }).eq("id", answerId);
         if (citations.length) {
           await db.from("citations").insert(citations.map((c) => ({
