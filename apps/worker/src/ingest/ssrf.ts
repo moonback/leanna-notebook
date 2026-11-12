@@ -18,7 +18,11 @@ export function isForbiddenIp(ip: string): boolean {
 }
 
 export class FetchRefused extends Error {
-  constructor(message: string, readonly status?: number) { super(message); }
+  readonly status?: number;
+  constructor(message: string, status?: number) {
+    super(message);
+    this.status = status;
+  }
 }
 
 const MAX_BYTES = 10 * 1024 * 1024;
