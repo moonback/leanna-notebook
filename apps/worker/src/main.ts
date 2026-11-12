@@ -8,6 +8,10 @@ import { studioHandler } from "./studio/generate.ts";
 import { generateImageArtifact } from "./studio/image-generation.ts";
 import { guideHandler, overviewHandler } from "./studio/summaries.ts";
 import { researchHandler } from "./research/handler.ts";
+import { deepResearchHandler } from "./research/deep.ts";
+import { searchProviderFromEnv } from "./research/search.ts";
+import { knowledgeExtractHandler } from "./knowledge/extract.ts";
+import { contradictionsHandler } from "./knowledge/contradictions.ts";
 import { transcriberFromEnv } from "./ai/transcription.ts";
 import { speechFromEnv } from "./ai/speech.ts";
 
@@ -30,8 +34,14 @@ const speech = speechFromEnv();
 if (!speech) console.warn("ELEVENLABS_API_KEY absent : génération Audio Overview désactivée.");
 if (!transcriber) console.warn("DEEPGRAM_API_KEY absent : import audio désactivé (les autres sources restent disponibles).");
 const handlers: Partial<Record<JobKind, Handler>> = {
-  ingest_source: ingestHandler(db, embedder, { summaries: Boolean(llm), transcriber }),
+  ingest_source: ingestHandler(db, embedder, { summaries: Boolean(llm), knowledge: Boolean(llm), transcriber }),
   research: researchHandler(db, process.env.TAVILY_API_KEY),
+  // Deep Research est toujours réclamé : sans clé, la recherche échoue explicitement (crédit rendu) au lieu de rester en file
+  deep_research: deepResearchHandler({
+    db, llm, search: searchProviderFromEnv(), embedder,
+    maxCostUsd: process.env.DEEP_RESEARCH_MAX_COST_USD ? Number(process.env.DEEP_RESEARCH_MAX_COST_USD) : undefined,
+  }),
+  knowledge_contradictions: contradictionsHandler(db, llm),
   generate_artifact: async (job, ctx) => {
     if (job.target_id) {
       const { data: artifact } = await db.from("artifacts").select("id,type,options,custom_prompt,source_ids,notebook_id,workspace_id,created_by").eq("id", job.target_id).single();
@@ -48,9 +58,10 @@ const handlers: Partial<Record<JobKind, Handler>> = {
     }
     return studioHandler(db, llm, speech)(job, ctx);
   },
-  ...(llm ? { source_guide: guideHandler(db, llm), notebook_overview: overviewHandler(db, llm) } : {}),
+  ...(llm ? { source_guide: guideHandler(db, llm), notebook_overview: overviewHandler(db, llm), knowledge_extract: knowledgeExtractHandler(db, llm) } : {}),
 };
-if (!llm) console.warn("OPENROUTER_API_KEY / OPENROUTER_CHAT_MODEL absents : Studio en échec (crédit rendu), pas de guides ni de résumé de notebook.");
+if (!llm) console.warn("OPENROUTER_API_KEY / OPENROUTER_CHAT_MODEL absents : Studio et Deep Research en échec (crédit rendu), pas de guides, de résumé ni de graphe de connaissances.");
+if (!process.env.TAVILY_API_KEY) console.warn("TAVILY_API_KEY absente : Fast Research et Deep Research indisponibles.");
 
 let stopping = false;
 process.on("SIGTERM", () => (stopping = true));

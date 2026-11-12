@@ -6,7 +6,7 @@ export type ResearchResult = { title: string; url: string; why: string; domain: 
 type TavilyResponse = { results?: Array<{ title?: string; url?: string; content?: string; score?: number }> };
 
 /** Normalise et déduplique les résultats du fournisseur avant de les exposer à l'utilisateur. */
-export function normalizeResearchResults(input: TavilyResponse["results"]): ResearchResult[] {
+export function normalizeResearchResults(input: TavilyResponse["results"], limit = 5): ResearchResult[] {
   const seen = new Set<string>();
   const output: ResearchResult[] = [];
   for (const item of input ?? []) {
@@ -21,7 +21,7 @@ export function normalizeResearchResults(input: TavilyResponse["results"]): Rese
     seen.add(key);
     const why = (item.content ?? "").replace(/\s+/g, " ").trim().slice(0, 360);
     output.push({ title: item.title.trim().slice(0, 240), url, why: why || "Page trouvée par la recherche web.", domain: parsed.hostname });
-    if (output.length === 5) break;
+    if (output.length === limit) break;
   }
   return output;
 }

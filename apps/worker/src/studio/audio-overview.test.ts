@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   AUDIO_OVERVIEW_MARKER,
-  buildAudioOverviewFfmpegArgs,\n  estimateAudioOverviewMetrics,
+  buildAudioOverviewFfmpegArgs,
+  estimateAudioOverviewMetrics,
   audioOverviewInstructions,
   buildAudioOverviewMessages,
   isAudioOverviewPrompt,

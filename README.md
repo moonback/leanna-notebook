@@ -17,6 +17,9 @@ Leanna Notebook est une application multi-utilisateur disponible sur le web et v
 | Prompts système | Catalogue éditable par utilisateur dans les réglages, avec sauvegarde et réinitialisation | Traçage des prompts de résumé encore incomplet |
 | Modèles IA | Catalogue OpenRouter et préférences par fonctionnalité | Dépend de la clé OpenRouter |
 | Découvrir & recherche web | Recherche externe, consultation de résultats et ajout de contenus au travail documentaire | Dépend de la configuration du fournisseur de recherche |
+| Recherche approfondie | Agent autonome par étapes persistées : plan, recherches multi-requêtes, lecture complète des pages (anti-SSRF), extraction vérifiée, recoupement, ajout des sources, rapport cité dans le Studio ; pause, reprise, annulation, consignes en cours | Requiert `TAVILY_API_KEY` et OpenRouter côté worker ; parcours en direct non exécuté dans cette passe |
+| Graphe de connaissances | Entités, relations (déclarées / déduites) et affirmations extraites de chaque source avec passage exact ; résolution d'identité, fusion/séparation tracées ; graphe interactif borné et dépliable | Requiert OpenRouter côté worker ; migrations `20261112*` à appliquer |
+| Contradictions | Comparaison structurée (dates, montants, quantités) puis qualification LLM ; décisions humaines historisées | Idem |
 | Electron | Client desktop, configuration de build et dépendance electron-updater | Installation et mise à jour non validées dans cette passe |
 | Facturation réelle | Mode de facturation configurable | README et code de configuration indiquent un mode simulé par défaut |
 | Google Drive | Type de source prévu dans le modèle de données | Connecteur de bout en bout non confirmé |
@@ -32,6 +35,11 @@ Une fonctionnalité présente dans le code n'est pas nécessairement validée en
 3. **Échanger à la voix** avec Leanna ; Roxane peut intervenir comme seconde voix pour apporter un autre angle.
 4. **Produire dans le Studio** un rapport, une synthèse, un guide, des fiches, un quiz, une chronologie, une infographie ou un autre format pris en charge. Les demandes explicites peuvent être lancées depuis le chat ; le Studio vocal dispose également d'un outil de création dédié.
 5. **Exporter** les livrables prêts dans les formats pris en charge : Markdown, texte, HTML et JSON ; MP3 pour les Audio Overview.
+6. **Lancer une recherche approfondie** : Leanna planifie, cherche et lit le web, ajoute les sources pertinentes au notebook et rédige un rapport cité dans le Studio.
+7. **Explorer le graphe de connaissances** de vos sources et vérifier, passage à l'appui, pourquoi deux éléments sont liés.
+8. **Traiter les contradictions** détectées entre documents et garder l'historique de vos décisions.
+
+Voir [Deep Research, Knowledge Graph et contradictions](docs/technical/DEEP_RESEARCH_KNOWLEDGE_GRAPH.md).
 
 ### PDF volumineux et OCR
 
@@ -109,7 +117,8 @@ Les variables principales sont :
 | `OPENROUTER_API_KEY`, `OPENROUTER_CHAT_MODEL` | Chat, génération Studio et OCR OpenRouter |
 | `OPENROUTER_EMBEDDINGS_MODEL`, `EMBEDDINGS_PROVIDER`, `EMBEDDINGS_MODEL`, `EMBEDDINGS_API_KEY` | Embeddings |
 | `GEMINI_API_KEY` | Sessions vocales Gemini Live |
-| `TAVILY_API_KEY` | Recherche web / Fast Research |
+| `TAVILY_API_KEY` | Recherche web / Fast Research ; **requise sur le worker** pour la recherche approfondie |
+| `DEEP_RESEARCH_MAX_COST_USD`, `OPENROUTER_TIMEOUT_MS` | Facultatives (worker) : plafond de coût par recherche approfondie, délai maximal d'un appel LLM |
 | `DEEPGRAM_API_KEY`, `STT_MODEL`, `STT_LANGUAGE` | Transcription audio |
 | `ELEVENLABS_API_KEY`, `AUDIO_OVERVIEW_HOST_VOICE_ID`, `AUDIO_OVERVIEW_GUEST_VOICE_ID`, `FFMPEG_PATH` | Audio Overview |
 | `APP_URL`, `BILLING_MODE` | URL publique et mode de facturation |
@@ -140,6 +149,7 @@ Documents disponibles dans le dépôt :
 - [Architecture de la génération d’images](docs/architecture/IMAGE_GENERATION_ARCHITECTURE.md)
 - [Audit de la génération d’images](docs/audits/IMAGE_GENERATION_AUDIT.md)
 - [Extraction et OCR des PDF](docs/technical/PDF_OCR.md)
+- [Deep Research, Knowledge Graph et contradictions](docs/technical/DEEP_RESEARCH_KNOWLEDGE_GRAPH.md)
 - [Configuration OpenRouter Nano Banana](docs/technical/OPENROUTER_NANO_BANANA.md)
 - [Documentation web](apps/web/README.md)
 - [Documentation desktop](apps/desktop/README.md)
