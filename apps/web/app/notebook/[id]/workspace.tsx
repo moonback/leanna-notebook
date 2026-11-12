@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import { createPortal } from "react-dom";
-import { AlertTriangle, ArrowUp, AudioLines, Bold, BookmarkPlus, BrainCircuit, Code, Eraser, Heading2, Italic, List, ListOrdered, Quote, Settings2, ThumbsDown, ThumbsUp, FileText, Globe, Inbox, Lock, NotebookPen, Pencil, Plus, Square, Sparkles, Trash2, Type, Upload, Search, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, FolderOpen, Telescope, Network, Scale, ExternalLink } from "lucide-react";
+import { AlertTriangle, ArrowUp, AudioLines, Video, Bold, BookmarkPlus, BrainCircuit, Code, Eraser, Heading2, Italic, List, ListOrdered, Quote, Settings2, ThumbsDown, ThumbsUp, FileText, Globe, Inbox, Lock, NotebookPen, Pencil, Plus, Square, Sparkles, Trash2, Type, Upload, Search, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, FolderOpen, Telescope, Network, Scale, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Textarea } from "@/components/ui/field";
 import { Alert, Badge, EmptyState, Progress, Skeleton } from "@/components/ui/feedback";
@@ -36,7 +36,13 @@ const ERRORS: Record<string, string> = {
   paywall: "Page réservée aux abonnés : contenu inaccessible.",
   url_refused: "Adresse refusée ou injoignable.",
   unsupported_type: "Type de fichier non pris en charge.",
-  transcription_not_configured: "La transcription audio n’est pas configurée côté serveur.",
+  transcription_not_configured: "La transcription audio/vidéo n’est pas configurée côté serveur.",
+  transcription_file_too_large: "La piste audio dépasse la limite de 25 Mo de Groq.",
+  video_tools_not_configured: "Le worker vidéo doit disposer de yt-dlp et FFmpeg.",
+  video_processing_failed: "Impossible de traiter cette vidéo.",
+  video_download_failed: "TikTok n’a pas fourni de vidéo téléchargeable.",
+  no_audio_track: "Aucune piste audio exploitable dans cette vidéo.",
+  file_too_large: "Vidéo trop volumineuse (200 Mo maximum).",
   transcription_config: "Le service de transcription audio est mal configuré.",
   no_speech: "Aucune parole exploitable détectée dans ce fichier audio.",
   embeddings_config: "Indexation impossible : configuration des embeddings invalide.",
@@ -45,7 +51,7 @@ const ERRORS: Record<string, string> = {
   lease_expired: "Le traitement a été interrompu. Supprimez puis réimportez la source.",
   archive_too_large: "Fichier compressé trop volumineux une fois décompressé.",
 };
-const KIND_ICON: Record<string, React.ReactNode> = { web: <Globe />, text: <Type />, note: <NotebookPen />, audio: <AudioLines /> };
+const KIND_ICON: Record<string, React.ReactNode> = { web: <Globe />, text: <Type />, note: <NotebookPen />, audio: <AudioLines />, video: <Video /> };
 const busyStatus = (s: string) => s === "pending" || s === "processing";
 
 /** Vrai si la requête média correspond (suit le redimensionnement). Rendu serveur : vue bureau. */
@@ -825,8 +831,8 @@ function AddSourcesDialog({ open, onOpenChange, notebookId, onAdded, onWebSearch
   const [dragging, setDragging] = React.useState(false);
   const fileRef = React.useRef<HTMLInputElement>(null);
   const folderRef = React.useRef<HTMLInputElement>(null);
-  const ACCEPT = ".pdf,.docx,.pptx,.epub,.txt,.md,.csv,.mp3,.wav,.m4a,.aac,.ogg,.flac,.webm";
-  const supportedExtensions = new Set(["pdf", "docx", "pptx", "epub", "txt", "md", "csv", "mp3", "wav", "m4a", "aac", "ogg", "flac", "webm"]);
+  const ACCEPT = ".pdf,.docx,.pptx,.epub,.txt,.md,.csv,.mp3,.wav,.m4a,.aac,.ogg,.flac,.weba,.webm,.mp4,.m4v,.mov,.mkv";
+  const supportedExtensions = new Set(["pdf", "docx", "pptx", "epub", "txt", "md", "csv", "mp3", "wav", "m4a", "aac", "ogg", "flac", "weba", "webm", "mp4", "m4v", "mov", "mkv"]);
   const folderFiles = selectedFiles.map((file) => {
     const relativePath = (file as File & { webkitRelativePath?: string }).webkitRelativePath || file.name;
     const extension = file.name.toLowerCase().split(".").pop() ?? "";
@@ -905,7 +911,7 @@ function AddSourcesDialog({ open, onOpenChange, notebookId, onAdded, onWebSearch
 
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!busy) onOpenChange(next); }}>
-      <DialogContent className="mobile-source-dialog" title="Ajouter des sources" description="Les réponses s’appuieront uniquement sur ces documents.">
+      <DialogContent className="mobile-source-dialog" title="Ajouter des sources" description="Importez des documents, des fichiers audio/vidéo ou des liens TikTok. Les réponses s’appuieront sur leur transcription.">
         <div className="grid gap-2 sm:grid-cols-2">
           <button type="button" onClick={onWebSearch} className="flex items-start gap-3 rounded-xl border border-border bg-surface p-3 text-left transition-colors hover:bg-surface-raised focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
             <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-accent-soft text-on-accent-soft"><Search className="size-4" aria-hidden /></span>
@@ -921,7 +927,7 @@ function AddSourcesDialog({ open, onOpenChange, notebookId, onAdded, onWebSearch
           <Tabs value={tab} onValueChange={setTab}>
             <TabsList aria-label="Type de source">
               <TabsTrigger value="file"><Upload className="mr-1.5 inline size-3.5" aria-hidden />Fichier / dossier</TabsTrigger>
-              <TabsTrigger value="url"><Globe className="mr-1.5 inline size-3.5" aria-hidden />Page web</TabsTrigger>
+              <TabsTrigger value="url"><Globe className="mr-1.5 inline size-3.5" aria-hidden />Page web / TikTok</TabsTrigger>
               <TabsTrigger value="text"><Type className="mr-1.5 inline size-3.5" aria-hidden />Texte</TabsTrigger>
             </TabsList>
             <TabsContent value="file" className="grid gap-3 pt-4">
@@ -953,7 +959,7 @@ function AddSourcesDialog({ open, onOpenChange, notebookId, onAdded, onWebSearch
                   <Button type="button" variant="secondary" size="sm" onClick={() => folderRef.current?.click()}><FolderOpen aria-hidden /> Choisir un dossier</Button>
                 </div>
                 <div className="flex flex-wrap justify-center gap-1.5" aria-label="Formats compatibles">
-                  {["PDF", "DOCX", "PPTX", "EPUB", "TXT", "MD", "CSV", "Audio"].map((f) => <Badge key={f}>{f}</Badge>)}
+                  {["PDF", "DOCX", "PPTX", "EPUB", "TXT", "MD", "CSV", "Audio", "MP4", "MOV"].map((f) => <Badge key={f}>{f}</Badge>)}
                 </div>
               </div>
               {selectedFiles.length > 0 && (
@@ -985,8 +991,8 @@ function AddSourcesDialog({ open, onOpenChange, notebookId, onAdded, onWebSearch
               )}
             </TabsContent>
             <TabsContent value="url" className="pt-4">
-              <Field id="urls" label="Adresses web" hint="Une par ligne. Seul le texte principal de la page est importé.">
-                <Textarea value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://…" />
+              <Field id="urls" label="Liens web ou TikTok" hint="Une URL par ligne. Les liens TikTok sont transcrits automatiquement ; les autres pages sont importées comme sources web.">
+                <Textarea value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://www.tiktok.com/@…/video/… ou https://…" />
               </Field>
             </TabsContent>
             <TabsContent value="text" className="grid gap-3 pt-4">

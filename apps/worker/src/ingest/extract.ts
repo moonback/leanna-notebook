@@ -41,6 +41,21 @@ export function parseOcrPages(recognized: string, pageCount: number): Pick<Extra
 const MAX_WORDS = 500_000;
 const PDF_PAGE_SEPARATOR = "\n\n";
 
+async function fromAudio(file: Uint8Array, mimeType: string, transcriber: Transcriber): Promise<Extracted> {
+  const transcript = await transcriber.transcribe(file, mimeType);
+  let offset = 0;
+  const timeRanges: ChunkTimeRange[] = [];
+  const text = transcript.segments.length ? transcript.segments.map((segment, index) => {
+    const clean = normalize(segment.text);
+    const start = offset;
+    offset += clean.length;
+    timeRanges.push({ char_start: start, char_end: offset, start_ms: segment.start_ms, end_ms: segment.end_ms });
+    if (index < transcript.segments.length - 1) offset += 2;
+    return clean;
+  }).join("\n\n") : normalize(transcript.text);
+  return { text, pageStarts: [], pageCount: null, timeRanges };
+}
+
 function finalize(e: Extracted): Extracted {
   const words = e.text.split(/\s+/).filter(Boolean).length;
   if (words === 0) throw new PermanentError("empty_content", "Aucun texte exploitable dans cette source.");
@@ -155,18 +170,13 @@ export async function extract(
     case "audio": {
       if (!transcriber) throw new PermanentError("transcription_not_configured", "La transcription audio n’est pas configurée côté serveur.");
       if (!data.file) throw new PermanentError("file_missing");
-      const transcript = await transcriber.transcribe(data.file, data.mimeType ?? "application/octet-stream");
-      let offset = 0;
-      const timeRanges: ChunkTimeRange[] = [];
-      const text = transcript.segments.length ? transcript.segments.map((segment, index) => {
-        const clean = normalize(segment.text);
-        const start = offset;
-        offset += clean.length;
-        timeRanges.push({ char_start: start, char_end: offset, start_ms: segment.start_ms, end_ms: segment.end_ms });
-        if (index < transcript.segments.length - 1) offset += 2;
-        return clean;
-      }).join("\n\n") : normalize(transcript.text);
-      return finalize({ text, pageStarts: [], pageCount: null, timeRanges });
+      return finalize(await fromAudio(data.file, data.mimeType ?? "application/octet-stream", transcriber));
+    }
+    case "video": {
+      if (!transcriber) throw new PermanentError("transcription_not_configured", "La transcription vidéo n’est pas configurée côté serveur.");
+      const { extractVideoAudio } = await import("./video.ts");
+      const audio = await extractVideoAudio({ file: data.file, url: data.url });
+      return finalize(await fromAudio(audio, "audio/mpeg", transcriber));
     }
     case "note":
       return finalize({ text: data.noteText ?? "", pageStarts: [], pageCount: null });
