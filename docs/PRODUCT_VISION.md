@@ -431,3 +431,23 @@ Il doit pouvoir :
 - reprendre une conversation sans perdre les éléments importants.
 
 **La vision finale : Leanna devient une interface vocale intelligente sur l'ensemble du savoir contenu dans le notebook, capable de comprendre et d'agir, tout en restant vérifiable, transparente et sous le contrôle de l'utilisateur.**
+---
+
+## 9. Feuille de route — Recherche approfondie, graphe de connaissances et contradictions
+
+Détails techniques : [Deep Research, Knowledge Graph et contradictions](technical/DEEP_RESEARCH_KNOWLEDGE_GRAPH.md).
+
+| Élément | État (branche `feat/deep-research-knowledge-graph`) |
+|---|---|
+| Recherche approfondie autonome (étapes persistées, budgets, pause/reprise/annulation, consignes, rapport cité dans le Studio) | Implémentée ; tests unitaires verts ; parcours en direct à valider après application des migrations |
+| Graphe de connaissances (extraction prouvée, résolution d'identité, fusion/séparation, graphe interactif) | Implémenté ; idem |
+| Détection des contradictions (comparateur déterministe + qualification LLM, décisions humaines historisées) | Implémentée ; 6 jeux déterministes couverts |
+| Tests pgTAP `07_deep_research_knowledge` | Écrits ; à exécuter avec `pnpm db:test` (Docker requis) |
+
+Suites proposées :
+
+1. Tarif en crédits de la recherche approfondie (`plans.limits.credit_cost.deep_research`) — décision produit.
+2. Diffusion Supabase Realtime de `research_events` en complément de la relecture de l'état persisté.
+3. Second fournisseur de recherche web derrière l'abstraction `SearchProvider`.
+4. Réutilisation du texte déjà lu par la recherche lors de l'ingestion (éviter le double téléchargement).
+5. Lien vocal : expliquer à l'oral une contradiction détectée (fonctionnalité 12 ci-dessus), en s'appuyant sur `knowledge_contradictions`.
