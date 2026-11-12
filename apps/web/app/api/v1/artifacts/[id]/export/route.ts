@@ -64,11 +64,11 @@ export const GET = handle(async (req: NextRequest, { params }: Params) => {
   const body = format === "json"
     ? JSON.stringify({ title, type: artifact.type, content: artifact.content }, null, 2)
     : format === "txt"
-      ? markdown.replace(/^#{1,6}\\s+/gm, "").replace(/\\*\\*(.*?)\\*\\*/g, "$1").replace(/^[-*] /gm, "• ")
+      ? markdown.replace(/^#{1,6}\s+/gm, "").replace(/\*\*(.*?)\*\*/g, "$1").replace(/^[-*] /gm, "• ")
       : format === "html"
         ? `<!doctype html><html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${escapeHtml(title)}</title><body><main><h1>${escapeHtml(title)}</h1><pre style="white-space:pre-wrap;font:inherit;line-height:1.6">${escapeHtml(markdown)}</pre></main></body></html>`
         : markdown;
-  const slug = title.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 70) || "document";
+  const slug = title.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 70) || "document";
   const contentType = format === "json" ? "application/json; charset=utf-8" : format === "html" ? "text/html; charset=utf-8" : format === "txt" ? "text/plain; charset=utf-8" : "text/markdown; charset=utf-8";
   return new Response(body, {
     headers: {
