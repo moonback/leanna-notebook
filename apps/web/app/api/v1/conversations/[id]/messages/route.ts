@@ -186,6 +186,7 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
     async start(controller) {
       const send = (event: string, data: unknown) => controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
       send("meta", { messageId: answerId, passages: passages.length, vector: Boolean(query) });
+      if (requestedArtifact) send("artifact", { id: requestedArtifact.id, type: requestedArtifact.type });
       let raw = "", thoughts = "", usage: unknown = null, model: string | null = null;
       try {
         for await (const evt of streamChat(messages, { signal: req.signal, model: chatPreference?.model_id ?? undefined, reasoning: true })) {
