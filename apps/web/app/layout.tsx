@@ -9,8 +9,15 @@ const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"]
 const sourceSerif = Source_Serif_4({ variable: "--font-source-serif", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Notebook",
-  description: "Comprenez vos documents, réponses sourcées.",
+  title: { default: "Leanna Notebook — Rechercher, comprendre, structurer", template: "%s · Leanna Notebook" },
+  description: "Centralisez vos PDF, pages web et contenus. Interrogez vos sources avec l’IA et retrouvez les passages qui justifient chaque réponse.",
+  applicationName: "Leanna Notebook",
+  openGraph: {
+    title: "Leanna Notebook — Vos sources ont des réponses",
+    description: "Un espace de recherche documentaire pour collecter, comprendre et structurer vos connaissances.",
+    type: "website",
+    locale: "fr_FR",
+  },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
