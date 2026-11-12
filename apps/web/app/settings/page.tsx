@@ -85,7 +85,7 @@ export default async function SettingsPage() {
             {
               id: "ai",
               label: "Intelligence artificielle",
-              description: "Modèles, clés et génération d’images.",
+              description: "Modèles OpenRouter, OCR des PDF scannés et génération d’images.",
               icon: <Sparkles />,
               content: <div className="grid gap-5"><OpenRouterSettings /><OcrSettings /><ImageGenerationSettings /></div>,
             },
