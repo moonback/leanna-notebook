@@ -41,7 +41,7 @@ export async function safeFetch(rawUrl: string, redirects = 5, maxBytes = MAX_BY
     const req = (url.protocol === "https:" ? request : httpRequest)({
       host: ip, servername: isIP(host) ? undefined : host, port: url.port || (url.protocol === "https:" ? 443 : 80),
       path: url.pathname + url.search, method: "GET", timeout: TIMEOUT_MS,
-      headers: { host: url.host, "user-agent": "NotebookBot/0.1 (+import de source)", accept: "text/html,application/pdf,text/plain;q=0.9", ...extraHeaders },
+      headers: { ...extraHeaders, host: url.host, "user-agent": extraHeaders["user-agent"] ?? "NotebookBot/0.1 (+import de source)", accept: extraHeaders.accept ?? "text/html,application/pdf,text/plain;q=0.9" },
     }, (r) => {
       const parts: Buffer[] = []; let size = 0;
       r.on("data", (d: Buffer) => { size += d.length; if (size > maxBytes) { req.destroy(new FetchRefused("too_large")); } else parts.push(d); });
@@ -55,7 +55,9 @@ export async function safeFetch(rawUrl: string, redirects = 5, maxBytes = MAX_BY
 
   if (res.status >= 300 && res.status < 400 && res.headers.location) {
     if (redirects <= 0) throw new FetchRefused("too_many_redirects");
-    return safeFetch(new URL(String(res.headers.location), url).toString(), redirects - 1, maxBytes, extraHeaders);
+    const nextUrl = new URL(String(res.headers.location), url);
+    const nextHeaders = nextUrl.origin === url.origin ? extraHeaders : Object.fromEntries(Object.entries(extraHeaders).filter(([key]) => key !== "referer" && key !== "origin"));
+    return safeFetch(nextUrl.toString(), redirects - 1, maxBytes, nextHeaders);
   }
   if (res.status === 401 || res.status === 402 || res.status === 403) throw new FetchRefused("paywall", res.status);
   if (res.status >= 400) throw new FetchRefused(`http_${res.status}`);
