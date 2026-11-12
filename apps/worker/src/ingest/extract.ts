@@ -66,6 +66,7 @@ async function fromPdf(buf: Uint8Array, onProgress?: PdfProgress): Promise<Extra
   }
 
   const pageTexts: string[] = [];
+  let extractedWords = 0;
   const pageCount = pdf.numPages;
 
   try {
@@ -76,6 +77,8 @@ async function fromPdf(buf: Uint8Array, onProgress?: PdfProgress): Promise<Extra
         const content = await page.getTextContent();
         const items = (content.items ?? []) as PdfTextItem[];
         const pageText = formatPdfPage(items);
+        extractedWords += pageText.split(/\\s+/).filter(Boolean).length;
+        if (extractedWords > MAX_WORDS) throw new PermanentError("too_many_words", "Plus de 500 000 mots.");
         pageTexts.push(pageText);
       } finally {
         page.cleanup?.();
