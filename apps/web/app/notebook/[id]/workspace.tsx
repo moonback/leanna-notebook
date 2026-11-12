@@ -503,6 +503,7 @@ function Chat({ notebookId, readyCount, onOpenCitation, onOpenPassage, canViewSo
           const data = JSON.parse(/^data: (.*)$/m.exec(block)?.[1] ?? "null");
           if (event === "delta") setMessages((m) => m!.map((x) => x.id === "pending" ? { ...x, content: x.content + data.text } : x));
           if (event === "thought") setMessages((m) => m!.map((x) => x.id === "pending" ? { ...x, thoughts: (x.thoughts ?? "") + data.text } : x));
+          if (event === "artifact") window.dispatchEvent(new Event("notebook:artifact-created"));
           if (event === "done") setMessages((m) => m!.map((x) => x.id === "pending" ? { id: data.messageId, role: "assistant", content: data.text, status: "complete", citations: data.citations, thoughts: data.thoughts } : x));
           if (event === "error") { setError({ title: "La réponse a échoué", body: "Votre crédit a été restitué. Réessayez." }); setMessages((m) => m!.map((x) => x.id === "pending" ? { ...x, status: "failed" } : x)); }
         }
