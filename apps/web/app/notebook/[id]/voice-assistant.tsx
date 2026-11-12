@@ -200,23 +200,63 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
   async function handleToolCall(message: LiveMessage) {
     const calls = message?.toolCall?.functionCalls ?? [];
     for (const call of calls) {
-      if (call.name !== "search_notebook_sources") continue;
-      try {
-        const response = await fetch(`/api/v1/notebooks/${notebookId}/voice-search`, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ query: String(call.args?.query ?? "") })
-        });
-        const payload = await response.json();
-        if (!response.ok) throw new Error(payload.error ?? "Recherche documentaire impossible");
-        const retrieved = (payload.passages ?? []) as Array<Omit<Passage, "number">>;
-        const passages = turnPassages.current.add(retrieved);
-        for (const sourceId of turnPassages.current.sourceIds()) turnSourceIds.current.add(sourceId);
-        setSources(turnPassages.current.snapshot());
-        const result = passages.length ? passages.map((p) => `[Source ${p.number}] ${p.title}${p.page ? `, page ${p.page}` : ""}\n${p.excerpt}`).join("\n\n") : "Aucun passage pertinent trouv├® dans les sources s├®lectionn├®es.";
-        socket.current?.send(JSON.stringify({ toolResponse: { functionResponses: [{ id: call.id, name: call.name, response: { result } }] } }));
-      } catch {
-        socket.current?.send(JSON.stringify({ toolResponse: { functionResponses: [{ id: call.id, name: call.name, response: { error: "La recherche dans les sources a ├®chou├®. Indique ├á l'utilisateur que tu ne peux pas v├®rifier cette information." } }] } }));
+      if (call.name === "search_notebook_sources") {
+        try {
+          const response = await fetch(`/api/v1/notebooks/${notebookId}/voice-search`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ query: String(call.args?.query ?? "") })
+          });
+          const payload = await response.json();
+          if (!response.ok) throw new Error(payload.error ?? "Recherche documentaire impossible");
+          const retrieved = (payload.passages ?? []) as Array<Omit<Passage, "number">>;
+          const passages = turnPassages.current.add(retrieved);
+          for (const sourceId of turnPassages.current.sourceIds()) turnSourceIds.current.add(sourceId);
+          setSources(turnPassages.current.snapshot());
+          const result = passages.length ? passages.map((p) => `[Source ${p.number}] ${p.title}${p.page ? `, page ${p.page}` : ""}\n${p.excerpt}`).join("\n\n") : "Aucun passage pertinent trouvé dans les sources sélectionnées.";
+          socket.current?.send(JSON.stringify({ toolResponse: { functionResponses: [{ id: call.id, name: call.name, response: { result } }] } }));
+        } catch {
+          socket.current?.send(JSON.stringify({ toolResponse: { functionResponses: [{ id: call.id, name: call.name, response: { error: "La recherche dans les sources a échoué. Indique à l'utilisateur que tu ne peux pas vérifier cette information." } }] } }));
+        }
+        continue;
+      }
+
+      if (call.name === "create_studio_artifact") {
+        try {
+          const response = await fetch(`/api/v1/notebooks/${notebookId}/voice-artifacts`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              type: String(call.args?.type ?? ""),
+              prompt: String(call.args?.prompt ?? ""),
+              ...(call.args?.template ? { template: String(call.args.template) } : {}),
+              sourceIds: [...turnSourceIds.current]
+            })
+          });
+          const payload = await response.json();
+          if (!response.ok) {
+            const message = payload.error === "no_sources"
+              ? "Aucune source exploitable n'a été trouvée. Demande à l'utilisateur de sélectionner des documents prêts dans ce notebook."
+              : payload.error === "ai_not_configured"
+                ? "La génération Studio n'est pas configurée sur le serveur."
+                : "La création du livrable Studio a échoué. Explique brièvement l'erreur et ne prétends pas que le document a été créé.";
+            throw new Error(message);
+          }
+          const artifact = payload.artifact as { id: string; type: string; status: string };
+          window.dispatchEvent(new Event("notebook:artifact-created"));
+          setStatus("Génération lancée dans le Studio.");
+          socket.current?.send(JSON.stringify({ toolResponse: { functionResponses: [{
+            id: call.id,
+            name: call.name,
+            response: { result: `Livrable ${artifact.type} créé dans la file du Studio (identifiant ${artifact.id}, statut ${artifact.status}). Confirme oralement en une phrase que la génération est lancée dans l'onglet Studio. Ne récite pas le document.` }
+          }] } }));
+        } catch (error) {
+          socket.current?.send(JSON.stringify({ toolResponse: { functionResponses: [{
+            id: call.id,
+            name: call.name,
+            response: { error: error instanceof Error ? error.message : "Création Studio impossible." }
+          }] } }));
+        }
       }
     }
   }
