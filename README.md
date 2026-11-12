@@ -116,7 +116,7 @@ La liste complète et les variables worker sont détaillées dans [Configuration
 | `pnpm db:start` / `pnpm db:reset` | Supabase local |
 | `pnpm db:test` | Tests pgTAP |
 | `pnpm desktop:dev` | Client Electron en développement |
-| `pnpm desktop:build` / `pnpm desktop:dist:win` | Build desktop / Windows |
+| `pnpm desktop:build` / `pnpm desktop:dist:win` | Build desktop / Windows | $env:LEANNA_WEB_URL = "adresse"
 
 Ces commandes proviennent des manifestes du dépôt ; elles n'ont pas été exécutées pendant cette passe distante.
 

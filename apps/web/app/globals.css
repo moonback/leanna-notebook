@@ -36,3 +36,181 @@
   }
   @keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
 }
+
+
+/* --------------------------------------------------------------------------
+   Mobile experience — isolated below 768px. Desktop styles remain untouched.
+   -------------------------------------------------------------------------- */
+@media (max-width: 767px) {
+  html {
+    min-width: 320px;
+    overflow-x: clip;
+    scroll-padding-bottom: calc(5.25rem + env(safe-area-inset-bottom));
+  }
+
+  body {
+    min-width: 320px;
+    overflow-x: clip;
+    padding-bottom: calc(4.75rem + env(safe-area-inset-bottom));
+    overscroll-behavior-x: none;
+  }
+
+  button, [role="button"], a, input, select, textarea {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button:not([data-compact-touch="true"]),
+  [role="button"]:not([data-compact-touch="true"]) {
+    touch-action: manipulation;
+  }
+
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    max-width: 100%;
+    scroll-margin-bottom: 1rem;
+  }
+
+  input, select, textarea {
+    font-size: max(16px, 1em);
+  }
+
+  img, video, canvas, iframe {
+    max-width: 100%;
+  }
+
+  pre, code, table {
+    max-width: 100%;
+  }
+
+  pre {
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+  }
+
+  [role="dialog"] {
+    max-width: calc(100vw - 1rem);
+    max-height: calc(100dvh - 1rem - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    overscroll-behavior: contain;
+  }
+
+  .mobile-bottom-nav {
+    position: fixed;
+    z-index: 60;
+    inset-inline: 0;
+    bottom: 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    min-height: calc(4.15rem + env(safe-area-inset-bottom));
+    padding: 0.45rem max(0.75rem, env(safe-area-inset-right)) calc(0.45rem + env(safe-area-inset-bottom)) max(0.75rem, env(safe-area-inset-left));
+    border-top: 1px solid var(--border);
+    background: color-mix(in srgb, var(--surface-raised) 92%, transparent);
+    -webkit-backdrop-filter: blur(18px);
+    backdrop-filter: blur(18px);
+  }
+
+  .mobile-bottom-nav__item {
+    position: relative;
+    display: flex;
+    min-width: 0;
+    min-height: 3.1rem;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.2rem;
+    border-radius: 0.8rem;
+    color: var(--text-muted);
+    font-size: 0.68rem;
+    font-weight: 550;
+    text-decoration: none;
+    transition: color 180ms ease, background-color 180ms ease, transform 180ms ease;
+  }
+
+  .mobile-bottom-nav__icon {
+    display: grid;
+    width: 2rem;
+    height: 1.65rem;
+    place-items: center;
+    border-radius: 999px;
+    transition: background-color 180ms ease, transform 180ms ease;
+  }
+
+  .mobile-bottom-nav__item.is-active {
+    color: var(--accent);
+  }
+
+  .mobile-bottom-nav__item.is-active .mobile-bottom-nav__icon {
+    background: var(--accent-soft);
+    transform: translateY(-1px);
+  }
+
+  .mobile-bottom-nav__item:active {
+    transform: scale(0.96);
+  }
+
+  main {
+    min-width: 0;
+  }
+
+  /* Évite que les tableaux et grilles imposent leur largeur au viewport. */
+  main > *, main section, main article {
+    min-width: 0;
+  }
+
+  /* Les contenus de dialogue deviennent des feuilles confortables sur téléphone. */
+  [data-radix-dialog-content] {
+    width: calc(100vw - 1rem) !important;
+    max-width: calc(100vw - 1rem) !important;
+    max-height: calc(100dvh - 1rem - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    border-radius: 1.1rem;
+    padding: 1.1rem;
+    animation: mobile-sheet-in 220ms cubic-bezier(.2,.75,.25,1) both;
+  }
+
+  @keyframes mobile-sheet-in {
+    from { opacity: 0; transform: translate3d(0, 12px, 0) scale(.985); }
+    to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+  }
+
+  /* Entrées de listes et cartes : animation courte, sans déplacement de layout. */
+  main li {
+    animation: mobile-content-in 240ms ease both;
+  }
+
+  @keyframes mobile-content-in {
+    from { opacity: 0; transform: translate3d(0, 6px, 0); }
+    to { opacity: 1; transform: translate3d(0, 0, 0); }
+  }
+
+  /* Cible tactile minimale pour les actions icon-only existantes. */
+  header button[aria-label], main button[aria-label] {
+    min-width: 2.65rem;
+    min-height: 2.65rem;
+  }
+}
+
+@media (max-width: 380px) {
+  .mobile-bottom-nav { padding-inline: 0.4rem; }
+  .mobile-bottom-nav__item { font-size: 0.64rem; }
+}
+
+@media (max-width: 767px) and (orientation: landscape) {
+  .mobile-bottom-nav {
+    min-height: calc(3.5rem + env(safe-area-inset-bottom));
+    padding-top: 0.2rem;
+  }
+  .mobile-bottom-nav__item { min-height: 2.7rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-bottom-nav__item,
+  .mobile-bottom-nav__icon {
+    transition: none !important;
+  }
+  @media (max-width: 767px) {
+    main li,
+    [data-radix-dialog-content] {
+      animation: none !important;
+    }
+  }
+}
