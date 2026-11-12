@@ -125,6 +125,7 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
     throw e;
   }
 
+  const artifactRequest = detectStudioArtifactRequest(text);
   if (artifactRequest) {
     await requireRole(conv.notebook_id, "editor");
     if (!process.env.OPENROUTER_API_KEY || !process.env.OPENROUTER_CHAT_MODEL) throw new ApiError(503, "ai_not_configured");
@@ -147,7 +148,6 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
 
   // Une demande explicite de livrable déclenche le moteur Studio existant depuis le chat.
   // Les mêmes contrôles de rôle, de notebook, de sources et de quota que le Studio s'appliquent.
-  const artifactRequest = detectStudioArtifactRequest(text);
   let requestedArtifact: { id: string; type: StudioArtifactType } | null = null;
   if (artifactRequest) {
     const options = artifactRequest.type === "image"
