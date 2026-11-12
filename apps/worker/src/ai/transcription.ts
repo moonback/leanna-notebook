@@ -27,12 +27,15 @@ export function transcriberFromEnv(env = process.env, request: typeof fetch = fe
         utterances: "true",
         smart_format: "true",
       });
+      const startedAt = Date.now();
+      console.info("[transcription] request_started", { provider: "deepgram", model, mimeType, bytes: audio.byteLength });
       const response = await request(`https://api.deepgram.com/v1/listen?${params}`, {
         method: "POST",
         headers: { Authorization: `Token ${key}`, "Content-Type": mimeType },
         body: audio as BodyInit,
         signal: AbortSignal.timeout(10 * 60 * 1000),
       });
+      console.info("[transcription] response_received", { provider: "deepgram", status: response.status, requestId: response.headers.get("dg-request-id"), elapsedMs: Date.now() - startedAt });
       if ([400, 401, 403, 404].includes(response.status)) {
         throw new PermanentError("transcription_config", `deepgram_http_${response.status}`);
       }
@@ -54,7 +57,11 @@ export function transcriberFromEnv(env = process.env, request: typeof fetch = fe
       const text = utterances.length
         ? utterances.map((u) => u.text).join("\n\n")
         : payload.results?.channels?.[0]?.alternatives?.[0]?.transcript?.trim() ?? "";
-      if (!text) throw new PermanentError("no_speech", "Aucune parole exploitable dans ce fichier audio.");
+      console.info("[transcription] parsed", { provider: "deepgram", model, segmentCount: utterances.length, transcriptChars: text.length, elapsedMs: Date.now() - startedAt });
+      if (!text) {
+        console.warn("[transcription] no_speech", { provider: "deepgram", model, responseStatus: response.status, hasUtterances: Boolean(payload.results?.utterances?.length), hasChannels: Boolean(payload.results?.channels?.length) });
+        throw new PermanentError("no_speech", "Aucune parole exploitable dans ce fichier audio.");
+      }
       return { text, segments: utterances };
     },
   };
