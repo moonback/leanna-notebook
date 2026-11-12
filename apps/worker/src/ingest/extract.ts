@@ -54,6 +54,7 @@ async function fromTikTok(url: string, transcriber?: Transcriber | null): Promis
   let page: Awaited<ReturnType<typeof safeFetch>>;
   try { page = await safeFetch(url); }
   catch (error) {
+    console.warn("[tiktok-ingest] page_fetch_failed", { host, error: error instanceof Error ? error.message : String(error), elapsedMs: Date.now() - startedAt });
     if (error instanceof FetchRefused) throw new PermanentError("tiktok_unavailable", "TikTok refuse l'accès à cette vidéo (" + error.message + ").");
     throw error;
   }
@@ -66,6 +67,7 @@ async function fromTikTok(url: string, transcriber?: Transcriber | null): Promis
   let media: Awaited<ReturnType<typeof safeFetch>>;
   try { media = await safeFetch(metadata.playAddr, 5, 100 * 1024 * 1024); }
   catch (error) {
+    console.warn("[tiktok-ingest] media_fetch_failed", { mediaHost: (() => { try { return new URL(metadata.playAddr).hostname; } catch { return "invalid"; } })(), error: error instanceof Error ? error.message : String(error), elapsedMs: Date.now() - startedAt });
     if (error instanceof FetchRefused) throw new PermanentError("tiktok_unavailable", "Le fichier vidéo TikTok est inaccessible (" + error.message + ").");
     throw error;
   }
