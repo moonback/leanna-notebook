@@ -38,7 +38,6 @@ export default async function ProfilePage() {
           <div className="mb-4 flex items-center gap-2"><UserRound size={18} className="text-accent" /><h2 className="font-semibold">Informations du compte</h2></div>
           <div className="grid gap-3 text-sm sm:grid-cols-2">
             <div className="rounded-lg bg-surface p-3"><p className="text-xs text-text-subtle">Adresse e-mail</p><p className="mt-1 break-all font-medium">{user.email}</p></div>
-            <div className="rounded-lg bg-surface p-3"><p className="text-xs text-text-subtle">Identifiant du compte</p><p className="mt-1 break-all font-mono text-xs">{user.id}</p></div>
             <div className="rounded-lg bg-surface p-3"><p className="flex items-center gap-1 text-xs text-text-subtle"><CalendarDays size={12} /> Membre depuis</p><p className="mt-1 font-medium">{new Date(profile.created_at).toLocaleDateString("fr-FR", { dateStyle: "long" })}</p></div>
             <div className="rounded-lg bg-surface p-3"><p className="flex items-center gap-1 text-xs text-text-subtle"><ShieldCheck size={12} /> Sécurité</p><p className="mt-1 font-medium">Authentification sécurisée</p></div>
           </div>
