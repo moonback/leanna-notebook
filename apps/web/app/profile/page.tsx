@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowRight, CalendarDays, CheckCircle2, ChevronRight, CircleUserRound,
@@ -26,10 +27,7 @@ function initialsFrom(value: string) {
 
 export default async function ProfilePage() {
   const user = await getUser();
-  if (!user) {
-    const { redirect } = await import("next/navigation");
-    redirect("/login?next=/profile");
-  }
+  if (!user) redirect("/login?next=/profile");
 
   const supabase = await createUserClient();
   const { data: profile } = await supabase.from("profiles")
@@ -56,7 +54,7 @@ export default async function ProfilePage() {
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   <Badge tone="success">Compte actif</Badge>
                   {emailVerified
-                    ? <Badge tone="info"><span className="inline-flex items-center gap-1"><CheckCircle2 size={12} /> E-mail vérifié</span></Badge>
+                    ? <Badge tone="accent"><span className="inline-flex items-center gap-1"><CheckCircle2 size={12} /> E-mail vérifié</span></Badge>
                     : <Badge tone="warning">E-mail à vérifier</Badge>}
                 </div>
               </div>
