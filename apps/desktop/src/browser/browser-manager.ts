@@ -172,6 +172,25 @@ export class BrowserManager {
     return true;
   }
 
+  async extractPage(id: string): Promise<{ url: string; title: string; text: string } | null> {
+    const tab = this.tabs.get(id);
+    if (!tab || !isSafeBrowserUrl(tab.url)) return null;
+    try {
+      const result = await tab.view.webContents.executeJavaScript(
+        "(() => ({ title: document.title || location.href, text: document.body?.innerText || '' }))()",
+        true,
+      ) as { title?: unknown; text?: unknown };
+      if (!result || typeof result.text !== "string") return null;
+      return {
+        url: tab.url,
+        title: typeof result.title === "string" ? result.title.slice(0, 300) : tab.title,
+        text: result.text.slice(0, 3_500_000),
+      };
+    } catch {
+      return null;
+    }
+  }
+
   goBack(id: string): boolean {
     const tab = this.tabs.get(id);
     if (!tab?.view.webContents.canGoBack()) return false;
