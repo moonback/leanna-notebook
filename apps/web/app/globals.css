@@ -36,3 +36,383 @@
   }
   @keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
 }
+
+
+/* Navigation mobile masquée par défaut : aucun impact sur le desktop. */
+.mobile-bottom-nav { display: none; }
+
+/* --------------------------------------------------------------------------
+   Mobile experience — isolated below 768px. Desktop styles remain untouched.
+   -------------------------------------------------------------------------- */
+@media (max-width: 767px) {
+  html {
+    min-width: 320px;
+    overflow-x: clip;
+    scroll-padding-bottom: calc(5.25rem + env(safe-area-inset-bottom));
+  }
+
+  body {
+    min-width: 320px;
+    overflow-x: clip;
+    overscroll-behavior-x: none;
+  }
+
+  body:has(.mobile-bottom-nav) {
+    padding-bottom: calc(4.75rem + env(safe-area-inset-bottom));
+  }
+
+  button, [role="button"], a, input, select, textarea {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button:not([data-compact-touch="true"]),
+  [role="button"]:not([data-compact-touch="true"]) {
+    touch-action: manipulation;
+  }
+
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    max-width: 100%;
+    scroll-margin-bottom: 1rem;
+  }
+
+  input, select, textarea {
+    font-size: max(16px, 1em);
+  }
+
+  img, video, canvas, iframe {
+    max-width: 100%;
+  }
+
+  pre, code, table {
+    max-width: 100%;
+  }
+
+  pre {
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+  }
+
+  [role="dialog"] {
+    max-width: calc(100vw - 1rem);
+    max-height: calc(100dvh - 1rem - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    overscroll-behavior: contain;
+  }
+
+  .mobile-bottom-nav {
+    position: fixed;
+    z-index: 60;
+    inset-inline: 0;
+    bottom: 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    min-height: calc(4.15rem + env(safe-area-inset-bottom));
+    padding: 0.45rem max(0.75rem, env(safe-area-inset-right)) calc(0.45rem + env(safe-area-inset-bottom)) max(0.75rem, env(safe-area-inset-left));
+    border-top: 1px solid var(--border);
+    background: color-mix(in srgb, var(--surface-raised) 92%, transparent);
+    -webkit-backdrop-filter: blur(18px);
+    backdrop-filter: blur(18px);
+  }
+
+  .mobile-bottom-nav__item {
+    position: relative;
+    display: flex;
+    min-width: 0;
+    min-height: 3.1rem;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.2rem;
+    border-radius: 0.8rem;
+    color: var(--text-muted);
+    font-size: 0.68rem;
+    font-weight: 550;
+    text-decoration: none;
+    transition: color 180ms ease, background-color 180ms ease, transform 180ms ease;
+  }
+
+  .mobile-bottom-nav__icon {
+    display: grid;
+    width: 2rem;
+    height: 1.65rem;
+    place-items: center;
+    border-radius: 999px;
+    transition: background-color 180ms ease, transform 180ms ease;
+  }
+
+  .mobile-bottom-nav__item.is-active {
+    color: var(--accent);
+  }
+
+  .mobile-bottom-nav__item.is-active .mobile-bottom-nav__icon {
+    background: var(--accent-soft);
+    transform: translateY(-1px);
+  }
+
+  .mobile-bottom-nav__item:active {
+    transform: scale(0.96);
+  }
+
+  main {
+    min-width: 0;
+  }
+
+  /* Évite que les tableaux et grilles imposent leur largeur au viewport. */
+  main > *, main section, main article {
+    min-width: 0;
+  }
+
+  /* Les contenus de dialogue deviennent des feuilles confortables sur téléphone. */
+  [role="dialog"] {
+    width: calc(100vw - 1rem) !important;
+    max-width: calc(100vw - 1rem) !important;
+    max-height: calc(100dvh - 1rem - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    border-radius: 1.1rem;
+    padding: 1.1rem;
+    animation: mobile-dialog-in 200ms cubic-bezier(.2,.75,.25,1) both;
+  }
+
+  @keyframes mobile-dialog-in {
+    from { opacity: 0; scale: .985; }
+    to { opacity: 1; scale: 1; }
+  }
+
+  /* Entrées de listes et cartes : animation courte, sans déplacement de layout. */
+  main li {
+    animation: mobile-content-in 240ms ease both;
+  }
+
+  @keyframes mobile-content-in {
+    from { opacity: 0; transform: translate3d(0, 6px, 0); }
+    to { opacity: 1; transform: translate3d(0, 0, 0); }
+  }
+
+  /* Cible tactile minimale pour les actions icon-only existantes. */
+  header button[aria-label], main button[aria-label] {
+    min-width: 2.65rem;
+    min-height: 2.65rem;
+  }
+}
+
+@media (max-width: 380px) {
+  .mobile-bottom-nav { padding-inline: 0.4rem; }
+  .mobile-bottom-nav__item { font-size: 0.64rem; }
+}
+
+@media (max-width: 767px) and (orientation: landscape) {
+  .mobile-bottom-nav {
+    min-height: calc(3.5rem + env(safe-area-inset-bottom));
+    padding-top: 0.2rem;
+  }
+  .mobile-bottom-nav__item { min-height: 2.7rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-bottom-nav__item,
+  .mobile-bottom-nav__icon {
+    transition: none !important;
+  }
+  @media (max-width: 767px) {
+    main li,
+    [role="dialog"] {
+      animation: none !important;
+    }
+  }
+}
+
+
+/* Écrans de découverte et réglages : améliorations strictement mobiles. */
+@media (max-width: 767px) {
+  .mobile-discover-main {
+    gap: 1rem;
+    padding-top: 1rem;
+    padding-bottom: 1.5rem;
+  }
+
+  .mobile-discover-hero {
+    border-radius: 1rem;
+    padding: 1.25rem;
+  }
+
+  .mobile-discover-filters {
+    justify-content: flex-start;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    margin-inline: -0.25rem;
+    padding: 0.25rem;
+    scrollbar-width: none;
+    scroll-snap-type: x proximity;
+  }
+  .mobile-discover-filters::-webkit-scrollbar { display: none; }
+  .mobile-discover-filters > * { flex: 0 0 auto; scroll-snap-align: start; }
+
+  .mobile-discover-card-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .mobile-discover-card-actions > * { min-width: 0; }
+  .mobile-discover-card-actions button { width: 100%; }
+
+  .mobile-settings-main {
+    gap: 1rem;
+    padding-top: 1rem;
+    padding-bottom: 1.5rem;
+  }
+  .mobile-settings-account {
+    align-items: flex-start;
+    padding: 1rem;
+  }
+
+  .mobile-settings-tabs {
+    gap: 0.35rem;
+    margin-inline: -1rem;
+    padding: 0 1rem 0.65rem;
+    scroll-padding-inline: 1rem;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+  }
+  .mobile-settings-tabs [role="tab"] {
+    min-height: 2.75rem;
+    padding-inline: 0.85rem;
+    scroll-snap-align: start;
+  }
+  .mobile-settings-tabs [role="tab"][aria-selected="true"] {
+    box-shadow: inset 0 -2px 0 var(--accent);
+  }
+
+  .mobile-settings-content {
+    gap: 1rem;
+  }
+  .mobile-settings-content [role="tabpanel"] {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 380px) {
+  .mobile-discover-card-actions { grid-template-columns: 1fr; }
+}
+
+
+@media (max-width: 767px) {
+  .mobile-workspace-tabs {
+    min-height: calc(3.75rem + env(safe-area-inset-bottom));
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+  }
+  .mobile-workspace-tabs [role="tab"] {
+    min-height: 2.8rem;
+    border-radius: 0.75rem;
+  }
+  .mobile-workspace-tabs [role="tab"][data-state="active"] {
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+
+  .mobile-chat-composer {
+    padding: 0.65rem;
+    padding-bottom: max(0.65rem, env(safe-area-inset-bottom));
+    background: color-mix(in srgb, var(--surface-raised) 96%, transparent);
+  }
+  .mobile-chat-composer__form {
+    gap: 0.4rem;
+    border-radius: 1rem;
+    padding: 0.45rem;
+  }
+  .mobile-chat-composer__input {
+    min-height: 2.7rem;
+    max-height: min(9rem, 28dvh);
+    padding: 0.65rem 0.55rem;
+    line-height: 1.45;
+    overflow-y: auto;
+  }
+  .mobile-chat-composer__form button[type="submit"],
+  .mobile-chat-composer__form button[aria-label="Arrêter la réponse"] {
+    width: 2.7rem;
+    height: 2.7rem;
+    flex: 0 0 2.7rem;
+  }
+}
+
+
+/* Authentification : formulaire prioritaire, sans hauteur fixe face au clavier mobile. */
+@media (max-width: 767px) {
+  .mobile-auth-panel {
+    min-height: 100svh;
+    min-height: 100dvh;
+    padding: max(1rem, env(safe-area-inset-top)) 1.1rem max(1rem, env(safe-area-inset-bottom));
+  }
+  .mobile-auth-header {
+    min-height: 2.75rem;
+    gap: 0.75rem;
+  }
+  .mobile-auth-header > a:first-child {
+    min-height: 2.75rem;
+    align-items: center;
+  }
+  .mobile-auth-content {
+    flex: 0 0 auto;
+    justify-content: flex-start;
+    padding-top: clamp(1.5rem, 7svh, 3.5rem);
+    padding-bottom: 1.5rem;
+  }
+  .mobile-auth-footer {
+    margin-top: auto;
+    padding-top: 1rem;
+    line-height: 1.6;
+  }
+}
+
+@media (max-width: 380px) {
+  .mobile-auth-panel { padding-inline: 0.9rem; }
+  .mobile-auth-content { padding-top: 1.25rem; }
+}
+
+/* Studio vocal : feuille basse compacte ou plein écran, sans débordement horizontal. */
+@media (max-width: 767px) {
+  .mobile-voice-dialog[role="dialog"] {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    max-height: calc(100dvh - env(safe-area-inset-top)) !important;
+    padding: 0 !important;
+    border-radius: 1.25rem 1.25rem 0 0;
+    overflow: hidden;
+  }
+  .mobile-voice-dialog--sheet[role="dialog"] {
+    bottom: 0 !important;
+    top: auto !important;
+    left: 0 !important;
+    right: 0 !important;
+    height: auto !important;
+    padding-bottom: env(safe-area-inset-bottom) !important;
+  }
+  .mobile-voice-dialog--expanded[role="dialog"] {
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    border-radius: 0 !important;
+    padding-top: env(safe-area-inset-top) !important;
+    padding-bottom: env(safe-area-inset-bottom) !important;
+  }
+  .mobile-voice-dialog--expanded main {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .mobile-voice-dialog--expanded main > section {
+    gap: 1.25rem;
+    padding: 1.25rem 1rem;
+  }
+  .mobile-voice-dialog--expanded main > aside {
+    min-height: 11rem;
+    max-height: 38dvh;
+  }
+  .mobile-voice-dialog--expanded footer {
+    min-height: 2.75rem;
+    height: auto;
+    padding-top: 0.65rem;
+    padding-bottom: 0.65rem;
+    padding-right: 1rem;
+    padding-left: 1rem;
+  }
+}

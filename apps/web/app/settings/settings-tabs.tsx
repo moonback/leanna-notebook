@@ -36,13 +36,13 @@ export function SettingsTabs({ tabs }: { tabs: SettingsTab[] }) {
   const current = tabs.find((t) => t.id === active) ?? tabs[0]!;
 
   return (
-    <div className="grid items-start gap-6 lg:grid-cols-[16rem_minmax(0,1fr)] lg:gap-10">
+    <div className="mobile-settings-content grid items-start gap-6 lg:grid-cols-[16rem_minmax(0,1fr)] lg:gap-10">
       <div
         role="tablist"
         aria-label="Sections des réglages"
         aria-orientation="vertical"
         onKeyDown={onKeyDown}
-        className="flex gap-1 overflow-x-auto border-b pb-2 lg:sticky lg:top-[calc(var(--header-h)+1.5rem)] lg:flex-col lg:overflow-visible lg:border-b-0 lg:pb-0"
+        className="mobile-settings-tabs flex gap-1 overflow-x-auto border-b pb-2 lg:sticky lg:top-[calc(var(--header-h)+1.5rem)] lg:flex-col lg:overflow-visible lg:border-b-0 lg:pb-0"
       >
         {tabs.map((t) => {
           const selected = active === t.id;

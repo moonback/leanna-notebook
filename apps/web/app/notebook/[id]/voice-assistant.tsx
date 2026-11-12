@@ -536,9 +536,9 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
           title="Studio vocal"
           description="Une conversation naturelle avec vos sources."
           size="lg"
-          className={expanded
+          className={`mobile-voice-dialog ${expanded ? "mobile-voice-dialog--expanded" : "mobile-voice-dialog--sheet"} ${expanded
             ? "!inset-0 !h-[100dvh] !max-h-none !w-full !max-w-none !translate-x-0 !translate-y-0 !rounded-none !gap-0 !p-0 [&>div:first-child]:!sr-only"
-            : "!inset-x-0 !bottom-0 !left-0 !top-auto !h-auto !max-h-none !w-full !max-w-none !translate-x-0 !translate-y-0 !rounded-t-2xl !rounded-b-none !gap-0 !p-0 [&>div:first-child]:!sr-only"}
+            : "!inset-x-0 !bottom-0 !left-0 !top-auto !h-auto !max-h-none !w-full !max-w-none !translate-x-0 !translate-y-0 !rounded-t-2xl !rounded-b-none !gap-0 !p-0 [&>div:first-child]:!sr-only"}`}
         >
           {!expanded ? (
             <div className="flex min-h-[76px] items-center gap-3 border-t bg-surface-raised py-2.5 pl-3 pr-14 sm:pl-5 sm:pr-16">

@@ -3,7 +3,7 @@ import { ArrowLeft, Check, FileSearch, LockKeyhole, Network, Sparkles } from "lu
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <main className="min-h-dvh bg-bg text-text lg:grid lg:grid-cols-[minmax(0,1.05fr)_minmax(460px,0.95fr)]">
+    <main className="mobile-auth-layout min-h-dvh bg-bg text-text lg:grid lg:grid-cols-[minmax(0,1.05fr)_minmax(460px,0.95fr)]">
       <section className="relative hidden min-h-dvh overflow-hidden bg-[#172b3b] px-10 py-10 text-white lg:flex lg:flex-col xl:px-16">
         <div aria-hidden className="pointer-events-none absolute inset-0">
           <div className="absolute -left-40 top-1/4 size-[34rem] rounded-full bg-[#5c9eb0]/20 blur-[110px]" />
@@ -27,19 +27,19 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <div className="relative z-10 flex items-center justify-between text-xs text-white/40"><span>Leanna Notebook</span><span>Rechercher · Comprendre · Structurer</span></div>
       </section>
 
-      <section className="relative flex min-h-dvh flex-col px-5 py-6 sm:px-10 lg:px-12 xl:px-16">
-        <header className="mx-auto flex w-full max-w-[480px] items-center justify-between lg:mx-0 lg:max-w-none">
+      <section className="mobile-auth-panel relative flex min-h-dvh flex-col px-5 py-6 sm:px-10 lg:px-12 xl:px-16">
+        <header className="mobile-auth-header mx-auto flex w-full max-w-[480px] items-center justify-between lg:mx-0 lg:max-w-none">
           <Link href="/" className="inline-flex items-center gap-2 text-sm text-text-muted transition hover:text-text"><ArrowLeft size={16}/> Retour à l’accueil</Link>
           <Link href="/" className="inline-flex items-center gap-2 font-semibold tracking-tight lg:hidden"><span className="grid size-9 place-items-center overflow-hidden rounded-lg bg-white p-1 shadow-sm"><img src="/logo.png" alt="" className="size-full object-contain"/></span> Leanna Notebook</Link>
         </header>
-        <div className="mx-auto flex w-full max-w-[440px] flex-1 flex-col justify-center py-12 lg:mx-auto lg:max-w-[440px]">
+        <div className="mobile-auth-content mx-auto flex w-full max-w-[440px] flex-1 flex-col justify-center py-12 lg:mx-auto lg:max-w-[440px]">
           <div className="mb-8">
             <div className="mb-5 hidden size-14 place-items-center overflow-hidden rounded-xl bg-white p-1.5 shadow-sm lg:grid"><img src="/logo.png" alt="Logo Leanna Notebook" className="size-full object-contain"/></div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">Leanna Notebook</p>
             <div className="mt-3">{children}</div>
           </div>
         </div>
-        <footer className="mx-auto w-full max-w-[440px] pb-2 text-center text-xs leading-6 text-text-subtle lg:mx-auto">
+        <footer className="mobile-auth-footer mx-auto w-full max-w-[440px] pb-2 text-center text-xs leading-6 text-text-subtle lg:mx-auto">
           En continuant, vous acceptez nos <Link className="underline underline-offset-4 hover:text-text" href="/terms">Conditions</Link> et notre <Link className="underline underline-offset-4 hover:text-text" href="/privacy">Politique de confidentialité</Link>.
           <p className="mt-2">© {new Date().getFullYear()} Leanna Notebook</p>
         </footer>

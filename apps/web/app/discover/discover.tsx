@@ -64,11 +64,11 @@ export function Discover({ initial, loadError }: { initial: FeaturedNotebook[]; 
     <AppHeader>
       <SearchInput aria-label="Rechercher dans les notebooks à découvrir" placeholder="Rechercher un sujet ou un notebook" value={query} onChange={(e) => setQuery(e.target.value)} className="mx-auto w-full max-w-md" />
     </AppHeader>
-    <main className="mx-auto grid max-w-[var(--page-max-w)] gap-6 px-4 py-8 sm:px-6">
+    <main className="mobile-discover-main mx-auto grid max-w-[var(--page-max-w)] gap-6 px-4 py-8 sm:px-6">
       <Link href="/" className="inline-flex w-fit items-center gap-1.5 rounded-md text-sm text-text-muted transition-colors hover:text-text">
         <ArrowLeft aria-hidden className="size-4" /> Mes notebooks
       </Link>
-      <header className="relative overflow-hidden rounded-xl border bg-accent-soft px-6 py-8 sm:px-10 sm:py-10">
+      <header className="mobile-discover-hero relative overflow-hidden rounded-xl border bg-accent-soft px-6 py-8 sm:px-10 sm:py-10">
         <Sparkles aria-hidden className="pointer-events-none absolute -right-4 -top-4 size-40 text-accent opacity-10" />
         <div className="relative grid max-w-2xl gap-3">
           <Badge tone="accent" className="w-fit"><Sparkles aria-hidden className="size-3.5" /> Sélections éditoriales</Badge>
@@ -78,7 +78,7 @@ export function Discover({ initial, loadError }: { initial: FeaturedNotebook[]; 
         </div>
       </header>
       <div className="flex flex-wrap items-center justify-end gap-3">
-        <div role="group" aria-label="Filtres et tri" className="flex flex-wrap items-center gap-2">
+        <div role="group" aria-label="Filtres et tri" className="mobile-discover-filters flex flex-wrap items-center gap-2">
           <Button size="sm" variant={copyOnly ? "soft" : "secondary"} aria-pressed={copyOnly} onClick={() => setCopyOnly((v) => !v)}><Copy aria-hidden /> Copiables</Button>
           <Button size="sm" variant={sort === "recent" ? "soft" : "secondary"} aria-pressed={sort === "recent"} onClick={() => setSort("recent")}>Récents</Button>
           <Button size="sm" variant={sort === "alpha" ? "soft" : "secondary"} aria-pressed={sort === "alpha"} onClick={() => setSort("alpha")}>A–Z</Button>
@@ -107,7 +107,7 @@ export function Discover({ initial, loadError }: { initial: FeaturedNotebook[]; 
                   <p className="mt-2 line-clamp-5 whitespace-pre-wrap text-sm text-text-muted">{n.overview || "Un notebook sélectionné pour explorer ce sujet."}</p>
                 </div>
                 <p className="text-xs text-text-subtle">Ajouté le {new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", year: "numeric" }).format(new Date(n.createdAt))}</p>
-                <div className="flex flex-wrap gap-2">
+                <div className="mobile-discover-card-actions flex flex-wrap gap-2">
                   {n.publicSlug
                     ? <Button size="sm" variant="secondary" onClick={() => router.push(`/p/${n.publicSlug}`)}><BookOpen aria-hidden /> Explorer</Button>
                     : <Button size="sm" variant="secondary" onClick={() => void explore(n.id)} loading={busy === n.id}><BookOpen aria-hidden /> Explorer</Button>}
