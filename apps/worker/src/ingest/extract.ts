@@ -12,6 +12,32 @@ export type Extracted = { text: string; pageStarts: number[]; pageCount: number 
 export type PdfProgress = (page: number, total: number) => Promise<void> | void;
 export type PdfOcr = (file: Uint8Array, pageCount: number) => Promise<string>;
 
+export function parseOcrPages(recognized: string, pageCount: number): Pick<Extracted, "text" | "pageStarts" | "pageCount"> {
+  const markers = [...recognized.matchAll(/^\[PAGE\s+(\d+)\]\s*$/gim)];
+  if (!markers.length) {
+    const text = normalize(recognized);
+    if (!text) throw new PermanentError("ocr_empty_result");
+    return { text, pageStarts: [0], pageCount };
+  }
+  const pages: string[] = [];
+  for (let index = 0; index < markers.length; index++) {
+    const marker = markers[index]!;
+    const start = marker.index! + marker[0].length;
+    const end = markers[index + 1]?.index ?? recognized.length;
+    pages.push(normalize(recognized.slice(start, end)));
+  }
+  const pageStarts: number[] = [];
+  let text = "";
+  for (const [index, page] of pages.entries()) {
+    if (index > 0) text += PDF_PAGE_SEPARATOR;
+    pageStarts.push(text.length);
+    text += page;
+  }
+  if (!text.replace(/[\s\p{C}]/gu, "")) throw new PermanentError("ocr_empty_result");
+  return { text, pageStarts, pageCount };
+}
+
+
 const MAX_WORDS = 500_000;
 const PDF_PAGE_SEPARATOR = "\n\n";
 
@@ -104,29 +130,8 @@ async function fromPdf(buf: Uint8Array, onProgress?: PdfProgress, ocr?: PdfOcr):
   const printable = text.replace(/[\s\p{C}]/gu, "").length;
   if (printable < Math.max(20, pageCount * 2)) {
     if (!ocr) throw new PermanentError("needs_ocr", "PDF sans couche texte détectable : activez l'OCR OpenRouter dans les réglages pour traiter ce document.");
-    const recognized = (await ocr(buf, pageCount)).trim();
-    const markers = [...recognized.matchAll(/^\[PAGE\s+(\d+)\]\s*$/gim)];
-    if (!markers.length) {
-      const normalized = normalize(recognized);
-      if (!normalized) throw new PermanentError("ocr_empty_result");
-      return { text: normalized, pageStarts: [0], pageCount };
-    }
-    const ocrPages: string[] = [];
-    for (let index = 0; index < markers.length; index++) {
-      const marker = markers[index]!;
-      const start = marker.index! + marker[0].length;
-      const end = markers[index + 1]?.index ?? recognized.length;
-      ocrPages.push(normalize(recognized.slice(start, end)));
-    }
-    const ocrPageStarts: number[] = [];
-    let ocrText = "";
-    for (const [index, page] of ocrPages.entries()) {
-      if (index > 0) ocrText += PDF_PAGE_SEPARATOR;
-      ocrPageStarts.push(ocrText.length);
-      ocrText += page;
-    }
-    if (!ocrText.replace(/[\s\p{C}]/gu, "")) throw new PermanentError("ocr_empty_result");
-    return { text: ocrText, pageStarts: ocrPageStarts, pageCount };
+    const recognized = await ocr(buf, pageCount);
+    return parseOcrPages(recognized, pageCount);
   }
   return { text, pageStarts, pageCount };
 }
