@@ -14,6 +14,7 @@ import { UsageCard, type PlanLimits } from "./usage-card";
 import { OpenRouterSettings } from "./openrouter-settings";
 import { OcrSettings } from "./ocr-settings";
 import { ImageGenerationSettings } from "./image-generation-settings";
+import { PasswordForm } from "./password-form";
 import { SystemPromptsSettings } from "./system-prompts";
 
 export const metadata: Metadata = { title: "Réglages · Notebook" };
@@ -60,7 +61,14 @@ export default async function SettingsPage() {
               label: "Préférences",
               description: "Profil, langue, apparence et notifications.",
               icon: <User />,
-              content: profile ? <ProfileForm initial={{ ...profile, theme: profile.theme as "light" | "dark" | "system" }} /> : <p role="alert" className="text-sm text-danger">Profil introuvable.</p>,
+              content: profile ? <ProfileForm showPreferences initial={{ ...profile, theme: profile.theme as "light" | "dark" | "system" }} /> : <p role="alert" className="text-sm text-danger">Profil introuvable.</p>,
+            },
+            {
+              id: "security",
+              label: "Sécurité",
+              description: "Protégez votre compte et modifiez votre mot de passe.",
+              icon: <User />,
+              content: <PasswordForm />,
             },
             {
               id: "plan",

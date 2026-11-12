@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Compass, Settings } from "lucide-react";
+import { Compass, Settings, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FeedbackButton } from "./feedback-button";
 import { SignOutButton } from "./signout-button";
@@ -24,6 +24,9 @@ export function AppHeader({ children, notebookId }: { children?: React.ReactNode
           </Button>
           <div id="app-header-notebook-actions" className="flex items-center empty:hidden" />
           <FeedbackButton notebookId={notebookId} />
+          <Button asChild variant="ghost" size="icon" aria-label="Mon profil" title="Mon profil">
+            <Link href="/profile"><UserRound aria-hidden /></Link>
+          </Button>
           <Button asChild variant="ghost" size="icon" aria-label="Réglages">
             <Link href="/settings"><Settings aria-hidden /></Link>
           </Button>

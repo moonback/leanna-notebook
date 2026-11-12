@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import * as React from "react";
 import { Monitor, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -23,7 +23,7 @@ function applyTheme(theme: Theme) {
 }
 
 /** Préférences du compte (A01, J01, J02) : enregistrées via PATCH /api/v1/me. */
-export function ProfileForm({ initial }: { initial: Profile }) {
+export function ProfileForm({ initial, showPreferences = false }: { initial: Profile; showPreferences?: boolean }) {
   const [saved, setSaved] = React.useState(initial);
   const [values, setValues] = React.useState(initial);
   const [errors, setErrors] = React.useState<Record<string, string>>({});
@@ -79,8 +79,16 @@ export function ProfileForm({ initial }: { initial: Profile }) {
           </select>
           {errors.output_language && <p role="alert" className="mt-1.5 text-xs font-medium text-danger">{errors.output_language}</p>}
         </SettingsRow>
+        <SettingsFooter>
+          <p className="text-xs text-text-subtle" aria-live="polite">{dirty ? "Modifications non enregistrées" : "Tout est à jour"}</p>
+          <div className="flex gap-2">
+            <Button type="button" variant="ghost" disabled={!dirty || saving} onClick={() => { setValues(saved); applyTheme(saved.theme); setErrors({}); }}>Annuler</Button>
+            <Button type="submit" loading={saving} disabled={!dirty}>Enregistrer</Button>
+          </div>
+        </SettingsFooter>
       </SettingsSection>
 
+      {showPreferences && (<>
       <SettingsSection title="Apparence" description="Choisissez le thème de l’interface." className="mt-6">
         <SettingsRow label="Thème" description="« Système » suit le réglage de votre appareil.">
           <div role="radiogroup" aria-label="Thème" className="grid grid-cols-3 gap-2">
@@ -118,14 +126,8 @@ export function ProfileForm({ initial }: { initial: Profile }) {
             <Switch aria-label="Notification de fin de génération" checked={values.web_notifications} onCheckedChange={(v) => setValues({ ...values, web_notifications: v })} />
           </div>
         </SettingsRow>
-        <SettingsFooter>
-          <p className="text-xs text-text-subtle" aria-live="polite">{dirty ? "Modifications non enregistrées" : "Tout est à jour"}</p>
-          <div className="flex gap-2">
-            <Button type="button" variant="ghost" disabled={!dirty || saving} onClick={() => { setValues(saved); applyTheme(saved.theme); setErrors({}); }}>Annuler</Button>
-            <Button type="submit" loading={saving} disabled={!dirty}>Enregistrer</Button>
-          </div>
-        </SettingsFooter>
       </SettingsSection>
+      </>)}
     </form>
   );
 }
