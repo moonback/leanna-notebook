@@ -15,7 +15,7 @@ const MAX_WORDS = 500_000;
 const PDF_PAGE_SEPARATOR = "\n\n";
 
 function finalize(e: Extracted): Extracted {
-  const words = e.text.split(/\\s+/).filter(Boolean).length;
+  const words = e.text.split(/\s+/).filter(Boolean).length;
   if (words === 0) throw new PermanentError("empty_content", "Aucun texte exploitable dans cette source.");
   if (words > MAX_WORDS) throw new PermanentError("too_many_words", "Plus de 500 000 mots.");
   return e;
@@ -34,18 +34,19 @@ export function formatPdfPage(items: PdfTextItem[]): string {
   let previousEndX: number | null = null;
 
   for (const item of items) {
-    const value = (item.str ?? "").replace(/[\\t ]+/g, " ");
+    const value = (item.str ?? "").replace(/[\t ]+/g, " ");
     if (!value) continue;
     const x = Number.isFinite(item.transform?.[4]) ? item.transform![4] : null;
     const y = Number.isFinite(item.transform?.[5]) ? item.transform![5] : null;
     const newLine = output.length > 0 && y !== null && previousY !== null && Math.abs(y - previousY) > 2.5;
-    if (newLine || item.hasEOL) {
-      output = output.trimEnd() + "\\n";
-    } else if (output.length > 0 && !output.endsWith("\\n")) {
+    if (newLine) {
+      output = output.trimEnd() + "\n";
+    } else if (output.length > 0 && !output.endsWith("\n")) {
       const gap = x !== null && previousEndX !== null ? x - previousEndX : 0;
       if (gap > 1.5 && !output.endsWith(" ")) output += " ";
     }
     output += value;
+    if (item.hasEOL) output += "\n";
     previousY = y ?? previousY;
     previousEndX = x !== null ? x + (item.width ?? 0) : null;
   }
@@ -64,9 +65,7 @@ async function fromPdf(buf: Uint8Array, onProgress?: PdfProgress): Promise<Extra
     throw new PermanentError(/password/i.test(String(e)) ? "protected_pdf" : "unreadable_file");
   }
 
-  const pageStarts: number[] = [];
   const pageTexts: string[] = [];
-  let totalChars = 0;
   const pageCount = pdf.numPages;
 
   try {
@@ -77,9 +76,7 @@ async function fromPdf(buf: Uint8Array, onProgress?: PdfProgress): Promise<Extra
         const content = await page.getTextContent();
         const items = (content.items ?? []) as PdfTextItem[];
         const pageText = formatPdfPage(items);
-        pageStarts.push(totalChars);
         pageTexts.push(pageText);
-        totalChars += pageText.length + PDF_PAGE_SEPARATOR.length;
       } finally {
         page.cleanup?.();
       }
@@ -91,8 +88,15 @@ async function fromPdf(buf: Uint8Array, onProgress?: PdfProgress): Promise<Extra
     pdf.cleanup?.();
   }
 
-  const text = pageTexts.map((page) => page.trim()).join(PDF_PAGE_SEPARATOR);
-  const printable = text.replace(/[\\s\\p{C}]/gu, "").length;
+  const normalizedPages = pageTexts.map((page) => normalize(page));
+  const pageStarts: number[] = [];
+  let text = "";
+  for (const [index, page] of normalizedPages.entries()) {
+    if (index > 0) text += PDF_PAGE_SEPARATOR;
+    pageStarts.push(text.length);
+    text += page;
+  }
+  const printable = text.replace(/[\s\p{C}]/gu, "").length;
   if (printable < Math.max(20, pageCount * 2)) {
     throw new PermanentError("needs_ocr", "PDF sans couche texte détectable : un moteur OCR doit être configuré pour traiter ce document.");
   }
@@ -127,7 +131,7 @@ export async function extract(
         timeRanges.push({ char_start: start, char_end: offset, start_ms: segment.start_ms, end_ms: segment.end_ms });
         if (index < transcript.segments.length - 1) offset += 2;
         return clean;
-      }).join("\\n\\n") : normalize(transcript.text);
+      }).join("\n\n") : normalize(transcript.text);
       return finalize({ text, pageStarts: [], pageCount: null, timeRanges });
     }
     case "note":
