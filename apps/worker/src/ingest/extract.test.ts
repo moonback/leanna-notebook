@@ -19,6 +19,14 @@ describe("formatPdfPage", () => {
     ])).toBe("ABC123");
   });
 
+  it("préserve les séparations larges entre colonnes de tableaux", () => {
+    expect(formatPdfPage([
+      { str: "Article", transform: [1, 0, 0, 1, 0, 100], width: 30 },
+      { str: "Quantité", transform: [1, 0, 0, 1, 80, 100], width: 35 },
+      { str: "Prix", transform: [1, 0, 0, 1, 160, 100], width: 20 },
+    ])).toBe("Article | Quantité | Prix");
+  });
+
   it("ignore les éléments vides et les pages sans texte", () => {
     expect(formatPdfPage([{ str: "" }, { str: "   " }])).toBe("");
   });
