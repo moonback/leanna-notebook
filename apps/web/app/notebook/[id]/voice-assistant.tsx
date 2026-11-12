@@ -77,6 +77,27 @@ function floatToPcm16(input: Float32Array) {
   return new Uint8Array(buffer);
 }
 
+/** Petit carillon à deux notes joué quand la conversation vocale devient active. */
+function playActivationChime(ctx: AudioContext) {
+  try {
+    const notes = [660, 880];
+    notes.forEach((frequency, i) => {
+      const start = ctx.currentTime + 0.02 + i * 0.12;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = frequency;
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(0.15, start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.22);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(start);
+      osc.stop(start + 0.25);
+    });
+  } catch { /* le son est un confort, jamais bloquant */ }
+}
+
 export function VoiceAssistant({ notebookId, conversationId, disabled = false, onOpenCitation }: { notebookId: string; conversationId: string; disabled?: boolean; onOpenCitation: (passage: Passage) => void }) {
   const [open, setOpen] = React.useState(false);
   const [expanded, setExpanded] = React.useState(false);
@@ -362,6 +383,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
       source.connect(node);
       node.connect(ctx.destination);
       setState("listening");
+      playActivationChime(ctx);
       setStatus("Connecté · je vous écoute. Parlez naturellement.");
       ws.onclose = () => { if (mounted.current && !intentionalClose.current) { stop(); setStatus("Session vocale terminée. Relancez-la pour continuer."); } };
       ws.onerror = () => { if (mounted.current) setStatus("Connexion vocale instable… vérifiez votre réseau."); };
@@ -531,7 +553,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
         <AudioLines aria-hidden /> {state === "idle" || state === "error" ? "Mode vocal" : "Studio vocal actif"}
       </Button>
 
-      <Dialog open={open} onOpenChange={(value) => { if (!value && state !== "idle" && state !== "error") stop(); setOpen(value); if (!value) setExpanded(false); }}>
+      <Dialog open={open} onOpenChange={(value) => { setOpen(value); if (!value) setExpanded(false); }}>
         <DialogContent
           title="Studio vocal"
           description="Une conversation naturelle avec vos sources."
