@@ -91,19 +91,19 @@ export function Dashboard({ initial, loadError, initialView }: { initial: Notebo
       <SearchInput aria-label="Rechercher un notebook" placeholder="Rechercher" value={query} onChange={(e) => setQuery(e.target.value)} className="mx-auto w-full max-w-md" />
       <Button size="sm" className="shrink-0" onClick={create} loading={creating}><Plus aria-hidden /> <span className="hidden sm:inline">Nouveau notebook</span><span className="sr-only sm:hidden">Nouveau notebook</span></Button>
     </AppHeader>
-    <main className="mx-auto grid max-w-[var(--page-max-w)] gap-6 px-4 py-8 sm:px-6">
+    <main className="mobile-dashboard-main mx-auto grid max-w-[var(--page-max-w)] gap-6 px-4 py-8 sm:px-6">
       {loadError && <Alert tone="danger" title="Impossible de charger vos notebooks" action={<Button size="sm" variant="secondary" onClick={() => router.refresh()}>Réessayer</Button>} />}
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="mobile-dashboard-toolbar flex flex-wrap items-center justify-between gap-3">
         <Tabs value={tab} onValueChange={(v) => { if (v === "discover") router.push("/discover"); else setTab(v as Tab); }}>
-          <TabsList aria-label="Filtrer les notebooks">
+          <TabsList aria-label="Filtrer les notebooks" className="mobile-dashboard-tabs">
             <TabsTrigger value="all">Tous</TabsTrigger>
             <TabsTrigger value="mine">Les miens</TabsTrigger>
             <TabsTrigger value="shared">Partagés avec moi</TabsTrigger>
             <TabsTrigger value="discover">Découvrir</TabsTrigger>
           </TabsList>
         </Tabs>
-        <div className="flex w-full items-center gap-2 sm:w-auto">
+        <div className="mobile-dashboard-view-controls flex w-full items-center gap-2 sm:w-auto">
           <div role="group" aria-label="Affichage" className="flex shrink-0 rounded-md border p-0.5">
             <Button size="icon-sm" variant={view === "grid" ? "soft" : "ghost"} aria-label="Grille" aria-pressed={view === "grid"} onClick={() => changeView("grid")}><LayoutGrid aria-hidden /></Button>
             <Button size="icon-sm" variant={view === "list" ? "soft" : "ghost"} aria-label="Liste" aria-pressed={view === "list"} onClick={() => changeView("list")}><List aria-hidden /></Button>
@@ -120,10 +120,10 @@ export function Dashboard({ initial, loadError, initialView }: { initial: Notebo
       ) : visible.length === 0 ? (
         <Card><EmptyState icon={<SearchX />} title="Aucun résultat">Aucun notebook ne correspond à ce filtre.</EmptyState></Card>
       ) : view === "grid" ? (
-        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <ul className="mobile-dashboard-grid grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {visible.map((n) => (
             <li key={n.id}>
-              <Card interactive className="grid h-full gap-6 p-4">
+              <Card interactive className="mobile-dashboard-card grid h-full gap-6 p-4">
                 <div className="flex items-start justify-between gap-2">
                   <span aria-hidden className="grid size-10 place-items-center rounded-lg bg-accent-soft text-lg">{n.emoji ?? <BookOpen className="size-4 text-on-accent-soft" />}</span>
                   {actions(n)}
