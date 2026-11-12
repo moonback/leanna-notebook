@@ -43,10 +43,15 @@ export class BrowserManager {
   private activeTabId: string | null = null;
   private bounds: BrowserBounds = DEFAULT_BOUNDS;
   private readonly onState: (state: BrowserState) => void;
+  private readonly onVisit: (visit: { url: string; title: string; isPrivate: boolean }) => void;
   private readonly configuredSessions = new WeakSet<Session>();
 
-  constructor(onState: (state: BrowserState) => void) {
+  constructor(
+    onState: (state: BrowserState) => void,
+    onVisit: (visit: { url: string; title: string; isPrivate: boolean }) => void = () => undefined,
+  ) {
     this.onState = onState;
+    this.onVisit = onVisit;
   }
 
   attach(window: BrowserWindow): void {
@@ -269,7 +274,10 @@ export class BrowserManager {
       this.publish();
     });
     const updateUrl = (_event: Electron.Event, url: string) => {
-      if (isSafeBrowserUrl(url)) tab.url = url;
+      if (isSafeBrowserUrl(url)) {
+        tab.url = url;
+        this.onVisit({ url, title: tab.title || url, isPrivate: tab.isPrivate });
+      }
       tab.canGoBack = contents.canGoBack();
       tab.canGoForward = contents.canGoForward();
       this.publish();
