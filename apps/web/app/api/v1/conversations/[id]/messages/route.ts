@@ -124,6 +124,9 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
     throw e;
   }
 
+  const { data: usageId, error: qe } = await db.rpc("reserve_usage", { p_ws: conv.workspace_id, p_user: user.id, p_feature: "chat" });
+  if (qe) throw qe;
+
   // Une demande explicite de livrable déclenche le moteur Studio existant depuis le chat.
   // Les mêmes contrôles de rôle, de notebook, de sources et de quota que le Studio s'appliquent.
   const artifactRequest = detectStudioArtifactRequest(text);
@@ -143,13 +146,11 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
       p_source_ids: selected.map((s) => s.id),
       p_idempotency_key: null,
     });
-    if (artifactError) throw artifactError;
+    if (artifactError) { await db.rpc("settle_usage", { p_id: usageId, p_status: "refunded" }); throw artifactError; }
     requestedArtifact = { id: artifactId as string, type: artifactRequest.type };
     log.info("chat.studio_artifact_requested", { notebook_id: conv.notebook_id, artifact_id: artifactId, type: artifactRequest.type });
   }
 
-  const { data: usageId, error: qe } = await db.rpc("reserve_usage", { p_ws: conv.workspace_id, p_user: user.id, p_feature: "chat" });
-  if (qe) throw qe;
 
   const base = { workspace_id: conv.workspace_id, notebook_id: conv.notebook_id, conversation_id: conv.id, user_id: user.id };
   const { data: history } = await db.from("chat_messages").select("role, content").eq("conversation_id", conv.id)
