@@ -4,6 +4,7 @@ import type {
   DesktopBrowserState,
   DesktopBrowserVisit,
   DesktopBrowserBookmark,
+  DesktopBrowserPageContent,
   DesktopFileFilter,
   DesktopUpdateStatus,
 } from "./shared/desktop-api";
@@ -40,6 +41,7 @@ const api: DesktopApi = {
   browserStop: (id: string) => ipcRenderer.invoke("browser:stop", id),
   setBrowserBounds: (bounds) => ipcRenderer.invoke("browser:set-bounds", bounds),
   setBrowserVisible: (visible: boolean) => ipcRenderer.invoke("browser:set-visible", visible),
+  extractBrowserPage: (id: string) => ipcRenderer.invoke("browser:extract-page", id) as Promise<DesktopBrowserPageContent | null>,
   getBrowserHistory: () => ipcRenderer.invoke("browser:get-history") as Promise<DesktopBrowserVisit[]>,
   clearBrowserHistory: () => ipcRenderer.invoke("browser:clear-history"),
   getBrowserBookmarks: () => ipcRenderer.invoke("browser:get-bookmarks") as Promise<DesktopBrowserBookmark[]>,
