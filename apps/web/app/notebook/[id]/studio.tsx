@@ -116,7 +116,7 @@ export function Studio({ notebookId, canEdit, sourceIds, sourceTitle, onOpenCita
   async function generate(type: ArtType, options: Record<string, string>, customPrompt?: string) {
     const r = await fetch(`/api/v1/notebooks/${notebookId}/artifacts`, {
       method: "POST", headers: { "content-type": "application/json", "idempotency-key": crypto.randomUUID() },
-      body: JSON.stringify({ type, options, sourceIds: (type === "infographic" || type === "image") && options.sourceScope === "all" ? [] : sourceIds, ...(customPrompt ? { customPrompt } : {}) }),
+      body: JSON.stringify({ type, options, sourceIds: options.sourceScope === "all" ? [] : sourceIds, ...(customPrompt ? { customPrompt } : {}) }),
     });
     const j = await r.json().catch(() => ({}));
     if (r.status === 429) { toast({ title: "Quota atteint", description: "Changez d’offre dans les réglages ou réessayez plus tard.", tone: "error" }); return false; }
@@ -349,7 +349,7 @@ function CreateDialog({ type, notebookId, sourceIds, referenceImageId, onClose, 
     return () => { active = false; };
   }, [type, notebookId, sourceKey]);
   React.useEffect(() => {
-    setOpts(type === "report" ? { template: "briefing", reportFormat: "document" } : type === "flashcards" || type === "quiz" ? { difficulty: "medium", count: "standard" } : type === "audio" ? { format: "deep_dive", duration: "standard", style: "accessible" } : type === "infographic" ? { language: "fr", orientation: "landscape", visualStyle: "auto", detailLevel: "standard", sourceScope: "selected" } : type === "image" ? { orientation: "landscape", sourceScope: "selected" } : {});
+    setOpts(type === "report" ? { template: "briefing", reportFormat: "document" } : type === "flashcards" || type === "quiz" ? { difficulty: "medium", count: "standard", language: "fr", sourceScope: "selected" } : type === "audio" ? { format: "deep_dive", duration: "standard", style: "accessible" } : type === "infographic" ? { language: "fr", orientation: "landscape", visualStyle: "auto", detailLevel: "standard", sourceScope: "selected" } : type === "image" ? { orientation: "landscape", sourceScope: "selected" } : type === "comparison" ? { language: "fr", sourceScope: "selected" } : {});
     setPrompt("");
   }, [type]);
   if (!type) return null;
@@ -501,7 +501,17 @@ function CreateDialog({ type, notebookId, sourceIds, referenceImageId, onClose, 
             </div>
           )}
           {type === "audio" && <div className="grid gap-4 sm:grid-cols-2">{choice("format", "Format du podcast", [["deep_dive", "Deep Dive · approfondi"], ["brief", "Brief · essentiel"], ["critique", "Critique · analyse"], ["debate", "Débat · points de vue"]])}{choice("duration", "Durée cible", [["short", "Court · 5 min"], ["standard", "Standard · 10 min"], ["long", "Long · 15 min"]])}{choice("style", "Ton", [["accessible", "Accessible et pédagogique"], ["professional", "Professionnel et précis"], ["dynamic", "Dynamique et vivant"]])}</div>}
-          {(type === "flashcards" || type === "quiz") && <div className="grid gap-4 sm:grid-cols-2">{choice("difficulty", "Difficulté", [["easy", "Facile"], ["medium", "Moyenne"], ["hard", "Difficile"]])}{choice("count", "Quantité", [["fewer", "Moins"], ["standard", "Standard"], ["more", "Plus"]])}</div>}
+          {(type === "flashcards" || type === "quiz") && <div className="grid gap-4 sm:grid-cols-2">
+            {/* le worker plafonne le quiz à 20 questions */}
+            {choice("count", type === "quiz" ? "Nombre de questions" : "Nombre de cartes", [["fewer", "Moins · 8"], ["standard", "Standard · 15"], ["more", type === "quiz" ? "Plus · 20" : "Plus · 25"]])}
+            {choice("difficulty", "Niveau de difficulté", [["easy", "Facile"], ["medium", "Moyen"], ["hard", "Difficile"]])}
+            {choice("language", "Langue", [["fr", "Français"], ["en", "Anglais"], ["es", "Espagnol"], ["de", "Allemand"], ["it", "Italien"], ["pt", "Portugais"], ["nl", "Néerlandais"]])}
+            {choice("sourceScope", "Sources", [["selected", `${sourceIds.length} source${sourceIds.length > 1 ? "s" : ""} sélectionnée${sourceIds.length > 1 ? "s" : ""}`], ["all", "Toutes les sources prêtes"]])}
+          </div>}
+          {type === "comparison" && <div className="grid gap-4 sm:grid-cols-2">
+            {choice("language", "Sélectionnez une langue", [["fr", "Français"], ["en", "Anglais"], ["es", "Espagnol"], ["de", "Allemand"], ["it", "Italien"], ["pt", "Portugais"], ["nl", "Néerlandais"]])}
+            {choice("sourceScope", "Sources", [["selected", `${sourceIds.length} source${sourceIds.length > 1 ? "s" : ""} sélectionnée${sourceIds.length > 1 ? "s" : ""}`], ["all", "Toutes les sources prêtes"]])}
+          </div>}
           {type === "image" && <section className="grid gap-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div><h3 className="text-sm font-semibold">Idées adaptées à vos sources</h3><p className="text-xs text-text-muted">Leanna analyse le contenu du notebook pour proposer des concepts visuels pertinents.</p></div>
@@ -517,9 +527,17 @@ function CreateDialog({ type, notebookId, sourceIds, referenceImageId, onClose, 
               </button>)}
             </div> : imageSuggestionsLoading ? <div className="h-16 animate-pulse rounded-xl bg-surface-raised" /> : <p className="rounded-lg bg-surface-raised p-3 text-xs text-text-muted">{imageSuggestionsError ? ({ openrouter_not_configured: "Clé API OpenRouter absente côté serveur.", chat_model_not_configured: "Aucun modèle de conversation n’est configuré. Choisissez-en un dans Réglages → Intelligence artificielle.", openrouter_invalid_key: "La clé API OpenRouter est invalide.", openrouter_insufficient_credits: "Votre compte OpenRouter n’a plus de crédits.", openrouter_chat_model_unavailable: "Le modèle de conversation sélectionné n’est pas disponible sur OpenRouter.", openrouter_rate_limited: "OpenRouter limite temporairement les requêtes. Réessayez dans quelques instants.", image_suggestions_disabled: "Les suggestions automatiques sont désactivées dans Réglages → Fonctionnalités → Génération d’images.", no_ready_sources: "Aucune source prête sélectionnée. Sélectionnez des sources ou choisissez « Toutes les sources prêtes ».", no_source_content: "Les sources sélectionnées ne contiennent pas encore de texte exploitable.", image_suggestions_provider_error: "OpenRouter a rencontré une erreur. Vérifiez les journaux serveur pour le détail." } as Record<string, string>)[imageSuggestionsError] ?? "Suggestions indisponibles. Vérifiez votre configuration OpenRouter et les sources, ou rédigez votre propre description." : "Ajoutez ou sélectionnez des sources prêtes pour obtenir des idées visuelles adaptées."}</p>}
           </section>}
-          <Field id="opt-prompt" label={type === "image" ? "Décrivez l’image à générer" : type === "infographic" ? "Décrivez l’infographie que vous souhaitez créer" : type === "report" ? "Personnaliser le modèle (facultatif)" : "Consignes (facultatif)"} hint={type === "image" ? "Choisissez une idée proposée ou décrivez votre propre image." : type === "infographic" ? undefined : type === "report" ? "Public visé, ton, plan souhaité, longueur ou éléments à mettre en avant…" : "Public visé, angle, thèmes à privilégier…"}>
-            <Textarea value={prompt} maxLength={4000} onChange={(e) => setPrompt(e.target.value)} placeholder={type === "image" ? "Choisissez une idée ci-dessus ou décrivez l’image souhaitée…" : type === "infographic" ? "Indiquez le style, la couleur ou le thème principal : « Utilise un thème de couleurs bleu et mets en avant les… »" : type === "report" ? "Ex. : rédiger pour une direction, avec une synthèse exécutive et des recommandations concrètes." : "Ex. : pour un public débutant, insister sur la sécurité."} />
+          <Field id="opt-prompt" label={type === "image" ? "Décrivez l’image à générer" : type === "infographic" ? "Décrivez l’infographie que vous souhaitez créer" : type === "report" ? "Personnaliser le modèle (facultatif)" : type === "flashcards" || type === "quiz" ? "Quel est le thème ?" : type === "comparison" ? "Décrivez la table de données que vous souhaitez créer" : "Consignes (facultatif)"} hint={type === "image" ? "Choisissez une idée proposée ou décrivez votre propre image." : type === "infographic" ? undefined : type === "report" ? "Public visé, ton, plan souhaité, longueur ou éléments à mettre en avant…" : "Public visé, angle, thèmes à privilégier…"}>
+            <Textarea value={prompt} maxLength={4000} onChange={(e) => setPrompt(e.target.value)} placeholder={type === "image" ? "Choisissez une idée ci-dessus ou décrivez l’image souhaitée…" : type === "infographic" ? "Indiquez le style, la couleur ou le thème principal : « Utilise un thème de couleurs bleu et mets en avant les… »" : type === "report" ? "Ex. : rédiger pour une direction, avec une synthèse exécutive et des recommandations concrètes." : type === "flashcards" ? "Utilisez le recto pour le nom de la fonctionnalité et le verso pour ses prérequis." : type === "comparison" ? "Colonnes souhaitées, critères de comparaison, regroupements…" : "Ex. : pour un public débutant, insister sur la sécurité."} />
           </Field>
+          {type === "comparison" && <section className="grid gap-2">
+            <h3 className="text-sm font-medium">À essayer</h3>
+            {[
+              "Crée un tableau avec les principales conclusions de ces articles de recherche, en utilisant les colonnes suivantes : titre, auteur, résultat clé",
+              "Extraie les citations les plus importantes de mes lectures, en les regroupant par thème et par auteur",
+              "Liste les destinations de vacances en Italie avec la ville, la meilleure période pour visiter, les attractions et le coût",
+            ].map((idea) => <button key={idea} type="button" onClick={() => setPrompt(idea)} className={cn("rounded-lg border p-3 text-left text-xs leading-5 transition-colors hover:border-accent hover:bg-accent-soft/40", prompt === idea ? "border-accent bg-accent-soft" : "border-border bg-surface")}>{idea}</button>)}
+          </section>}
           {type === "image" && <section className="grid gap-4 rounded-xl border border-border bg-surface-raised/40 p-4" aria-label="Réglages de l’image">
             <div className="flex items-center justify-between gap-2">
               <h3 className="text-sm font-semibold">Réglages de l’image</h3>
