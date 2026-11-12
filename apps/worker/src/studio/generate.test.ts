@@ -47,6 +47,21 @@ describe("toContent (validation des sorties du modèle)", () => {
     expect(messages[0].content).toContain("public débutant");
     expect(messages[1].content).toContain('<passage n="1">');
   });
+  it("les champs du Studio arrivent dans la consigne", () => {
+    const content = (type: string, o: Record<string, string>) => buildPrompt(type, o, null, "x", "fr").messages[0].content;
+    expect(content("faq", { count: "more" })).toContain("Nombre de questions demandé : 15");
+    expect(content("glossary", {})).toContain("environ 20");
+    expect(content("study_plan", { days: "14" })).toContain("14 jours");
+    expect(content("editorial", { editorialFormat: "newsletter", style: "dynamic" })).toMatch(/newsletter\. Ton : dynamique/);
+    expect(content("diagram", { direction: "LR" })).toContain("flowchart LR");
+    expect(content("timeline", { days: "14" })).not.toContain("jours.");
+  });
+  it("le quiz respecte le type de questions demandé", () => {
+    const content = (o: Record<string, string>) => buildPrompt("quiz", o, null, "x", "fr").messages[0].content;
+    expect(content({})).toContain("questions à 4 choix");
+    expect(content({ questionTypes: "true_false" })).toContain('["Vrai","Faux"]');
+    expect(content({ questionTypes: "mixed" })).toContain("mêlant QCM");
+  });
 });
 
 const envFile = new URL("../../.env", import.meta.url);

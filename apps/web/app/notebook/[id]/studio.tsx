@@ -349,7 +349,8 @@ function CreateDialog({ type, notebookId, sourceIds, referenceImageId, onClose, 
     return () => { active = false; };
   }, [type, notebookId, sourceKey]);
   React.useEffect(() => {
-    setOpts(type === "report" ? { template: "briefing", reportFormat: "document" } : type === "flashcards" || type === "quiz" ? { difficulty: "medium", count: "standard", language: "fr", sourceScope: "selected" } : type === "audio" ? { format: "deep_dive", duration: "standard", style: "accessible" } : type === "infographic" ? { language: "fr", orientation: "landscape", visualStyle: "auto", detailLevel: "standard", sourceScope: "selected" } : type === "image" ? { orientation: "landscape", sourceScope: "selected" } : type === "comparison" ? { language: "fr", sourceScope: "selected" } : {});
+    const base = { language: "fr", sourceScope: "selected" };
+    setOpts(type === "report" ? { ...base, template: "briefing", reportFormat: "document" } : type === "flashcards" || type === "quiz" || type === "faq" || type === "glossary" ? { ...base, difficulty: "medium", count: "standard" } : type === "audio" ? { format: "deep_dive", duration: "standard", style: "accessible" } : type === "infographic" ? { language: "fr", orientation: "landscape", visualStyle: "auto", detailLevel: "standard", sourceScope: "selected" } : type === "image" ? { orientation: "landscape", sourceScope: "selected" } : type === "study_plan" ? { ...base, days: "7" } : type === "editorial" ? { ...base, editorialFormat: "blog_post", style: "accessible" } : type === "diagram" ? { ...base, direction: "TD" } : base);
     setPrompt("");
   }, [type]);
   if (!type) return null;
@@ -501,14 +502,17 @@ function CreateDialog({ type, notebookId, sourceIds, referenceImageId, onClose, 
             </div>
           )}
           {type === "audio" && <div className="grid gap-4 sm:grid-cols-2">{choice("format", "Format du podcast", [["deep_dive", "Deep Dive · approfondi"], ["brief", "Brief · essentiel"], ["critique", "Critique · analyse"], ["debate", "Débat · points de vue"]])}{choice("duration", "Durée cible", [["short", "Court · 5 min"], ["standard", "Standard · 10 min"], ["long", "Long · 15 min"]])}{choice("style", "Ton", [["accessible", "Accessible et pédagogique"], ["professional", "Professionnel et précis"], ["dynamic", "Dynamique et vivant"]])}</div>}
-          {(type === "flashcards" || type === "quiz") && <div className="grid gap-4 sm:grid-cols-2">
+          {type !== "infographic" && type !== "image" && type !== "audio" && <div className="grid gap-4 sm:grid-cols-2">
             {/* le worker plafonne le quiz à 20 questions */}
-            {choice("count", type === "quiz" ? "Nombre de questions" : "Nombre de cartes", [["fewer", "Moins · 8"], ["standard", "Standard · 15"], ["more", type === "quiz" ? "Plus · 20" : "Plus · 25"]])}
-            {choice("difficulty", "Niveau de difficulté", [["easy", "Facile"], ["medium", "Moyen"], ["hard", "Difficile"]])}
-            {choice("language", "Langue", [["fr", "Français"], ["en", "Anglais"], ["es", "Espagnol"], ["de", "Allemand"], ["it", "Italien"], ["pt", "Portugais"], ["nl", "Néerlandais"]])}
-            {choice("sourceScope", "Sources", [["selected", `${sourceIds.length} source${sourceIds.length > 1 ? "s" : ""} sélectionnée${sourceIds.length > 1 ? "s" : ""}`], ["all", "Toutes les sources prêtes"]])}
-          </div>}
-          {type === "comparison" && <div className="grid gap-4 sm:grid-cols-2">
+            {(type === "flashcards" || type === "quiz") && choice("count", type === "quiz" ? "Nombre de questions" : "Nombre de cartes", [["fewer", "Moins · 8"], ["standard", "Standard · 15"], ["more", type === "quiz" ? "Plus · 20" : "Plus · 25"]])}
+            {(type === "flashcards" || type === "quiz") && choice("difficulty", "Niveau de difficulté", [["easy", "Facile"], ["medium", "Moyen"], ["hard", "Difficile"]])}
+            {type === "quiz" && choice("questionTypes", "Types de questions", [["mcq", "QCM · 4 choix"], ["true_false", "Vrai / Faux"], ["mixed", "Mélange QCM et Vrai / Faux"]])}
+            {type === "faq" && choice("count", "Nombre de questions", [["fewer", "Moins · 6"], ["standard", "Standard · 10"], ["more", "Plus · 15"]])}
+            {type === "glossary" && choice("count", "Nombre de termes", [["fewer", "Moins · 10"], ["standard", "Standard · 20"], ["more", "Plus · 30"]])}
+            {type === "study_plan" && choice("days", "Durée du plan", [["3", "3 jours"], ["7", "1 semaine"], ["14", "2 semaines"], ["30", "1 mois"]])}
+            {type === "editorial" && choice("editorialFormat", "Format", [["blog_post", "Article de blog"], ["newsletter", "Newsletter"], ["social_thread", "Fil de réseaux sociaux"]])}
+            {type === "editorial" && choice("style", "Ton", [["accessible", "Accessible"], ["professional", "Professionnel"], ["dynamic", "Dynamique"]])}
+            {type === "diagram" && choice("direction", "Orientation", [["TD", "Haut → bas"], ["LR", "Gauche → droite"]])}
             {choice("language", "Sélectionnez une langue", [["fr", "Français"], ["en", "Anglais"], ["es", "Espagnol"], ["de", "Allemand"], ["it", "Italien"], ["pt", "Portugais"], ["nl", "Néerlandais"]])}
             {choice("sourceScope", "Sources", [["selected", `${sourceIds.length} source${sourceIds.length > 1 ? "s" : ""} sélectionnée${sourceIds.length > 1 ? "s" : ""}`], ["all", "Toutes les sources prêtes"]])}
           </div>}

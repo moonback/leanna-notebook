@@ -49,10 +49,10 @@ const TEMPLATES: Record<string, string> = {
   timeline: "Chronologie : liste les événements explicitement datés dans les sources, dans l'ordre chronologique. Pour chaque événement, indique la date, le fait et la citation [n]. Si la date est imprécise, indique-le sans la deviner.",
   comparison: "Tableau comparatif : compare les sources ou concepts selon des critères pertinents. Utilise un tableau Markdown, indique « non précisé » si une donnée manque et cite chaque cellule factuelle.",
   glossary: "Glossaire : extrais les termes clés, définis-les uniquement à partir des sources et ajoute les citations [n] à chaque définition.",
-  faq: "FAQ : formule 8 à 12 questions utiles et réponds de façon concise. Chaque réponse factuelle doit citer les passages [n]. Signale quand les sources ne permettent pas de répondre.",
-  diagram: "Diagramme : produis un diagramme Mermaid valide (flowchart ou sequenceDiagram selon les sources), dans un bloc de code Mermaid, puis une courte légende. N'ajoute aucune étape non documentée.",
-  editorial: "Contenu éditorial : réécris fidèlement les sources sous forme de newsletter, article de blog ou fil de réseaux sociaux selon les consignes. Conserve les citations [n] et n'ajoute aucun fait externe.",
-  study_plan: "Plan d'étude : crée un planning de révision sur le nombre de jours indiqué dans les consignes, répartis par jour avec objectifs, notions, exercices et rappels. Chaque notion doit être sourcée [n].",
+  faq: "FAQ : formule le nombre de questions utiles demandé et réponds de façon concise. Chaque réponse factuelle doit citer les passages [n]. Signale quand les sources ne permettent pas de répondre.",
+  diagram: "Diagramme : produis un diagramme Mermaid flowchart valide (seul type affiché par le Studio), dans un bloc de code Mermaid, puis une courte légende. N'ajoute aucune étape non documentée.",
+  editorial: "Contenu éditorial : réécris fidèlement les sources sous forme de newsletter, article de blog ou fil de réseaux sociaux selon le format demandé. Conserve les citations [n] et n'ajoute aucun fait externe.",
+  study_plan: "Plan d'étude : crée un planning de révision sur la durée demandée, répartis par jour avec objectifs, notions, exercices et rappels. Chaque notion doit être sourcée [n].",
 };
 
 /** Construit le prompt d'un type d'artefact. Exporté pour les tests. */
@@ -78,7 +78,15 @@ export function buildPrompt(type: string, options: Record<string, unknown>, cust
         "Niveau de détail : " + (detailLabels[infographicOptions.detailLevel ?? "standard"] ?? "équilibré") + ".",
         "Structure le contenu pour qu’il puisse être converti en une infographie lisible, hiérarchisée et visuellement équilibrée. Privilégie les titres courts, les données vérifiables, les étapes numérotées et les comparaisons utiles."
       ].join("\n") : "";
-      const task = "TÂCHE : rédige le contenu en Markdown (titres ##, listes et tableaux si utiles). Format : " + t + "\n" + infographicGuidance + "\n" + mode + "\nChaque affirmation tirée d’un passage doit se terminer par son numéro entre crochets, ex. [3] ou [1, 4]. N’invente jamais de numéro.";
+      const pick = (labels: Record<string, string>, key: unknown, fallback: string) => labels[String(key)] ?? fallback;
+      const typeGuidance = ({
+        faq: `Nombre de questions demandé : ${pick({ fewer: "6", standard: "10", more: "15" }, options.count, "10")}.`,
+        glossary: `Nombre de termes demandé : environ ${pick({ fewer: "10", standard: "20", more: "30" }, options.count, "20")}.`,
+        study_plan: `Durée demandée : ${pick({ "3": "3", "7": "7", "14": "14", "30": "30" }, options.days, "7")} jours.`,
+        editorial: `Format demandé : ${pick({ blog_post: "article de blog", newsletter: "newsletter", social_thread: "fil de réseaux sociaux" }, options.editorialFormat, "article de blog")}. Ton : ${pick({ accessible: "accessible et pédagogique", professional: "professionnel et précis", dynamic: "dynamique et percutant" }, options.style, "accessible et pédagogique")}.`,
+        diagram: options.direction === "LR" ? "Oriente le diagramme de gauche à droite (flowchart LR)." : "Oriente le diagramme de haut en bas (flowchart TD).",
+      } as Record<string, string>)[type] ?? "";
+      const task = "TÂCHE : rédige le contenu en Markdown (titres ##, listes et tableaux si utiles). Format : " + t + "\n" + infographicGuidance + typeGuidance + "\n" + mode + "\nChaque affirmation tirée d’un passage doit se terminer par son numéro entre crochets, ex. [3] ou [1, 4]. N’invente jamais de numéro.";
       return { json: false, messages: [sys(task), user] };
     }
     case "flashcards": {
@@ -87,7 +95,12 @@ export function buildPrompt(type: string, options: Record<string, unknown>, cust
     }
     case "quiz": {
       const n = Math.min(20, COUNT[(options.count as keyof typeof COUNT) ?? "standard"] ?? 10);
-      return { json: true, messages: [sys(`TÂCHE : crée un QCM de ${n} questions de difficulté « ${options.difficulty ?? "medium"} », 4 choix chacune, une seule bonne réponse. Réponds UNIQUEMENT en JSON : {"questions":[{"question":"…","choices":["…","…","…","…"],"answer":index_de_la_bonne_réponse_à_partir_de_0,"hint":"indice court","explanation":"pourquoi","n":[numéros des passages]}]}`), user] };
+      const kinds = options.questionTypes === "true_false"
+        ? `questions vrai/faux : choices vaut exactement ["Vrai","Faux"]`
+        : options.questionTypes === "mixed"
+          ? `questions mêlant QCM (4 choix) et vrai/faux (choices vaut exactement ["Vrai","Faux"])`
+          : "questions à 4 choix";
+      return { json: true, messages: [sys(`TÂCHE : crée un quiz de ${n} ${kinds}, de difficulté « ${options.difficulty ?? "medium"} », une seule bonne réponse par question. Réponds UNIQUEMENT en JSON : {"questions":[{"question":"…","choices":["…","…","…","…"],"answer":index_de_la_bonne_réponse_à_partir_de_0,"hint":"indice court","explanation":"pourquoi","n":[numéros des passages]}]}`), user] };
     }
     case "mind_map":
       return { json: true, messages: [sys(`TÂCHE : construis une carte mentale des thèmes des passages (3 niveaux maximum, 4 à 8 branches principales, libellés de moins de 8 mots). Réponds UNIQUEMENT en JSON : {"root":{"label":"sujet central","children":[{"label":"…","n":[numéros],"children":[…]}]}}`), user] };
