@@ -239,12 +239,7 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
           else { usage = evt.usage; model = evt.model; }
         }
         const resolved = resolveCitations(raw, passages);
-        const artifactLink = requestedArtifact
-          ? requestedArtifact.type === "image"
-            ? `\n\n**Image lancée dans le Studio** — [Ouvrir le notebook](/notebook/${conv.notebook_id}) · [Voir l’image](/api/v1/artifacts/${requestedArtifact.id}/image)`
-            : `\n\n**Livrable lancé dans le Studio** — [Ouvrir le notebook](/notebook/${conv.notebook_id}) · [Markdown](/api/v1/artifacts/${requestedArtifact.id}/export?format=md) · [TXT](/api/v1/artifacts/${requestedArtifact.id}/export?format=txt) · [HTML](/api/v1/artifacts/${requestedArtifact.id}/export?format=html) · [JSON](/api/v1/artifacts/${requestedArtifact.id}/export?format=json)${requestedArtifact.type === "audio" ? ` · [MP3](/api/v1/artifacts/${requestedArtifact.id}/export?format=mp3)` : ""}`
-          : "";
-        const final = resolved.text + artifactLink;
+        const final = resolved.text;
         const citations = resolved.citations;
         const dropped = resolved.dropped;
         await db.from("chat_messages").update({ content: final, status: "complete", usage, model, thoughts: thoughts || null }).eq("id", answerId);
