@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
+import { sameOrigin } from "@/lib/api";
 import { createUserClient, getUser } from "@/lib/supabase/server";
 
 const schema = z.object({
@@ -14,7 +15,7 @@ export async function POST(request: NextRequest) {
   const user = await getUser();
   if (!user || !user.email) return response(401, "auth_required");
   const origin = request.headers.get("origin");
-  if (origin && origin !== request.nextUrl.origin) return response(403, "forbidden");
+  if (origin && !sameOrigin(request, origin)) return response(403, "forbidden");
 
   let body: unknown;
   try { body = await request.json(); } catch { return response(400, "invalid_json"); }

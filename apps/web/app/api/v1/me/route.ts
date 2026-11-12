@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
+import { sameOrigin } from "@/lib/api";
 import { log } from "@/lib/log";
 import { createServiceClient, createUserClient, getUser } from "@/lib/supabase/server";
 import { fieldErrors, profilePatchSchema } from "@/lib/validation";
@@ -50,7 +51,7 @@ export async function DELETE(request: NextRequest) {
   const user = await getUser();
   if (!user) return err(401, "auth_required");
   const origin = request.headers.get("origin");
-  if (origin && origin !== request.nextUrl.origin) return err(403, "forbidden");
+  if (origin && !sameOrigin(request, origin)) return err(403, "forbidden");
 
   let body: unknown;
   try {
@@ -103,7 +104,7 @@ export async function PATCH(request: NextRequest) {
   const user = await getUser();
   if (!user) return err(401, "auth_required");
   const origin = request.headers.get("origin");
-  if (origin && origin !== request.nextUrl.origin) return err(403, "forbidden");
+  if (origin && !sameOrigin(request, origin)) return err(403, "forbidden");
 
   let body: unknown;
   try {

@@ -36,7 +36,7 @@ export async function requireRole(notebookId: string, min: Role): Promise<Role> 
 }
 
 /** Derrière un proxy (Railway), `nextUrl.origin` peut être l'adresse interne : on compare aussi à l'hôte public transmis. */
-function sameOrigin(req: NextRequest, origin: string): boolean {
+export function sameOrigin(req: NextRequest, origin: string): boolean {
   if (origin === req.nextUrl.origin) return true;
   const host = (req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? "").split(",")[0]?.trim();
   if (!host) return false;
