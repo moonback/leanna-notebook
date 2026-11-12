@@ -2,7 +2,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { BookOpen, Globe, LayoutGrid, List, Lock, MoreVertical, Pencil, Plus, SearchX, Trash2 } from "lucide-react";
+import { BookOpen, Compass, FileText, Globe, Headphones, LayoutGrid, List, Lock, MoreVertical, Pencil, Plus, SearchX, Trash2 } from "lucide-react";
 import { useConfirm } from "@/components/ui/confirm";
 import { AppHeader } from "@/components/app/app-header";
 import { Button } from "@/components/ui/button";
@@ -21,7 +21,7 @@ const fold = (s: string) => s.normalize("NFD").replace(/\p{Diacritic}/gu, "").to
 const titleOf = (n: NotebookRow) => n.title || "Notebook sans titre";
 const sources = (n: number) => `${n} source${n > 1 ? "s" : ""}`;
 
-export function Dashboard({ initial, loadError, initialView }: { initial: NotebookRow[]; loadError: boolean; initialView: "grid" | "list"; name: string | null }) {
+export function Dashboard({ initial, loadError, initialView, name }: { initial: NotebookRow[]; loadError: boolean; initialView: "grid" | "list"; name: string | null }) {
   const router = useRouter();
   const [items, setItems] = React.useState(initial);
   const [tab, setTab] = React.useState<Tab>("all");
@@ -93,6 +93,38 @@ export function Dashboard({ initial, loadError, initialView }: { initial: Notebo
     </AppHeader>
     <main className="mx-auto grid max-w-[var(--page-max-w)] gap-6 px-4 py-8 sm:px-6">
       {loadError && <Alert tone="danger" title="Impossible de charger vos notebooks" action={<Button size="sm" variant="secondary" onClick={() => router.refresh()}>Réessayer</Button>} />}
+
+      <section aria-labelledby="dashboard-welcome" className="rounded-2xl border border-border bg-surface-raised p-5 shadow-xs sm:p-7">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="max-w-2xl">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-accent">Votre espace de travail</p>
+            <h1 id="dashboard-welcome" className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">
+              {name ? `Bonjour ${name}` : "Bonjour"}
+            </h1>
+            <p className="mt-2 max-w-xl text-sm leading-6 text-text-muted">
+              Retrouvez vos recherches, rassemblez vos documents et transformez vos sources en informations claires.
+            </p>
+          </div>
+          <div className="flex shrink-0 flex-wrap gap-2">
+            <Button onClick={create} loading={creating}><Plus aria-hidden /> Créer un notebook</Button>
+            <Button asChild variant="secondary"><Link href="/discover"><Compass aria-hidden /> Découvrir</Link></Button>
+          </div>
+        </div>
+        <div className="mt-6 grid gap-3 border-t border-border pt-5 sm:grid-cols-3">
+          <div className="flex items-center gap-3">
+            <span className="grid size-9 place-items-center rounded-lg bg-accent-soft text-on-accent-soft"><BookOpen size={17} /></span>
+            <div><p className="text-lg font-semibold tabular-nums">{items.length}</p><p className="text-xs text-text-subtle">Notebook{items.length > 1 ? "s" : ""}</p></div>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="grid size-9 place-items-center rounded-lg bg-accent-soft text-on-accent-soft"><FileText size={17} /></span>
+            <div><p className="text-lg font-semibold tabular-nums">{items.reduce((sum, item) => sum + item.sourceCount, 0)}</p><p className="text-xs text-text-subtle">Sources importées</p></div>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="grid size-9 place-items-center rounded-lg bg-accent-soft text-on-accent-soft"><Headphones size={17} /></span>
+            <div><p className="text-sm font-semibold">Studio vocal</p><p className="text-xs text-text-subtle">Leanna et Roxane dans chaque notebook</p></div>
+          </div>
+        </div>
+      </section>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Tabs value={tab} onValueChange={(v) => { if (v === "discover") router.push("/discover"); else setTab(v as Tab); }}>
