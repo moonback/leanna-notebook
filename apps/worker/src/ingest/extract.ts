@@ -85,7 +85,7 @@ export function formatPdfPage(items: PdfTextItem[]): string {
  * Extraction page par page : évite de matérialiser simultanément les structures
  * de texte de toutes les pages. Le callback permet au worker de publier la progression.
  */
-async function fromPdf(buf: Uint8Array, onProgress?: PdfProgress, ocr?: PdfOcr): Promise<Extracted> {
+export async function fromPdf(buf: Uint8Array, onProgress?: PdfProgress, ocr?: PdfOcr): Promise<Extracted> {
   let pdf;
   try {
     pdf = await getDocumentProxy(buf);
@@ -136,7 +136,7 @@ async function fromPdf(buf: Uint8Array, onProgress?: PdfProgress, ocr?: PdfOcr):
   return { text, pageStarts, pageCount };
 }
 
-function fromHtml(html: string): Extracted {
+export function fromHtml(html: string): Extracted {
   const { document } = parseHTML(html);
   const article = new Readability(document as unknown as Document).parse();
   if (!article?.textContent?.trim()) throw new PermanentError("empty_content", "Aucun texte principal trouvé sur cette page.");

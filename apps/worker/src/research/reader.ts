@@ -21,8 +21,8 @@ export function canonicalize(raw: string): string {
   u.hostname = u.hostname.toLowerCase().replace(/^www\./, "");
   for (const k of [...u.searchParams.keys()]) if (/^(utm_|fbclid|gclid|mc_|ref$|ref_src$)/i.test(k)) u.searchParams.delete(k);
   u.searchParams.sort();
-  const s = u.toString();
-  return s.endsWith("/") && u.pathname !== "/" ? s.slice(0, -1) : s;
+  if (u.pathname.length > 1) u.pathname = u.pathname.replace(/\/+$/, "");
+  return u.toString();
 }
 
 /** Métadonnées déclarées par la page (jamais devinées) : URL canonique, auteur, date de publication. */
