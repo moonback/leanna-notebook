@@ -406,7 +406,7 @@ export function Workspace({ notebookId, initialTitle, role, allowCopies }: { not
             <TabsContent value="chat" className="h-full">{chatPanel}</TabsContent>
             <TabsContent value="studio" className="h-full">{studioPanel}</TabsContent>
           </div>
-          <TabsList aria-label="Panneaux" className="grid h-14 shrink-0 grid-cols-3 border-t bg-surface-raised px-2">
+          <TabsList aria-label="Panneaux" className="mobile-workspace-tabs grid h-14 shrink-0 grid-cols-3 border-t bg-surface-raised px-2">
             <TabsTrigger value="sources">Sources</TabsTrigger><TabsTrigger value="chat">Chat</TabsTrigger><TabsTrigger value="studio">Studio</TabsTrigger>
           </TabsList>
         </Tabs>
@@ -569,13 +569,13 @@ function Chat({ notebookId, readyCount, onOpenCitation, onOpenPassage, canViewSo
           <div ref={bottom} />
         </div>
       </div>
-      <div className="border-t p-3">
+      <div className="mobile-chat-composer border-t p-3">
         {error && <div className="mx-auto mb-2 max-w-[var(--chat-max-w)]"><Alert tone="warning" title={error.title}>{error.body}</Alert></div>}
-        <form onSubmit={send} className="mx-auto flex max-w-[var(--chat-max-w)] items-end gap-2 rounded-xl border border-border-input bg-surface-raised p-2 focus-within:border-focus">
+        <form onSubmit={send} className="mobile-chat-composer__form mx-auto flex max-w-[var(--chat-max-w)] items-end gap-2 rounded-xl border border-border-input bg-surface-raised p-2 focus-within:border-focus">
           <textarea rows={1} value={text} maxLength={4000} onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); } }}
             aria-label="Votre question" placeholder={readyCount ? "Posez une question sur vos sources…" : "Ajoutez d’abord une source"}
-            className="max-h-40 min-h-8 flex-1 resize-none bg-transparent px-2 py-1.5 text-sm outline-none placeholder:text-text-subtle" />
+            className="mobile-chat-composer__input max-h-40 min-h-8 flex-1 resize-none bg-transparent px-2 py-1.5 text-sm outline-none placeholder:text-text-subtle" />
           <span className="hidden pb-2 text-xs text-text-subtle sm:inline">{readyCount} source{readyCount > 1 ? "s" : ""}</span>
           {streaming ? (
             <Tooltip label="Arrêter"><Button type="button" size="icon-sm" variant="secondary" aria-label="Arrêter la réponse" onClick={() => abort.current?.abort()}><Square aria-hidden /></Button></Tooltip>

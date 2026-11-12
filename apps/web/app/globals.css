@@ -292,3 +292,43 @@
 @media (max-width: 380px) {
   .mobile-discover-card-actions { grid-template-columns: 1fr; }
 }
+
+
+@media (max-width: 767px) {
+  .mobile-workspace-tabs {
+    min-height: calc(3.75rem + env(safe-area-inset-bottom));
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+  }
+  .mobile-workspace-tabs [role="tab"] {
+    min-height: 2.8rem;
+    border-radius: 0.75rem;
+  }
+  .mobile-workspace-tabs [role="tab"][data-state="active"] {
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+
+  .mobile-chat-composer {
+    padding: 0.65rem;
+    padding-bottom: max(0.65rem, env(safe-area-inset-bottom));
+    background: color-mix(in srgb, var(--surface-raised) 96%, transparent);
+  }
+  .mobile-chat-composer__form {
+    gap: 0.4rem;
+    border-radius: 1rem;
+    padding: 0.45rem;
+  }
+  .mobile-chat-composer__input {
+    min-height: 2.7rem;
+    max-height: min(9rem, 28dvh);
+    padding: 0.65rem 0.55rem;
+    line-height: 1.45;
+    overflow-y: auto;
+  }
+  .mobile-chat-composer__form button[type="submit"],
+  .mobile-chat-composer__form button[aria-label="Arrêter la réponse"] {
+    width: 2.7rem;
+    height: 2.7rem;
+    flex: 0 0 2.7rem;
+  }
+}
