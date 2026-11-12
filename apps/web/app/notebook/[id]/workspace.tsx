@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import { createPortal } from "react-dom";
-import { AlertTriangle, ArrowUp, AudioLines, BookmarkPlus, BrainCircuit, Eraser, Settings2, ThumbsDown, ThumbsUp, FileText, Globe, Inbox, Lock, NotebookPen, Pencil, Plus, Square, Sparkles, Trash2, Type, Upload, Search, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, FolderOpen } from "lucide-react";
+import { AlertTriangle, ArrowUp, AudioLines, Bold, BookmarkPlus, BrainCircuit, Code, Eraser, Heading2, Italic, List, ListOrdered, Quote, Settings2, ThumbsDown, ThumbsUp, FileText, Globe, Inbox, Lock, NotebookPen, Pencil, Plus, Square, Sparkles, Trash2, Type, Upload, Search, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, FolderOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Textarea } from "@/components/ui/field";
 import { Alert, Badge, EmptyState, Progress, Skeleton } from "@/components/ui/feedback";
@@ -1084,9 +1084,7 @@ function NoteEditor({ state, notebookId, canEdit, onClose, onSaved }: { state: {
             <Field id="note-title" label="Titre" error={errors.title}>
               <Input value={title} maxLength={300} readOnly={readOnly} onChange={(e) => setTitle(e.target.value)} />
             </Field>
-            <Field id="note-text" label="Contenu" error={errors.text}>
-              <Textarea value={text} readOnly={readOnly || locked} onChange={(e) => setText(e.target.value)} className="min-h-64 font-serif text-reading" />
-            </Field>
+            <NoteContentField text={text} onChange={setText} readOnly={readOnly || locked} error={errors.text} />
             {errors.form && <Alert tone="danger" title={errors.form} />}
             <div className="flex justify-end gap-2">
               <DialogClose asChild><Button type="button" variant="secondary">{readOnly ? "Fermer" : "Annuler"}</Button></DialogClose>
@@ -1096,6 +1094,84 @@ function NoteEditor({ state, notebookId, canEdit, onClose, onSaved }: { state: {
         )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+type MarkAction =
+  | { kind: "wrap"; before: string; after?: string }
+  | { kind: "line"; prefix: string };
+const MARK_BUTTONS: { label: string; icon: React.ReactNode; action: MarkAction }[] = [
+  { label: "Gras", icon: <Bold aria-hidden />, action: { kind: "wrap", before: "**" } },
+  { label: "Italique", icon: <Italic aria-hidden />, action: { kind: "wrap", before: "*" } },
+  { label: "Code", icon: <Code aria-hidden />, action: { kind: "wrap", before: "`" } },
+  { label: "Titre", icon: <Heading2 aria-hidden />, action: { kind: "line", prefix: "## " } },
+  { label: "Liste à puces", icon: <List aria-hidden />, action: { kind: "line", prefix: "- " } },
+  { label: "Liste numérotée", icon: <ListOrdered aria-hidden />, action: { kind: "line", prefix: "1. " } },
+  { label: "Citation", icon: <Quote aria-hidden />, action: { kind: "line", prefix: "> " } },
+];
+
+/** Contenu d'une note : barre d'outils de mise en forme + onglets Rédiger / Aperçu (rendu comme dans le chat). */
+function NoteContentField({ text, onChange, readOnly, error }: { text: string; onChange: (v: string) => void; readOnly: boolean; error?: string }) {
+  const [tab, setTab] = React.useState("write");
+  const ref = React.useRef<HTMLTextAreaElement>(null);
+
+  function applyMark(action: MarkAction) {
+    const el = ref.current;
+    if (!el) return;
+    const { selectionStart: start, selectionEnd: end } = el;
+    const selected = text.slice(start, end);
+    let next: string, caretStart: number, caretEnd: number;
+    if (action.kind === "wrap") {
+      const after = action.after ?? action.before;
+      next = text.slice(0, start) + action.before + selected + after + text.slice(end);
+      caretStart = start + action.before.length;
+      caretEnd = caretStart + selected.length;
+    } else {
+      // Préfixe chaque ligne de la sélection (ou la ligne courante si rien n'est sélectionné).
+      const lineStart = text.lastIndexOf("\n", start - 1) + 1;
+      const lineEndRaw = text.indexOf("\n", end);
+      const lineEnd = lineEndRaw === -1 ? text.length : lineEndRaw;
+      const block = text.slice(lineStart, lineEnd);
+      const prefixed = block.split("\n").map((l) => (l.startsWith(action.prefix) ? l : action.prefix + l)).join("\n");
+      next = text.slice(0, lineStart) + prefixed + text.slice(lineEnd);
+      caretStart = lineStart;
+      caretEnd = lineStart + prefixed.length;
+    }
+    onChange(next);
+    requestAnimationFrame(() => { el.focus(); el.setSelectionRange(caretStart, caretEnd); });
+  }
+
+  if (readOnly) return <Field id="note-text" label="Contenu" error={error}><div className="min-h-64 rounded-md border border-border-input bg-surface-sunken px-3 py-2"><Markdown text={text || "Aucun contenu."} citations={[]} /></div></Field>;
+  return (
+    <div className="grid gap-1.5">
+      <div className="flex items-center justify-between">
+        <label htmlFor="note-text" className="text-sm font-medium text-text-muted">Contenu</label>
+        <Tabs value={tab} onValueChange={setTab}>
+          <TabsList aria-label="Mode d’édition">
+            <TabsTrigger value="write">Rédiger</TabsTrigger>
+            <TabsTrigger value="preview">Aperçu</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+      {tab === "write" ? (
+        <>
+          <div role="toolbar" aria-label="Mise en forme" className="flex flex-wrap items-center gap-0.5 rounded-t-md border border-b-0 border-border-input bg-surface p-1">
+            {MARK_BUTTONS.map((b) => (
+              <Tooltip key={b.label} label={b.label}>
+                <Button type="button" size="icon-sm" variant="ghost" aria-label={b.label} onClick={() => applyMark(b.action)}>{b.icon}</Button>
+              </Tooltip>
+            ))}
+          </div>
+          <Textarea ref={ref} id="note-text" value={text} onChange={(e) => onChange(e.target.value)} className="min-h-64 rounded-t-none font-serif text-reading" aria-invalid={Boolean(error)} />
+          <p className="text-xs text-text-subtle">Markdown pris en charge : **gras**, *italique*, listes, `code`, ## titres.</p>
+        </>
+      ) : (
+        <div className="min-h-64 rounded-md border border-border-input bg-surface-sunken px-3 py-2">
+          {text.trim() ? <Markdown text={text} citations={[]} /> : <p className="text-sm text-text-subtle">Rien à prévisualiser pour l’instant.</p>}
+        </div>
+      )}
+      {error && <p className="text-xs text-danger">{error}</p>}
+    </div>
   );
 }
 
