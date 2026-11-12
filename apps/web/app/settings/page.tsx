@@ -1,14 +1,16 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { CreditCard, Database, Gauge, Sparkles, TerminalSquare, User } from "lucide-react";
 import { AppHeader } from "@/components/app/app-header";
 import { Button } from "@/components/ui/button";
-import { Badge, Progress } from "@/components/ui/feedback";
-import { Card } from "@/components/ui/surfaces";
+import { Badge } from "@/components/ui/feedback";
 import { createUserClient, getUser } from "@/lib/supabase/server";
 import { ProfileForm } from "../profile-form";
 import { DeleteAccount } from "./delete-account";
 import { PlanCard } from "./plan-card";
 import { SettingsTabs } from "./settings-tabs";
+import { SettingsRow, SettingsSection } from "./settings-ui";
+import { UsageCard, type PlanLimits } from "./usage-card";
 import { OpenRouterSettings } from "./openrouter-settings";
 import { ImageGenerationSettings } from "./image-generation-settings";
 import { SystemPromptsSettings } from "./system-prompts";
@@ -30,72 +32,85 @@ export default async function SettingsPage() {
   const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
   const dayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString();
   const { data: usage } = personal
-    ? await supabase.from("usage_ledger").select("feature, units, created_at").eq("workspace_id", personal.id).neq("status", "refunded").gte("created_at", monthStart)
+    ? await supabase.from("usage_ledger").select("feature, units, status, created_at").eq("workspace_id", personal.id).neq("status", "refunded").gte("created_at", monthStart)
     : { data: null };
-  const limits = plans?.find((p) => p.id === personal?.plan_id)?.limits as { monthly_credits?: number; daily?: Record<string, number> } | undefined;
+  const currentPlan = plans?.find((p) => p.id === personal?.plan_id);
+  const limits = currentPlan?.limits as PlanLimits | undefined;
+
+  const name = profile?.display_name?.trim() || user.email?.split("@")[0] || "Compte";
+  const initials = name.split(/\s+/).map((s: string) => s[0]).join("").slice(0, 2).toUpperCase();
 
   return (
-    <div className="min-h-dvh">
+    <div className="min-h-dvh bg-surface/40">
       <AppHeader><h1 className="truncate text-lg">Réglages</h1></AppHeader>
-      <main className="mx-auto grid max-w-8xl grid-cols-1 gap-6 px-4 py-8 sm:px-6">
-        <p className="text-sm text-text-muted">Connecté·e avec {user.email}</p>
+      <main className="mx-auto grid max-w-6xl grid-cols-1 gap-8 px-4 py-8 sm:px-6">
+        <section aria-label="Compte" className="flex flex-wrap items-center gap-4 rounded-lg border bg-surface-raised p-5 shadow-xs">
+          <span aria-hidden className="grid size-14 shrink-0 place-items-center rounded-pill bg-accent text-lg font-semibold text-on-accent">{initials}</span>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-lg font-semibold">{name}</p>
+            <p className="truncate text-sm text-text-muted">{user.email}</p>
+          </div>
+          {currentPlan && <Badge tone="accent">Offre {currentPlan.name}</Badge>}
+        </section>
         <SettingsTabs
           tabs={[
             {
               id: "preferences",
               label: "Préférences",
-              content: (
-                <Card className="grid gap-4 p-5">
-                  <h2 className="text-lg">Préférences</h2>
-                  {profile ? <ProfileForm initial={{ ...profile, theme: profile.theme as "light" | "dark" | "system" }} /> : <p role="alert" className="text-sm text-danger">Profil introuvable.</p>}
-                </Card>
-              ),
+              description: "Profil, langue, apparence et notifications.",
+              icon: <User />,
+              content: profile ? <ProfileForm initial={{ ...profile, theme: profile.theme as "light" | "dark" | "system" }} /> : <p role="alert" className="text-sm text-danger">Profil introuvable.</p>,
             },
             {
               id: "plan",
               label: "Offre",
+              description: "Comparez les offres et gérez votre abonnement.",
+              icon: <CreditCard />,
               content: (
-                <Card className="grid gap-4 p-5">
-                  <div className="flex items-center justify-between gap-3">
-                    <h2 className="text-lg">Offre</h2>
-                    <Badge tone="warning">Paiement simulé</Badge>
+                <SettingsSection title="Abonnement" description="Votre offre détermine les crédits mensuels et les limites quotidiennes." action={<Badge tone="warning">Paiement simulé</Badge>}>
+                  <div className="p-5">
+                    {personal && plans ? <PlanCard workspaceId={personal.id} current={personal.plan_id} plans={plans} /> : <p role="alert" className="text-sm text-danger">Espace de travail introuvable.</p>}
                   </div>
-                  {personal && plans ? <PlanCard workspaceId={personal.id} current={personal.plan_id} plans={plans} /> : <p role="alert" className="text-sm text-danger">Espace de travail introuvable.</p>}
-                </Card>
+                </SettingsSection>
               ),
             },
             {
               id: "usage",
               label: "Consommation",
+              description: "Crédits du mois, détail par fonctionnalité, limites du jour et activité récente.",
+              icon: <Gauge />,
               content: limits && usage ? <UsageCard limits={limits} usage={usage} dayStart={dayStart} /> : <p className="text-sm text-text-muted">Aucune donnée de consommation.</p>,
             },
             {
               id: "ai",
               label: "Intelligence artificielle",
+              description: "Modèles, clés et génération d’images.",
+              icon: <Sparkles />,
               content: <div className="grid gap-5"><OpenRouterSettings /><ImageGenerationSettings /></div>,
             },
             {
               id: "prompts",
               label: "Prompts système",
+              description: "Personnalisez le comportement de l’assistant.",
+              icon: <TerminalSquare />,
               content: <SystemPromptsSettings />,
             },
             {
               id: "data",
               label: "Données",
+              description: "Exportez vos données ou supprimez votre compte.",
+              icon: <Database />,
               content: (
                 <>
-                  <Card className="grid gap-3 p-5">
-                    <h2 className="text-lg">Vos données</h2>
-                    <p className="text-sm text-text-muted">
-                      Téléchargez une copie de vos données (profil, notebooks, sources, conversations, contenus générés, usage) au format JSON. Les fichiers d’origine sont accessibles par des liens valables 7 jours.
-                    </p>
-                    <div><Button asChild variant="secondary"><a href="/api/v1/me/export" download>Exporter mes données</a></Button></div>
-                  </Card>
+                  <SettingsSection title="Vos données" description="Copie de vos données (profil, notebooks, sources, conversations, contenus générés, usage) au format JSON.">
+                    <SettingsRow label="Export complet" description="Les fichiers d’origine sont accessibles par des liens valables 7 jours.">
+                      <div className="md:flex md:justify-end"><Button asChild variant="secondary"><a href="/api/v1/me/export" download>Exporter mes données</a></Button></div>
+                    </SettingsRow>
+                  </SettingsSection>
                   {user.email && (
-                    <Card className="grid gap-4 border-danger/40 p-5">
-                      <h2 className="text-lg text-danger">Zone dangereuse</h2>
-                      <DeleteAccount email={user.email} />
-                    </Card>
+                    <SettingsSection tone="danger" title="Zone dangereuse" description="Ces actions sont définitives.">
+                      <div className="p-5"><DeleteAccount email={user.email} /></div>
+                    </SettingsSection>
                   )}
                 </>
               ),
@@ -104,34 +119,5 @@ export default async function SettingsPage() {
         />
       </main>
     </div>
-  );
-}
-
-const FEATURES: Record<string, string> = { chat: "Questions au chat", report: "Rapports", flashcards: "Fiches", quiz: "Quiz", mind_map: "Cartes mentales" };
-
-/** K01 : consommation du mois et du jour, lue sous RLS dans le registre d'usage. */
-function UsageCard({ limits, usage, dayStart }: { limits: { monthly_credits?: number; daily?: Record<string, number> }; usage: { feature: string; units: number; created_at: string }[]; dayStart: string }) {
-  const used = usage.reduce((n, u) => n + u.units, 0);
-  const today = (f: string) => usage.filter((u) => u.feature === f && u.created_at >= dayStart).length;
-  return (
-    <Card className="grid gap-4 p-5">
-      <h2 className="text-lg">Consommation</h2>
-      {limits.monthly_credits != null && (
-        <div className="grid gap-2">
-          <p className="flex justify-between text-sm"><span>Crédits du mois</span><span className="tabular-nums">{used} / {limits.monthly_credits}</span></p>
-          <Progress value={Math.min(100, Math.round((used / limits.monthly_credits) * 100))} label="Crédits du mois utilisés" />
-          <p className="text-xs text-text-subtle">Remis à zéro le 1er du mois (UTC). Une génération échouée ne consomme rien.</p>
-        </div>
-      )}
-      <table className="w-full text-sm">
-        <caption className="sr-only">Utilisation aujourd’hui</caption>
-        <thead><tr className="text-left text-text-muted"><th className="py-1 font-normal">Aujourd’hui</th><th className="py-1 text-right font-normal">Utilisé / limite</th></tr></thead>
-        <tbody>
-          {Object.entries(FEATURES).filter(([f]) => limits.daily?.[f] != null).map(([f, l]) => (
-            <tr key={f} className="border-t"><td className="py-1.5">{l}</td><td className="py-1.5 text-right tabular-nums">{today(f)} / {limits.daily![f]}</td></tr>
-          ))}
-        </tbody>
-      </table>
-    </Card>
   );
 }
