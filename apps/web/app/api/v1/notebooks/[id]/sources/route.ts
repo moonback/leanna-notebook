@@ -3,6 +3,7 @@ import { ApiError, handle, parseBody, requireRole, requireUser } from "@/lib/api
 import { log } from "@/lib/log";
 import { createServiceClient, createUserClient } from "@/lib/supabase/server";
 import { sourcesCreateSchema, uploadTypeOf, UPLOAD_TYPES } from "@/lib/validation";
+import { isTikTokUrl } from "@/lib/tiktok";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -51,7 +52,11 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
       args = { p_kind: UPLOAD_TYPES[ext][1], p_title: item.title, p_storage_path: item.storagePath,
                p_mime_type: UPLOAD_TYPES[ext][0], p_size_bytes: file.metadata?.size ?? null };
     } else if (item.type === "url") {
-      args = { p_kind: "web", p_title: new URL(item.url).hostname, p_origin_url: item.url };
+      if (isTikTokUrl(item.url)) {
+        args = { p_kind: "video", p_title: "Vidéo TikTok", p_origin_url: item.url };
+      } else {
+        args = { p_kind: "web", p_title: new URL(item.url).hostname, p_origin_url: item.url };
+      }
     } else {
       const path = `${prefix}${crypto.randomUUID()}/original.txt`;
       const { error } = await db.storage.from("sources").upload(path, new Blob([item.text], { type: "text/plain" }));
