@@ -991,8 +991,8 @@ function AddSourcesDialog({ open, onOpenChange, notebookId, onAdded, onWebSearch
               )}
             </TabsContent>
             <TabsContent value="url" className="pt-4">
-              <Field id="urls" label="Adresses web" hint="Une par ligne. Seul le texte principal de la page est importé.">
-                <Textarea value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://…" />
+              <Field id="urls" label="Liens web ou TikTok" hint="Une URL par ligne. Les liens TikTok sont transcrits automatiquement ; les autres pages sont importées comme sources web.">
+                <Textarea value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://www.tiktok.com/@…/video/… ou https://…" />
               </Field>
             </TabsContent>
             <TabsContent value="text" className="grid gap-3 pt-4">
