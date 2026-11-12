@@ -23,7 +23,7 @@ type StudioArtifactType = "report" | "flashcards" | "quiz" | "mind_map" | "infog
 /** Détecte uniquement une demande explicite de création d'un livrable Studio. */
 function detectStudioArtifactRequest(input: string): { type: StudioArtifactType; template?: string } | null {
   const value = input.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-  const action = /\b(cree|gener(e|er|ez)|prepare|produis|realise|construis|fabrique|fais-moi|fais moi|make|create|generate|prepare)\b/.test(value);
+  const action = /\b(cree|creer|gener(e|er|ez)|prepare|produis|realise|redige|rediger|ecris|construis|fabrique|fais-moi|fais moi|fais|make|create|generate)\b/.test(value);
   if (!action) return null;
   const types: Array<[StudioArtifactType, RegExp]> = [
     ["flashcards", /\b(fiches? de revision|flashcards|cartes memoire)\b/],
@@ -115,6 +115,15 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
   const selected = (ready ?? []).filter((s) => (sourceIds ? sourceIds.includes(s.id) : !off.has(s.id)));
   if (selected.length === 0) throw new ApiError(422, "no_sources");
 
+  // Configuration IA vérifiée AVANT de consommer du quota
+  const { data: chatPreference } = await db.from("ai_model_preferences")
+    .select("model_id").eq("user_id", user.id).eq("feature_key", "chat").maybeSingle();
+  let query: Awaited<ReturnType<typeof embedQuery>>;
+  try { query = await embedQuery(text); } catch (e) {
+    if (e instanceof AiNotConfigured) throw new ApiError(503, "ai_not_configured");
+    throw e;
+  }
+
   // Une demande explicite de livrable déclenche le moteur Studio existant depuis le chat.
   // Les mêmes contrôles de rôle, de notebook, de sources et de quota que le Studio s'appliquent.
   const artifactRequest = detectStudioArtifactRequest(text);
@@ -137,15 +146,6 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
     if (artifactError) throw artifactError;
     requestedArtifact = { id: artifactId as string, type: artifactRequest.type };
     log.info("chat.studio_artifact_requested", { notebook_id: conv.notebook_id, artifact_id: artifactId, type: artifactRequest.type });
-  }
-
-  // Configuration IA vérifiée AVANT de consommer du quota
-  const { data: chatPreference } = await db.from("ai_model_preferences")
-    .select("model_id").eq("user_id", user.id).eq("feature_key", "chat").maybeSingle();
-  let query: Awaited<ReturnType<typeof embedQuery>>;
-  try { query = await embedQuery(text); } catch (e) {
-    if (e instanceof AiNotConfigured) throw new ApiError(503, "ai_not_configured");
-    throw e;
   }
 
   const { data: usageId, error: qe } = await db.rpc("reserve_usage", { p_ws: conv.workspace_id, p_user: user.id, p_feature: "chat" });
@@ -192,7 +192,7 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
         }
         const resolved = resolveCitations(raw, passages);
         const artifactLink = requestedArtifact
-          ? `\\n\\n**Livrable lancé dans le Studio** — [Ouvrir le notebook](/notebook/${conv.notebook_id}) · [Télécharger le résultat](/api/v1/artifacts/${requestedArtifact.id}/export?format=${["flashcards", "quiz", "mind_map"].includes(requestedArtifact.type) ? "json" : "md"})`
+          ? `\\n\\n**Livrable lancé dans le Studio** — [Ouvrir le notebook](/notebook/${conv.notebook_id}) · [Markdown](/api/v1/artifacts/${requestedArtifact.id}/export?format=md) · [TXT](/api/v1/artifacts/${requestedArtifact.id}/export?format=txt) · [HTML](/api/v1/artifacts/${requestedArtifact.id}/export?format=html) · [JSON](/api/v1/artifacts/${requestedArtifact.id}/export?format=json)`
           : "";
         const final = resolved.text + artifactLink;
         const citations = resolved.citations;
