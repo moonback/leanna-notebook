@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import {
-  ArrowLeft, ArrowRight, Bookmark, BookmarkCheck, Clock3, Globe, Lock, LoaderCircle, Plus, RotateCw, ShieldAlert, Trash2, X,
+  ArrowLeft, ArrowRight, Bookmark, BookmarkCheck, BookPlus, Clock3, Globe, Lock, LoaderCircle, Plus, RotateCw, ShieldAlert, Trash2, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -34,6 +34,7 @@ type BrowserApi = {
   browserStop(id: string): Promise<boolean>;
   setBrowserBounds(bounds: BrowserBounds): Promise<boolean>;
   setBrowserVisible(visible: boolean): Promise<boolean>;
+  extractBrowserPage(id: string): Promise<{ url: string; title: string; text: string } | null>;
   getBrowserHistory(): Promise<BrowserVisit[]>;
   clearBrowserHistory(): Promise<boolean>;
   getBrowserBookmarks(): Promise<BrowserBookmark[]>;
@@ -45,7 +46,7 @@ function getApi(): BrowserApi | undefined {
   return (window as Window & { leannaDesktop?: BrowserApi }).leannaDesktop;
 }
 
-export function BrowserClient() {
+export function BrowserClient({ notebookId }: { notebookId?: string } = {}) {
   const [available, setAvailable] = React.useState<boolean | null>(null);
   const [state, setState] = React.useState<BrowserState>({ activeTabId: null, tabs: [] });
   const [address, setAddress] = React.useState("");
@@ -54,6 +55,7 @@ export function BrowserClient() {
   const [history, setHistory] = React.useState<BrowserVisit[]>([]);
   const [libraryOpen, setLibraryOpen] = React.useState(false);
   const [libraryTab, setLibraryTab] = React.useState<"bookmarks" | "history">("bookmarks");
+  const [addingSource, setAddingSource] = React.useState(false);
   const viewportRef = React.useRef<HTMLDivElement>(null);
 
   const activeTab = state.tabs.find((tab) => tab.id === state.activeTabId) ?? null;
@@ -130,6 +132,25 @@ export function BrowserClient() {
     if (saved) setBookmarks((items) => [saved, ...items.filter((item) => item.url !== saved.url)]);
   }
 
+  async function addPageToNotebook() {
+    if (!notebookId || !activeTab || addingSource) return;
+    setAddingSource(true);
+    try {
+      const page = await getApi()?.extractBrowserPage(activeTab.id);
+      if (!page?.text.trim()) throw new Error("empty_page");
+      const response = await fetch("/api/v1/notebooks/" + encodeURIComponent(notebookId) + "/sources", {
+        method: "POST",
+        headers: { "content-type": "application/json", "idempotency-key": crypto.randomUUID() },
+        body: JSON.stringify({ items: [{ type: "text", title: page.title || page.url, text: "URL source: " + page.url + "\n\n" + page.text }] }),
+      });
+      if (!response.ok) throw new Error("source_rejected");
+      window.dispatchEvent(new CustomEvent("leanna:browser-source-added"));
+    } catch {
+      window.alert("Impossible d’ajouter cette page. Vérifiez que vous avez le droit de modifier ce notebook et réessayez.");
+    } finally {
+      setAddingSource(false);
+    }
+  }
   async function removeBookmark(id: string) {
     if (await getApi()?.removeBrowserBookmark(id)) setBookmarks((items) => items.filter((item) => item.id !== id));
   }
@@ -227,6 +248,7 @@ export function BrowserClient() {
             autoComplete="off"
           />
         </div>
+        {notebookId && <Button type="button" size="sm" variant="secondary" disabled={!activeTab || addingSource} onClick={() => void addPageToNotebook()}><BookPlus aria-hidden /> {addingSource ? "Import…" : "Ajouter au notebook"}</Button>}
         <Button type="button" size="icon-sm" variant="ghost" aria-label="Ajouter aux favoris" title="Ajouter aux favoris" disabled={!activeTab || !(activeTab.url.startsWith("http://") || activeTab.url.startsWith("https://"))} onClick={() => void saveBookmark()}>
           {bookmarks.some((item) => item.url === activeTab?.url) ? <BookmarkCheck aria-hidden /> : <Bookmark aria-hidden />}
         </Button>
