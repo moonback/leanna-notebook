@@ -53,8 +53,8 @@ const shortLabel = (a: Art) => {
 };
 const fmt = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
-export function Studio({ notebookId, canEdit, sourceIds, sourceTitle, onOpenCitation, onAsk, onImported }: {
-  notebookId: string; canEdit: boolean; sourceIds: string[]; onImported?: () => void;
+export function Studio({ notebookId, canEdit, sourceIds, sourceTitle, onOpenCitation, onAsk, onImported, promptSuggestions = true }: {
+  notebookId: string; canEdit: boolean; sourceIds: string[]; onImported?: () => void; promptSuggestions?: boolean;
   sourceTitle: (id: string) => string | undefined; onOpenCitation?: (c: Cite) => void; onAsk: (text: string) => void;
 }) {
   const [arts, setArts] = React.useState<Art[] | null>(null);
@@ -203,7 +203,7 @@ export function Studio({ notebookId, canEdit, sourceIds, sourceTitle, onOpenCita
           ))}
         </ul>
       )}
-      <CreateDialog type={creating === "image" && !imageGenerationEnabled ? null : creating} notebookId={notebookId} sourceIds={sourceIds} referenceImageId={referenceImageId} onClose={() => { setCreating(null); setReferenceImageId(null); }} onGenerate={generate} />
+      <CreateDialog type={creating === "image" && !imageGenerationEnabled ? null : creating} notebookId={notebookId} sourceIds={sourceIds} referenceImageId={referenceImageId} promptSuggestions={promptSuggestions} onClose={() => { setCreating(null); setReferenceImageId(null); }} onGenerate={generate} />
       <ArtifactViewer id={open} canShare={canEdit} onImported={onImported} onEditImage={imageGenerationEnabled ? (artifactId) => { setOpen(null); setReferenceImageId(artifactId); setCreating("image"); } : undefined} onClose={() => setOpen(null)} sourceTitle={sourceTitle} onOpenCitation={onOpenCitation} onAsk={(t) => { setOpen(null); onAsk(t); }} />
     </Panel>
   );
@@ -222,7 +222,7 @@ type ImageSuggestion = { id: string; title: string; description: string; prompt:
 // Idées d'image mises en cache par notebook : relancées seulement si une nouvelle source est ajoutée ou manuellement.
 const imageSuggestionsCache = new Map<string, { sourceIds: Set<string>; suggestions: ImageSuggestion[] }>();
 
-function CreateDialog({ type, notebookId, sourceIds, referenceImageId, onClose, onGenerate }: { type: ArtType | null; notebookId: string; sourceIds: string[]; referenceImageId?: string | null; onClose: () => void; onGenerate: (t: ArtType, o: Record<string, string>, p?: string) => Promise<boolean> }) {
+function CreateDialog({ type, notebookId, sourceIds, referenceImageId, promptSuggestions, onClose, onGenerate }: { type: ArtType | null; notebookId: string; sourceIds: string[]; referenceImageId?: string | null; promptSuggestions: boolean; onClose: () => void; onGenerate: (t: ArtType, o: Record<string, string>, p?: string) => Promise<boolean> }) {
   const [opts, setOpts] = React.useState<Record<string, string>>({});
   const [prompt, setPrompt] = React.useState("");
   const [sending, setSending] = React.useState(false);
@@ -357,8 +357,10 @@ function CreateDialog({ type, notebookId, sourceIds, referenceImageId, onClose, 
     setOpts(type === "report" ? { ...base, template: "briefing", reportFormat: "document" } : type === "flashcards" || type === "quiz" || type === "faq" || type === "glossary" ? { ...base, difficulty: "medium", count: "standard" } : type === "audio" ? { format: "deep_dive", duration: "standard", style: "accessible" } : type === "infographic" ? { language: "fr", orientation: "landscape", visualStyle: "auto", detailLevel: "standard", sourceScope: "selected" } : type === "image" ? { orientation: "landscape", sourceScope: "selected" } : type === "study_plan" ? { ...base, days: "7" } : type === "editorial" ? { ...base, editorialFormat: "blog_post", style: "accessible" } : type === "diagram" ? { ...base, direction: "TD" } : base);
     setPrompt("");
     ideasRequest.current++; // ignore une réponse arrivée après un changement de format
-    setIdeas([]); setIdeasError(false); setIdeasLoading(false);
-  }, [type]);
+    let saved: AiReportModel[] = [];
+    try { saved = type ? JSON.parse(localStorage.getItem(`studio-ideas:${notebookId}:${type}`) ?? "[]") : []; } catch { /* stockage indisponible : on repart à vide */ }
+    setIdeas(Array.isArray(saved) ? saved : []); setIdeasError(false); setIdeasLoading(false);
+  }, [type, notebookId]);
   if (!type) return null;
   async function suggestIdeas() {
     const request = ++ideasRequest.current;
@@ -367,7 +369,10 @@ function CreateDialog({ type, notebookId, sourceIds, referenceImageId, onClose, 
       const r = await fetch(`/api/v1/notebooks/${notebookId}/artifacts/suggestions`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ sourceIds, type }) });
       if (!r.ok) throw new Error("suggestions_unavailable");
       const j = await r.json() as { suggestions: AiReportModel[] };
-      if (request === ideasRequest.current) setIdeas(j.suggestions);
+      if (request !== ideasRequest.current) return;
+      setIdeas(j.suggestions);
+      // gardées jusqu'à la prochaine demande, même après fermeture de la fenêtre
+      try { localStorage.setItem(`studio-ideas:${notebookId}:${type}`, JSON.stringify(j.suggestions)); } catch { /* stockage indisponible */ }
     } catch {
       if (request === ideasRequest.current) setIdeasError(true);
     } finally {
@@ -554,7 +559,7 @@ function CreateDialog({ type, notebookId, sourceIds, referenceImageId, onClose, 
           <Field id="opt-prompt" label={type === "image" ? "Décrivez l’image à générer" : type === "infographic" ? "Décrivez l’infographie que vous souhaitez créer" : type === "report" ? "Personnaliser le modèle (facultatif)" : type === "flashcards" || type === "quiz" ? "Quel est le thème ?" : type === "comparison" ? "Décrivez la table de données que vous souhaitez créer" : "Consignes (facultatif)"} hint={type === "image" ? "Choisissez une idée proposée ou décrivez votre propre image." : type === "infographic" ? undefined : type === "report" ? "Public visé, ton, plan souhaité, longueur ou éléments à mettre en avant…" : "Public visé, angle, thèmes à privilégier…"}>
             <Textarea value={prompt} maxLength={4000} onChange={(e) => setPrompt(e.target.value)} placeholder={type === "image" ? "Choisissez une idée ci-dessus ou décrivez l’image souhaitée…" : type === "infographic" ? "Indiquez le style, la couleur ou le thème principal : « Utilise un thème de couleurs bleu et mets en avant les… »" : type === "report" ? "Ex. : rédiger pour une direction, avec une synthèse exécutive et des recommandations concrètes." : type === "flashcards" ? "Utilisez le recto pour le nom de la fonctionnalité et le verso pour ses prérequis." : type === "comparison" ? "Colonnes souhaitées, critères de comparaison, regroupements…" : "Ex. : pour un public débutant, insister sur la sécurité."} />
           </Field>
-          {type !== "image" && <section className="grid gap-2" aria-live="polite">
+          {type !== "image" && promptSuggestions && <section className="grid gap-2" aria-live="polite">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-xs text-text-muted">Besoin d’inspiration ? Leanna propose 3 consignes adaptées à vos sources.</p>
               <Button type="button" variant="secondary" size="sm" loading={ideasLoading} disabled={!sourceIds.length} onClick={() => void suggestIdeas()}><Sparkles aria-hidden className="size-3.5" /> {ideas.length ? "Autres suggestions" : "Suggérer avec l’IA"}</Button>

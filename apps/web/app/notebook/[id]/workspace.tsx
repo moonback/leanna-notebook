@@ -288,7 +288,7 @@ export function Workspace({ notebookId, initialTitle, role, allowCopies, disable
   const studioPanel = (
     <Studio notebookId={notebookId} canEdit={canEdit} sourceIds={ready.filter((s) => !deselected.has(s.id)).map((s) => s.id)} sourceTitle={(id) => titles.get(id)}
       onOpenCitation={role !== "chat" ? (c) => setViewer({ sourceId: c.source_id, range: [c.char_start, c.char_end] }) : undefined}
-      onAsk={ask} onImported={() => void load()} />
+      onAsk={ask} onImported={() => void load()} promptSuggestions={!disabledFeatures.includes("prompt_suggestions")} />
   );
 
   // Espaces centraux : Chat, Recherche approfondie, Graphe de connaissances, Contradictions.

@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { ApiError, handle, parseBody, requireRole, requireUser } from "@/lib/api";
 import { createServiceClient } from "@/lib/supabase/server";
+import { disabledFeatures } from "@/lib/ownership";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -28,16 +29,23 @@ const suggestionSchema = z.object({
 
 /** Génère des modèles de rapport adaptés au contenu réel des sources sélectionnées. */
 export const POST = handle(async (req: NextRequest, { params }: Params) => {
-  await requireUser();
+  const user = await requireUser();
   const { id } = await params;
   await requireRole(id, "editor");
   const body = await parseBody(req, schema);
-
-  const key = process.env.OPENROUTER_API_KEY;
-  const model = process.env.OPENROUTER_CHAT_MODEL;
-  if (!key || !model) throw new ApiError(503, "ai_not_configured");
+  if (body.type && (await disabledFeatures(user.id)).includes("prompt_suggestions")) throw new ApiError(403, "feature_disabled");
 
   const db = createServiceClient();
+  const key = process.env.OPENROUTER_API_KEY;
+  let model = process.env.OPENROUTER_CHAT_MODEL;
+  if (body.type) {
+    const { data: preference, error: preferenceError } = await db.from("ai_model_preferences")
+      .select("model_id").eq("user_id", user.id).eq("feature_key", "prompt_suggestions").maybeSingle();
+    if (preferenceError) throw preferenceError;
+    model = preference?.model_id || model;
+  }
+  if (!key || !model) throw new ApiError(503, "ai_not_configured");
+
   const { data: sources, error: sourceError } = await db
     .from("sources")
     .select("id, title, kind")
