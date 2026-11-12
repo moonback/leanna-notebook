@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, ArrowUpRight, AudioLines, BookOpen, Check, ChevronRight, FileSearch, FileText, Headphones, Layers3, LockKeyhole, MessageCircleQuestion, Mic, Network, Quote, Search, Sparkles, UploadCloud } from "lucide-react";
+import { ArrowRight, ArrowUpRight, AudioLines, BookOpen, Check, ChevronRight, FileSearch, FileText, Headphones, Layers3, LockKeyhole, MessageCircleQuestion, Mic, Network, Quote, Scale, Search, Sparkles, Telescope, TriangleAlert, UploadCloud } from "lucide-react";
 import { createUserClient, getUser } from "@/lib/supabase/server";
 import { Dashboard, type NotebookRow } from "./dashboard";
 
@@ -37,6 +37,7 @@ function PublicHome() {
           </Link>
           <nav aria-label="Navigation principale" className="hidden items-center gap-8 text-sm text-text-muted md:flex">
             <a href="#fonctionnalites" className="transition-colors hover:text-text">Fonctionnalités</a>
+            <a href="#recherche" className="transition-colors hover:text-text">Recherche & graphe</a>
             <a href="#studio-vocal" className="transition-colors hover:text-text">Studio vocal</a>
             <a href="#methode" className="transition-colors hover:text-text">Comment ça marche</a>
             <a href="#confiance" className="transition-colors hover:text-text">Confidentialité</a>
@@ -63,7 +64,7 @@ function PublicHome() {
               Vos documents deviennent <span className="text-accent">des connaissances exploitables.</span>
             </h1>
             <p className="mt-7 max-w-xl text-base leading-8 text-text-muted sm:text-lg">
-              Réunissez vos PDF, pages web et notes dans un même espace. Posez vos questions à Leanna, vérifiez chaque réponse dans ses sources, échangez à la voix avec Leanna et Roxane, puis créez directement dans le Studio des rapports, synthèses, quiz, chronologies et bien plus.
+              Réunissez vos PDF, pages web et notes dans un même espace. Posez vos questions à Leanna, confiez-lui une recherche approfondie sur le web, explorez le graphe des liens entre vos documents, repérez leurs contradictions, puis créez dans le Studio des rapports, synthèses, quiz, chronologies et bien plus.
             </p>
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
               <Link href="/signup" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-accent px-6 py-3 text-sm font-semibold text-on-accent shadow-[0_8px_24px_rgba(15,76,138,0.18)] transition hover:-translate-y-0.5 hover:bg-accent-hover">Commencer gratuitement <ArrowRight size={17} /></Link>
@@ -72,7 +73,7 @@ function PublicHome() {
             <div className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-text-subtle">
               <span className="inline-flex items-center gap-1.5"><Check size={14} className="text-success" /> Vos documents réunis dans un notebook</span>
               <span className="inline-flex items-center gap-1.5"><Check size={14} className="text-success" /> Réponses appuyées par les sources</span>
-              <span className="inline-flex items-center gap-1.5"><Check size={14} className="text-success" /> Chat, voix et Studio réunis</span>
+              <span className="inline-flex items-center gap-1.5"><Check size={14} className="text-success" /> Recherche approfondie et graphe de connaissances</span>
             </div>
           </div>
 
@@ -132,6 +133,50 @@ function PublicHome() {
         </div>
       </section>
 
+      <section id="recherche" className="mx-auto grid max-w-[var(--page-max-w)] items-center gap-12 px-5 pb-20 sm:px-8 lg:grid-cols-[1fr_1fr] lg:gap-16 lg:pb-28">
+        <div>
+          <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-accent"><Telescope size={15}/> Recherche & connaissance</p>
+          <h2 className="mt-4 max-w-2xl font-serif text-4xl leading-tight tracking-tight sm:text-5xl">Leanna cherche, relie et <span className="text-accent">vérifie pour vous.</span></h2>
+          <p className="mt-5 max-w-xl text-base leading-7 text-text-muted">Posez une question de fond : Leanna planifie la recherche, lit les pages web en entier, ajoute les sources pertinentes à votre notebook et rédige un rapport cité. Vos documents forment ensuite un graphe de connaissances, et chaque écart entre eux vous est signalé.</p>
+          <div className="mt-8 grid gap-5">
+            <Pillar icon={Telescope} title="Recherche approfondie" desc="Plan, recherches multi-angles, lecture complète des pages, recoupement et rapport cité dans le Studio. Suivez chaque étape en direct, mettez en pause, reprenez ou ajoutez une consigne."/>
+            <Pillar icon={Network} title="Graphe de connaissances" desc="Personnes, organisations, lieux, technologies et leurs relations, extraits de toutes vos sources. Cliquez sur un lien pour voir le document et le passage exact qui le justifient."/>
+            <Pillar icon={Scale} title="Détection des contradictions" desc="Dates, montants et quantités sont comparés entre vos documents. Chaque écart présente les deux passages ; vous confirmez, rejetez ou expliquez, et l’historique est conservé."/>
+          </div>
+        </div>
+
+        <div className="relative mx-auto w-full max-w-[560px]">
+          <div aria-hidden className="absolute -inset-5 rounded-[2rem] bg-accent/10 blur-2xl"/>
+          <div className="relative grid gap-4">
+            <div className="rounded-2xl border border-border-strong bg-surface-raised p-5 shadow-[0_18px_60px_rgba(28,27,25,0.10)]">
+              <div className="flex items-center justify-between"><p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-accent">Recherche approfondie</p><span className="rounded-full bg-accent-soft px-2 py-0.5 text-[9px] font-semibold text-on-accent-soft">Vérification</span></div>
+              <p className="mt-2 text-sm font-semibold">Comparer les technologies de stockage d’énergie</p>
+              <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-surface-sunken"><div className="h-full w-[62%] rounded-full bg-accent"/></div>
+              <dl className="mt-3 grid grid-cols-4 gap-2 text-center">
+                {[["10","requêtes"],["18","pages lues"],["8","retenues"],["10","écartées"]].map(([v,l])=><div key={l} className="flex flex-col-reverse rounded-lg bg-bg py-2"><dt className="text-[9px] text-text-subtle">{l}</dt><dd className="text-sm font-semibold tabular-nums">{v}</dd></div>)}
+              </dl>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-[1.1fr_1fr]">
+              <div className="rounded-2xl border border-border-strong bg-surface-raised p-4 shadow-[0_18px_60px_rgba(28,27,25,0.10)]">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-accent">Graphe</p>
+                <svg viewBox="0 0 200 120" className="mt-2 w-full" role="img" aria-label="Exemple de graphe de connaissances">
+                  <g stroke="var(--border-strong)" strokeWidth="1.2"><line x1="100" y1="60" x2="40" y2="28"/><line x1="100" y1="60" x2="160" y2="30"/><line x1="100" y1="60" x2="52" y2="98"/><line x1="100" y1="60" x2="158" y2="96" strokeDasharray="4 3"/><line x1="160" y1="30" x2="158" y2="96"/></g>
+                  <circle cx="100" cy="60" r="12" fill="#a855f7" fillOpacity=".8"/><circle cx="40" cy="28" r="8" fill="#3b82f6" fillOpacity=".8"/><circle cx="160" cy="30" r="9" fill="#06b6d4" fillOpacity=".8"/><circle cx="52" cy="98" r="7" fill="#10b981" fillOpacity=".8"/><circle cx="158" cy="96" r="7" fill="#f59e0b" fillOpacity=".8"/>
+                </svg>
+                <p className="mt-1 text-[10px] text-text-subtle">Pointillés : relation déduite, signalée comme hypothèse</p>
+              </div>
+              <div className="rounded-2xl border border-border-strong bg-surface-raised p-4 shadow-[0_18px_60px_rgba(28,27,25,0.10)]">
+                <p className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-warning"><TriangleAlert size={12}/> Contradiction</p>
+                <p className="mt-2 text-xs font-semibold">Date de lancement du projet</p>
+                <p className="mt-2 rounded-md bg-bg px-2 py-1.5 text-[10px] text-text-muted">« lancé en mars 2024 » — Rapport A</p>
+                <p className="mt-1.5 rounded-md bg-bg px-2 py-1.5 text-[10px] text-text-muted">« lancé en septembre 2024 » — Article B</p>
+                <div className="mt-2 flex gap-1.5"><span className="rounded-md bg-success-soft px-2 py-1 text-[9px] font-medium text-success">Confirmer</span><span className="rounded-md bg-surface px-2 py-1 text-[9px] text-text-subtle">Rejeter</span></div>
+              </div>
+            </div>
+            <p className="text-center text-[9px] text-text-subtle">Illustration fictive de l’interface</p>
+          </div>
+        </div>
+      </section>
 
       <section id="studio-vocal" className="relative overflow-hidden border-y border-border bg-surface/60">
         <div aria-hidden className="pointer-events-none absolute -right-24 top-0 size-[28rem] rounded-full bg-accent/10 blur-[100px]" />
@@ -198,7 +243,7 @@ function PublicHome() {
         <div className="mx-auto grid max-w-[var(--page-max-w)] gap-14 px-5 py-20 sm:px-8 lg:grid-cols-[0.8fr_1.2fr] lg:items-center lg:py-24">
           <div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#9bc9d4]">Votre méthode de travail</p><h2 className="mt-4 font-serif text-4xl leading-tight tracking-tight sm:text-5xl">De la source au livrable, gardez le fil.</h2><p className="mt-5 max-w-md text-sm leading-7 text-white/70">Un parcours lisible pour passer de documents dispersés à une production structurée, tout en gardant la possibilité de vérifier les informations.</p><Link href="/signup" className="mt-8 inline-flex items-center gap-2 rounded-lg bg-white px-5 py-3 text-sm font-semibold text-[#172b3b] transition hover:bg-[#e8f1f2]">Créer mon espace <ArrowRight size={16}/></Link></div>
           <div className="grid gap-3 sm:grid-cols-2">
-            {[{n:"01",icon:UploadCloud,t:"Collecter",d:"Importez vos PDF, pages web et notes dans un notebook dédié."},{n:"02",icon:Search,t:"Explorer",d:"Posez une question à Leanna et retrouvez les passages pertinents."},{n:"03",icon:Network,t:"Recouper",d:"Comparez les extraits, les dates et les informations entre vos sources."},{n:"04",icon:FileText,t:"Structurer",d:"Générez un rapport, un guide ou un autre format depuis le chat ou le Studio vocal."}].map(x=><div key={x.n} className="rounded-xl border border-white/15 bg-white/[0.06] p-5"><div className="flex items-center justify-between"><span className="grid size-9 place-items-center rounded-lg bg-white/10 text-[#b9e0e4]"><x.icon size={17}/></span><span className="font-mono text-xs text-white/40">{x.n}</span></div><h3 className="mt-5 text-base font-semibold">{x.t}</h3><p className="mt-2 text-xs leading-5 text-white/65">{x.d}</p></div>)}
+            {[{n:"01",icon:UploadCloud,t:"Collecter",d:"Importez vos PDF, pages web et notes dans un notebook dédié."},{n:"02",icon:Search,t:"Explorer",d:"Posez une question à Leanna et retrouvez les passages pertinents."},{n:"03",icon:Network,t:"Recouper",d:"Explorez le graphe des liens entre vos sources et traitez les contradictions détectées."},{n:"04",icon:FileText,t:"Structurer",d:"Générez un rapport, un guide ou un autre format depuis le chat ou le Studio vocal."}].map(x=><div key={x.n} className="rounded-xl border border-white/15 bg-white/[0.06] p-5"><div className="flex items-center justify-between"><span className="grid size-9 place-items-center rounded-lg bg-white/10 text-[#b9e0e4]"><x.icon size={17}/></span><span className="font-mono text-xs text-white/40">{x.n}</span></div><h3 className="mt-5 text-base font-semibold">{x.t}</h3><p className="mt-2 text-xs leading-5 text-white/65">{x.d}</p></div>)}
           </div>
         </div>
       </section>
@@ -224,7 +269,7 @@ function PublicHome() {
       <footer className="border-t border-border bg-surface/55">
         <div className="mx-auto flex max-w-[var(--page-max-w)] flex-col gap-5 px-5 py-8 text-xs text-text-subtle sm:px-8 md:flex-row md:items-center md:justify-between">
           <Link href="/" className="flex items-center gap-2 font-semibold text-text"><span className="grid size-8 shrink-0 place-items-center overflow-hidden rounded-lg bg-surface-raised"><img src="/logo.png" alt="" className="size-full object-contain" /></span> Leanna Notebook</Link>
-          <p>Recherche documentaire, conversation vocale et création dans le Studio.</p>
+          <p>Recherche documentaire et approfondie, graphe de connaissances, conversation vocale et création dans le Studio.</p>
           <div className="flex flex-wrap gap-5"><Link href="/login" className="hover:text-text">Connexion</Link><Link href="/signup" className="hover:text-text">Créer un compte</Link><Link href="/privacy" className="hover:text-text">Confidentialité</Link><Link href="/terms" className="hover:text-text">Conditions</Link></div>
         </div>
       </footer>
@@ -234,6 +279,10 @@ function PublicHome() {
 
 function Feature({icon:Icon,number,title,desc,tags}:{icon:typeof BookOpen;number:string;title:string;desc:string;tags:string[]}) {
   return <article className="group rounded-2xl border border-border bg-surface-raised p-6 shadow-xs transition duration-200 hover:-translate-y-1 hover:shadow-lg"><div className="flex items-center justify-between"><span className="grid size-10 place-items-center rounded-xl bg-accent-soft text-on-accent-soft"><Icon size={19}/></span><span className="font-mono text-[10px] text-text-subtle">{number}</span></div><h3 className="mt-6 text-base font-semibold tracking-tight">{title}</h3><p className="mt-3 min-h-[5rem] text-sm leading-6 text-text-muted">{desc}</p><div className="mt-5 flex flex-wrap gap-1.5">{tags.map(t=><span key={t} className="rounded-md bg-surface px-2 py-1 text-[10px] text-text-subtle">{t}</span>)}</div></article>;
+}
+
+function Pillar({icon:Icon,title,desc}:{icon:typeof BookOpen;title:string;desc:string}) {
+  return <div className="flex items-start gap-3"><span className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-on-accent-soft"><Icon size={19}/></span><div><h3 className="text-sm font-semibold">{title}</h3><p className="mt-1 text-xs leading-5 text-text-muted">{desc}</p></div></div>;
 }
 
 function Trust({icon:Icon,title,desc}:{icon:typeof BookOpen;title:string;desc:string}) {

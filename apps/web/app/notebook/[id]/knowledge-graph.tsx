@@ -1,7 +1,8 @@
-"use client";
+﻿"use client";
 import * as React from "react";
 import { forceCenter, forceCollide, forceLink, forceManyBody, forceSimulation, type Simulation, type SimulationLinkDatum, type SimulationNodeDatum } from "d3-force";
-import { ArrowRight, Check, ChevronsDownUp, ChevronsUpDown, ExternalLink, Focus, GitMerge, Network, RefreshCw, ScanSearch, Scissors, Share2, TriangleAlert, X } from "lucide-react";
+import { ArrowRight, Check, ChevronsDownUp, ChevronsUpDown, ExternalLink, Focus, GitMerge, Maximize2, Minimize2, Network, RefreshCw, ScanSearch, Scissors, Share2, SlidersHorizontal, TriangleAlert, X } from "lucide-react";
+import { Dialog, DialogContent, Tooltip } from "@/components/ui/overlay";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/field";
 import { Alert, Badge, EmptyState, Skeleton } from "@/components/ui/feedback";
@@ -76,6 +77,16 @@ export function KnowledgeGraph({ notebookId, canEdit, sources, onOpenPassage, on
   const [indirect, setIndirect] = React.useState(false);
   const [selection, setSelection] = React.useState<{ kind: "node" | "edge"; id: string } | null>(null);
   const [reindexing, setReindexing] = React.useState(false);
+  const [fullscreen, setFullscreen] = React.useState(false);
+  const [filtersOpen, setFiltersOpen] = React.useState(false);
+  const activeFilters = (sourceFilter ? 1 : 0) + (from ? 1 : 0) + (to ? 1 : 0) + (minConfidence > 0 ? 1 : 0) + (hideInferred ? 1 : 0) + (byCommunity ? 1 : 0) + (limit !== 150 ? 1 : 0);
+  function resetFilters() { setSourceFilter(""); setFrom(""); setTo(""); setMinConfidence(0); setHideInferred(false); setByCommunity(false); setLimit(150); }
+  React.useEffect(() => {
+    if (!fullscreen || filtersOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setFullscreen(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [fullscreen, filtersOpen]);
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -158,7 +169,7 @@ export function KnowledgeGraph({ notebookId, canEdit, sources, onOpenPassage, on
   const empty = !loading && !error && nodes.length === 0;
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className={cn("flex min-h-0 flex-col", fullscreen ? "fixed inset-0 z-[45] bg-surface-raised" : "h-full")}>
       <div className="grid gap-3 border-b p-3 sm:p-4">
         {stats && (
           <dl className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-text-muted">
@@ -172,36 +183,58 @@ export function KnowledgeGraph({ notebookId, canEdit, sources, onOpenPassage, on
         )}
         <div className="flex flex-wrap items-center gap-2">
           <EntitySearch notebookId={notebookId} onPick={(id) => void focusEntity(id)} />
-          <select aria-label="Filtrer par source" value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value)} className="h-8 max-w-48 rounded-md border border-border-input bg-surface-raised px-2 text-sm">
-            <option value="">Toutes les sources</option>{sources.map((s) => <option key={s.id} value={s.id}>{s.title}</option>)}
-          </select>
-          <label className="flex items-center gap-1 text-xs text-text-muted">Du <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="h-8 rounded-md border border-border-input bg-surface-raised px-1 text-sm text-text" /></label>
-          <label className="flex items-center gap-1 text-xs text-text-muted">au <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="h-8 rounded-md border border-border-input bg-surface-raised px-1 text-sm text-text" /></label>
-          <select aria-label="Confiance minimale des relations" value={minConfidence} onChange={(e) => setMinConfidence(Number(e.target.value))} className="h-8 rounded-md border border-border-input bg-surface-raised px-2 text-sm">
-            <option value={0}>Toutes les relations</option><option value={0.5}>Confiance ≥ 50 %</option><option value={0.8}>Confiance ≥ 80 %</option>
-          </select>
-          <select aria-label="Nombre maximal de nœuds" value={limit} onChange={(e) => setLimit(Number(e.target.value))} className="h-8 rounded-md border border-border-input bg-surface-raised px-2 text-sm">
-            {[50, 150, 300, 500].map((n) => <option key={n} value={n}>{n} nœuds max</option>)}
-          </select>
-          <label className="flex items-center gap-1.5 text-sm"><input type="checkbox" checked={hideInferred} onChange={(e) => setHideInferred(e.target.checked)} /> Faits déclarés seulement</label>
-          <label className="flex items-center gap-1.5 text-sm"><input type="checkbox" checked={byCommunity} onChange={(e) => setByCommunity(e.target.checked)} /> Regrouper</label>
-          {canEdit && <Button size="sm" variant="ghost" loading={reindexing} onClick={() => void reindex()}><RefreshCw aria-hidden /> Réindexer</Button>}
+          <Dialog open={filtersOpen} onOpenChange={setFiltersOpen}>
+            <Button size="sm" variant="secondary" onClick={() => setFiltersOpen(true)}>
+              <SlidersHorizontal aria-hidden /> Filtres{activeFilters > 0 && <Badge>{activeFilters}</Badge>}
+            </Button>
+            <DialogContent title="Filtres du graphe" description="Affinez les entités et relations affichées." size="md">
+              <div className="grid gap-4">
+                <label className="grid gap-1 text-sm">Source
+                  <select value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value)} className="h-9 rounded-md border border-border-input bg-surface-raised px-2 text-sm">
+                    <option value="">Toutes les sources</option>{sources.map((s) => <option key={s.id} value={s.id}>{s.title}</option>)}
+                  </select>
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="grid gap-1 text-sm">Du <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="h-9 rounded-md border border-border-input bg-surface-raised px-2 text-sm" /></label>
+                  <label className="grid gap-1 text-sm">Au <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="h-9 rounded-md border border-border-input bg-surface-raised px-2 text-sm" /></label>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="grid gap-1 text-sm">Confiance des relations
+                    <select value={minConfidence} onChange={(e) => setMinConfidence(Number(e.target.value))} className="h-9 rounded-md border border-border-input bg-surface-raised px-2 text-sm">
+                      <option value={0}>Toutes</option><option value={0.5}>≥ 50 %</option><option value={0.8}>≥ 80 %</option>
+                    </select>
+                  </label>
+                  <label className="grid gap-1 text-sm">Nombre de nœuds
+                    <select value={limit} onChange={(e) => setLimit(Number(e.target.value))} className="h-9 rounded-md border border-border-input bg-surface-raised px-2 text-sm">
+                      {[50, 150, 300, 500].map((n) => <option key={n} value={n}>{n} max</option>)}
+                    </select>
+                  </label>
+                </div>
+                <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={hideInferred} onChange={(e) => setHideInferred(e.target.checked)} /> Faits déclarés seulement</label>
+                <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={byCommunity} onChange={(e) => setByCommunity(e.target.checked)} /> Regrouper par communauté</label>
+                <div className="flex justify-between gap-2 border-t pt-4">
+                  <Button variant="ghost" onClick={resetFilters}>Réinitialiser</Button>
+                  <Button onClick={() => setFiltersOpen(false)}>Terminé</Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+          <Tooltip label={fullscreen ? "Quitter le plein écran" : "Plein écran"}>
+            <Button size="icon-sm" variant="ghost" className="ml-auto" aria-label={fullscreen ? "Quitter le plein écran" : "Plein écran"} aria-pressed={fullscreen} onClick={() => setFullscreen((v) => !v)}>
+              {fullscreen ? <Minimize2 aria-hidden /> : <Maximize2 aria-hidden />}
+            </Button>
+          </Tooltip>
+          {canEdit && (
+            <Tooltip label="Réindexer">
+              <Button size="icon-sm" variant="ghost" aria-label="Réindexer" loading={reindexing} onClick={() => void reindex()}><RefreshCw aria-hidden /></Button>
+            </Tooltip>
+          )}
         </div>
-        {presentTypes.length > 0 && (
-          <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filtrer par type d’entité">
-            {presentTypes.map((t) => (
-              <button key={t} type="button" aria-pressed={types.has(t)} onClick={() => setTypes((old) => { const n = new Set(old); if (n.has(t)) n.delete(t); else n.add(t); return n; })}
-                className={cn("inline-flex h-7 items-center gap-1.5 rounded-pill border px-2.5 text-xs", types.has(t) ? "border-accent bg-accent-soft text-on-accent-soft" : "text-text-muted hover:border-border-strong")}>
-                <span aria-hidden className="size-2 rounded-full" style={{ background: colorOf(t) }} />{TYPE_LABEL[t] ?? t}
-              </button>
-            ))}
-            {types.size > 0 && <button type="button" className="text-xs text-accent underline-offset-2 hover:underline" onClick={() => setTypes(new Set())}>Tout afficher</button>}
-          </div>
-        )}
       </div>
 
       <div className="relative flex min-h-0 flex-1 flex-col lg:flex-row">
-        <div className="relative min-h-[320px] flex-1">
+        <div className="flex min-h-[320px] min-w-0 flex-1 flex-col">
+        <div className="relative min-h-0 flex-1">
           {error ? <div className="p-6"><Alert tone="danger" title="Graphe indisponible" action={<Button size="sm" variant="secondary" onClick={() => void load()}>Réessayer</Button>} /></div>
             : loading && nodes.length === 0 ? <div className="grid h-full place-items-center p-6"><Skeleton className="size-48 rounded-full" /></div>
             : empty ? (
@@ -214,6 +247,19 @@ export function KnowledgeGraph({ notebookId, canEdit, sources, onOpenPassage, on
                 colorFor={(n) => (community ? communityColor.get(community.get(n.id) ?? "") ?? colorOf(n.type) : colorOf(n.type))}
                 onSelect={setSelection} onExpand={(id) => void expand(id)} />
             )}
+        </div>
+        {presentTypes.length > 0 && (
+          <div className="flex shrink-0 flex-wrap items-center gap-1.5 border-t bg-surface-raised px-3 py-2" role="group" aria-label="Légende : filtrer par type d’entité">
+            <span className="mr-1 text-xs font-medium text-text-muted">Légende</span>
+            {presentTypes.map((t) => (
+              <button key={t} type="button" aria-pressed={types.has(t)} onClick={() => setTypes((old) => { const n = new Set(old); if (n.has(t)) n.delete(t); else n.add(t); return n; })}
+                className={cn("inline-flex h-7 items-center gap-1.5 rounded-pill border px-2.5 text-xs", types.has(t) ? "border-accent bg-accent-soft text-on-accent-soft" : "text-text-muted hover:border-border-strong")}>
+                <span aria-hidden className="size-2 rounded-full" style={{ background: colorOf(t) }} />{TYPE_LABEL[t] ?? t}
+              </button>
+            ))}
+            {types.size > 0 && <button type="button" className="text-xs text-accent underline-offset-2 hover:underline" onClick={() => setTypes(new Set())}>Tout afficher</button>}
+          </div>
+        )}
         </div>
         {selection && (
           <aside className="max-h-[50dvh] min-h-0 w-full shrink-0 overflow-y-auto border-t bg-surface-raised lg:max-h-none lg:w-[360px] lg:border-l lg:border-t-0" aria-label="Détails">

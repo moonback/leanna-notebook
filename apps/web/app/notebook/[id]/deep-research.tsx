@@ -207,7 +207,10 @@ function Monitor({ runId, canEdit, onBack, onOpenSource, onOpenReport, onSources
     setRun(j.run); setSources(j.sources); setFindings(j.findings); setWorker(j.worker);
     if (j.events.length) {
       cursor.current = j.events[j.events.length - 1]!.id;
-      setEvents((old) => [...old, ...j.events]);
+      setEvents((old) => {
+        const seen = new Set(old.map((e) => e.id));
+        return [...old, ...j.events.filter((e) => !seen.has(e.id))];
+      });
     }
     const nAdded = j.sources.filter((s) => s.source_id).length;
     if (nAdded !== added.current) { added.current = nAdded; sourcesChanged.current(); }
