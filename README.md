@@ -96,7 +96,7 @@ Web : http://localhost:3000. Supabase local : API 58321, PostgreSQL 58322, Studi
 
 Pour réinitialiser la base locale (opération destructive) : `pnpm db:reset`.
 
-Voir [Installation](docs/INSTALLATION.md) et [Configuration](docs/CONFIGURATION.md).
+Voir [Documentation web](apps/web/README.md) et [Documentation desktop](apps/desktop/README.md).
 
 ## Variables d'environnement
 
@@ -115,7 +115,7 @@ Les variables principales sont :
 | `APP_URL`, `BILLING_MODE` | URL publique et mode de facturation |
 | `NEXT_PUBLIC_LEGAL_ENTITY`, `NEXT_PUBLIC_LEGAL_EMAIL` | Informations des pages légales |
 
-La liste complète et les variables worker sont détaillées dans [Configuration](docs/CONFIGURATION.md). Ne versionnez jamais de secrets. Web et worker doivent utiliser des embeddings compatibles de même dimension (1024 selon la configuration décrite).
+La configuration doit rester cohérente entre le web et le worker. Ne versionnez jamais de secrets. Web et worker doivent utiliser des embeddings compatibles de même dimension (1024 selon la configuration décrite).
 
 ## Scripts
 
@@ -151,7 +151,7 @@ Documents disponibles dans le dépôt :
 3. Exécuter `pnpm typecheck`, `pnpm lint`, `pnpm test` et, pour les changements SQL, `pnpm db:test`.
 4. Ouvrir une Pull Request vers `main` avec le périmètre, les tests exécutés et les limites connues.
 
-La structure est organisée autour de `apps/web`, `apps/worker`, `apps/desktop`, `packages/core` et `supabase`. Voir [Structure du projet](docs/PROJECT_STRUCTURE.md).
+La structure est organisée autour de `apps/web`, `apps/worker`, `apps/desktop`, `packages/core` et `supabase`.
 
 ## Licence
 
