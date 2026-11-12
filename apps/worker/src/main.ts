@@ -32,7 +32,7 @@ const llm = llmFromEnv();
 const transcriber = transcriberFromEnv();
 const speech = speechFromEnv();
 if (!speech) console.warn("ELEVENLABS_API_KEY absent : génération Audio Overview désactivée.");
-if (!transcriber) console.warn("DEEPGRAM_API_KEY absent : import audio désactivé (les autres sources restent disponibles).");
+if (!transcriber) console.warn("GROQ_API_KEY (ou DEEPGRAM_API_KEY de secours) absent : import audio/vidéo désactivé.");
 const handlers: Partial<Record<JobKind, Handler>> = {
   ingest_source: ingestHandler(db, embedder, { summaries: Boolean(llm), knowledge: Boolean(llm), transcriber }),
   research: researchHandler(db, process.env.TAVILY_API_KEY),
