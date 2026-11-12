@@ -95,6 +95,11 @@ export function Studio({ notebookId, canEdit, sourceIds, sourceTitle, onOpenCita
     } catch { setFailedLoad(true); }
   }, [notebookId]);
   React.useEffect(() => { void load(); }, [load]);
+  React.useEffect(() => {
+    const refresh = () => { void load(); };
+    window.addEventListener("notebook:artifact-created", refresh);
+    return () => window.removeEventListener("notebook:artifact-created", refresh);
+  }, [load]);
   const pending = arts?.some((a) => busy(a.status));
   React.useEffect(() => {
     if (!pending) return;
