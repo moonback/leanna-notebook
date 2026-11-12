@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Source_Serif_4 } from "next/font/google";
 import { Toaster } from "@/components/ui/toast";
+import { ResearchDock } from "@/components/app/research-dock";
 import "./globals.css";
 
 // Polices sous licence OFL, auto-hébergées par next/font au build.
@@ -25,6 +26,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="fr" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} ${sourceSerif.variable}`}>
         {children}
+        <ResearchDock />
         <Toaster />
       </body>
     </html>

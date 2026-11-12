@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Field, Input, Textarea } from "@/components/ui/field";
 import { Alert, Badge, Progress, Skeleton } from "@/components/ui/feedback";
 import { toast } from "@/components/ui/toast";
+import { notifyResearchChanged } from "@/components/app/research-dock";
 import { cn } from "@/lib/utils";
 
 type RunSummary = { id: string; question: string; depth: string; status: string; stage: string | null; progress: number; artifact_id: string | null; created_at: string; error_code: string | null; parent_run_id: string | null };
@@ -52,12 +53,14 @@ const elapsed = (from: string | null, to: string | null, now: number) => {
   return s < 60 ? `${s} s` : `${Math.floor(s / 60)} min ${String(s % 60).padStart(2, "0")} s`;
 };
 
-export function DeepResearch({ notebookId, canEdit, onOpenSource, onOpenReport, onSourcesChanged }: {
+export function DeepResearch({ notebookId, canEdit, onOpenSource, onOpenReport, onSourcesChanged, openRunId }: {
   notebookId: string; canEdit: boolean; onOpenSource: (sourceId: string) => void; onOpenReport: (artifactId: string) => void; onSourcesChanged: () => void;
+  openRunId?: string | null;
 }) {
   const [runs, setRuns] = React.useState<RunSummary[] | null>(null);
   const [failed, setFailed] = React.useState(false);
-  const [selected, setSelected] = React.useState<string | null>(null);
+  const [selected, setSelected] = React.useState<string | null>(openRunId ?? null);
+  React.useEffect(() => { if (openRunId) setSelected(openRunId); }, [openRunId]);
   const loadRuns = React.useCallback(async () => {
     try {
       const r = await fetch(`/api/v1/notebooks/${notebookId}/deep-research`, { cache: "no-store" });
@@ -112,6 +115,7 @@ async function launch(notebookId: string, body: Record<string, unknown>): Promis
     });
     const j = await r.json();
     if (!r.ok) throw new Error(ERRORS[j.error] ?? "Impossible de lancer la recherche.");
+    notifyResearchChanged();
     return j.runId as string;
   } catch (e) {
     toast({ title: "Recherche non lancée", description: e instanceof Error ? e.message : undefined, tone: "error" });
@@ -249,6 +253,7 @@ function Monitor({ runId, canEdit, onBack, onOpenSource, onOpenReport, onSources
       if (!r.ok) throw new Error(ERRORS[j.error] ?? "Action impossible.");
       if (action === "instruct") setInstruction("");
       setWake((n) => n + 1);   // relance le suivi (après une reprise notamment)
+      notifyResearchChanged();
     } catch (e) {
       toast({ title: "Action impossible", description: e instanceof Error ? e.message : undefined, tone: "error" });
     } finally { setActing(null); }

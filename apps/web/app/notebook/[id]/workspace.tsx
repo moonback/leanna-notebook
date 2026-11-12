@@ -76,6 +76,19 @@ export function Workspace({ notebookId, initialTitle, role, allowCopies }: { not
   const [renaming, setRenaming] = React.useState<Source | null>(null);
   const [mobileTab, setMobileTab] = React.useState("chat");
   const [center, setCenter] = React.useState<"chat" | "research" | "graph" | "contradictions">("chat");
+  const [researchRun, setResearchRun] = React.useState<string | null>(null);
+  // suivi flottant : « Suivre » ouvre l'onglet Recherche sur la bonne recherche (?research=<id> ou événement)
+  React.useEffect(() => {
+    const open = (runId: string) => { setCenter("research"); setMobileTab("chat"); setResearchRun(runId); };
+    const fromUrl = new URLSearchParams(window.location.search).get("research");
+    if (fromUrl && /^[0-9a-f-]{36}$/i.test(fromUrl)) open(fromUrl);
+    const onEvent = (e: Event) => {
+      const d = (e as CustomEvent<{ notebookId: string; runId: string }>).detail;
+      if (d?.notebookId === notebookId) open(d.runId);
+    };
+    window.addEventListener("notebook:open-research", onEvent);
+    return () => window.removeEventListener("notebook:open-research", onEvent);
+  }, [notebookId]);
   const mobileSwipeStart = React.useRef<{ x: number; y: number } | null>(null);
   const handleMobileSwipeStart = (event: React.TouchEvent<HTMLDivElement>) => {
     const touch = event.touches[0];
@@ -302,7 +315,7 @@ export function Workspace({ notebookId, initialTitle, role, allowCopies }: { not
       <div id="center-panel-chat" role="tabpanel" aria-labelledby="center-tab-chat" hidden={center !== "chat"} className="min-h-0 flex-1">{chatPanel}</div>
       {center !== "chat" && (
         <div id={`center-panel-${center}`} role="tabpanel" aria-labelledby={`center-tab-${center}`} className={cn("min-h-0 flex-1 rounded-xl border bg-surface-raised", center === "graph" ? "overflow-hidden" : "overflow-y-auto")}>
-          {center === "research" && <DeepResearch notebookId={notebookId} canEdit={canEdit} onOpenSource={(id) => setViewer({ sourceId: id })} onOpenReport={openReport} onSourcesChanged={() => void load()} />}
+          {center === "research" && <DeepResearch notebookId={notebookId} canEdit={canEdit} onOpenSource={(id) => setViewer({ sourceId: id })} onOpenReport={openReport} onSourcesChanged={() => void load()} openRunId={researchRun} />}
           {center === "graph" && <KnowledgeGraph notebookId={notebookId} canEdit={canEdit} sources={sourceList} onOpenPassage={openPassage} onShowContradictions={() => setCenter("contradictions")} />}
           {center === "contradictions" && <Contradictions notebookId={notebookId} canEdit={canEdit} sources={sourceList} onOpenPassage={openPassage} />}
         </div>
