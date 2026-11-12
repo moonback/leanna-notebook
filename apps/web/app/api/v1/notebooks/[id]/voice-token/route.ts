@@ -31,15 +31,30 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
     outputAudioTranscription: {},
     speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } },
     systemInstruction: { parts: [{ text: [VOICE_SYSTEM_PROMPTS[persona], promptOverride?.content].filter(Boolean).join("\n\n") }] },
-    ...(persona === "leanna" ? { tools: [{ functionDeclarations: [{
-      name: "search_notebook_sources",
-      description: "Recherche des passages pertinents dans les sources prêtes et sélectionnées du notebook courant. À appeler avant toute réponse documentaire.",
-      parameters: {
-        type: "OBJECT",
-        properties: { query: { type: "STRING", description: "Question ou concepts à rechercher dans les documents." } },
-        required: ["query"]
+    ...(persona === "leanna" ? { tools: [{ functionDeclarations: [
+      {
+        name: "search_notebook_sources",
+        description: "Recherche des passages pertinents dans les sources prêtes et sélectionnées du notebook courant. À appeler avant toute réponse documentaire et avant de créer un livrable Studio.",
+        parameters: {
+          type: "OBJECT",
+          properties: { query: { type: "STRING", description: "Question ou concepts à rechercher dans les documents." } },
+          required: ["query"]
+        }
+      },
+      {
+        name: "create_studio_artifact",
+        description: "Crée réellement un livrable dans l'onglet Studio du notebook. À utiliser dès que l'utilisateur demande à voix haute de créer, préparer, rédiger ou générer un rapport, une synthèse, un guide, des flashcards, un quiz, une carte mentale, une infographie, une chronologie, un comparatif, un glossaire, une FAQ, un diagramme, un contenu éditorial, un plan d'étude, un Audio Overview ou une image. Recherche d'abord les sources avec search_notebook_sources. Ne récite jamais le livrable dans la conversation vocale : appelle cet outil puis confirme brièvement que la génération est lancée.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            type: { type: "STRING", enum: ["report", "flashcards", "quiz", "mind_map", "audio", "infographic", "timeline", "comparison", "glossary", "faq", "diagram", "editorial", "study_plan", "image"], description: "Type exact de livrable Studio." },
+            prompt: { type: "STRING", description: "Consigne complète de génération, sujet, périmètre et attentes exprimés par l'utilisateur." },
+            template: { type: "STRING", enum: ["custom", "briefing", "study_guide", "faq", "blog_post", "specification", "action_plan", "practical_sheet", "detailed_guide"], description: "Modèle de rapport si le type est report." }
+          },
+          required: ["type", "prompt"]
+        }
       }
-    }] }] } : {})
+    ] }] } : {})
   };
 
   // L'API REST attend `bidiGenerateContentSetup` (le SDK le nomme `liveConnectConstraints`), uniquement en v1alpha.
