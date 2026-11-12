@@ -44,8 +44,8 @@ export default async function SettingsPage() {
   return (
     <div className="min-h-dvh bg-surface/40">
       <AppHeader><h1 className="truncate text-lg">Réglages</h1></AppHeader>
-      <main className="mx-auto grid max-w-6xl grid-cols-1 gap-8 px-4 py-8 sm:px-6">
-        <section aria-label="Compte" className="flex flex-wrap items-center gap-4 rounded-lg border bg-surface-raised p-5 shadow-xs">
+      <main className="mobile-settings-main mx-auto grid max-w-6xl grid-cols-1 gap-8 px-4 py-8 sm:px-6">
+        <section aria-label="Compte" className="mobile-settings-account flex flex-wrap items-center gap-4 rounded-lg border bg-surface-raised p-5 shadow-xs">
           <span aria-hidden className="grid size-14 shrink-0 place-items-center rounded-pill bg-accent text-lg font-semibold text-on-accent">{initials}</span>
           <div className="min-w-0 flex-1">
             <p className="truncate text-lg font-semibold">{name}</p>
