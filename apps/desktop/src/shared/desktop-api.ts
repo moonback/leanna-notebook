@@ -41,6 +41,8 @@ export interface DesktopBrowserState {
 
 export type DesktopBrowserBounds = { x: number; y: number; width: number; height: number };
 
+export interface DesktopBrowserPageContent { url: string; title: string; text: string }
+
 export interface DesktopBrowserVisit {
   id: string;
   url: string;
@@ -75,6 +77,7 @@ export interface DesktopApi {
   browserStop(id: string): Promise<boolean>;
   setBrowserBounds(bounds: DesktopBrowserBounds): Promise<boolean>;
   setBrowserVisible(visible: boolean): Promise<boolean>;
+  extractBrowserPage(id: string): Promise<DesktopBrowserPageContent | null>;
   getBrowserHistory(): Promise<DesktopBrowserVisit[]>;
   clearBrowserHistory(): Promise<boolean>;
   getBrowserBookmarks(): Promise<DesktopBrowserBookmark[]>;
