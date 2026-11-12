@@ -18,16 +18,14 @@ export function detectLanguage(text: string): string {
 }
 
 /**
- * Job ingest_source : télécharge l'original depuis Storage (ou l'URL), extrait, découpe, embedde,
- * puis remplace les chunks en UNE transaction (replace_chunks). Statuts persistants à chaque étape.
+ * Job ingest_source : télécharge l'original, extrait page par page, découpe, embedde,
+ * puis remplace les chunks en UNE transaction (replace_chunks). Les étapes sont publiées.
  */
-/** summaries : programme guide de source + résumé du notebook (seulement si un modèle est configuré). */
 export function ingestHandler(db: SupabaseClient, embedder: Embedder | null, opts: { summaries?: boolean; transcriber?: Transcriber | null } = {}): Handler {
   return async (job, ctx) => {
     const { data: src, error } = await db.from("sources").select("id, kind, storage_path, origin_url, notebook_id, workspace_id, note_body, mime_type")
       .eq("id", job.target_id!).single();
     if (error || !src) throw new PermanentError("source_not_found");
-    // le job et la source doivent appartenir au même tenant (défense en profondeur)
     if (src.workspace_id !== job.workspace_id || src.notebook_id !== job.notebook_id) throw new PermanentError("tenant_mismatch");
 
     await db.from("sources").update({ status: "processing", error_code: null }).eq("id", src.id);
@@ -40,29 +38,49 @@ export function ingestHandler(db: SupabaseClient, embedder: Embedder | null, opt
         file = new Uint8Array(await blob.arrayBuffer());
       }
       await ctx.progress(25, src.kind === "audio" ? "transcription" : "extraction");
-      const ex = await extract(src.kind, { file, url: src.origin_url ?? undefined, noteText: (src.note_body as { text?: string } | null)?.text, mimeType: src.mime_type ?? undefined }, opts.transcriber);
+      const ex = await extract(
+        src.kind,
+        { file, url: src.origin_url ?? undefined, noteText: (src.note_body as { text?: string } | null)?.text, mimeType: src.mime_type ?? undefined },
+        opts.transcriber,
+        async (page, total) => {
+          const progress = 25 + Math.floor((page / Math.max(1, total)) * 25);
+          await ctx.progress(progress, `extraction PDF · page ${page}/${total}`);
+        },
+      );
       const text = normalize(ex.text);
       const lang = detectLanguage(text);
       const chunks = chunk(text, { pageStarts: ex.pageStarts, timeRanges: ex.timeRanges });
       if (await ctx.cancelled()) return { cancelled: true };
 
-      await ctx.progress(55, embedder ? "vectorisation" : "indexation");
-      const vectors = embedder ? await embedder.embed(chunks.map((c) => c.content)) : null;
+      let vectors: number[][] | null = null;
+      if (embedder) {
+        vectors = [];
+        const batchSize = 64;
+        for (let offset = 0; offset < chunks.length; offset += batchSize) {
+          if (await ctx.cancelled()) return { cancelled: true };
+          const batch = chunks.slice(offset, offset + batchSize);
+          const embedded = await embedder.embed(batch.map((c) => c.content));
+          if (embedded.length !== batch.length) throw new Error("embeddings_count_mismatch");
+          vectors.push(...embedded);
+          const ratio = Math.min(1, (offset + batch.length) / Math.max(1, chunks.length));
+          await ctx.progress(55 + Math.floor(ratio * 25), `vectorisation · ${Math.min(offset + batch.length, chunks.length)}/${chunks.length}`);
+        }
+      } else {
+        await ctx.progress(80, "indexation plein texte");
+      }
 
       await ctx.progress(85, "enregistrement");
       const { error: e2 } = await db.rpc("replace_chunks", {
         p_source: src.id,
         p_chunks: chunks.map((c, i) => ({ ...c, embedding: vectors ? `[${vectors[i].join(",")}]` : null, embedding_model: embedder?.model ?? null })),
         p_extracted_text: text, p_language: lang, p_fts_config: FTS_CONFIG[lang] ?? "simple",
-        p_word_count: text.split(/\s+/).filter(Boolean).length, p_page_count: ex.pageCount,
+        p_word_count: text.split(/\\s+/).filter(Boolean).length, p_page_count: ex.pageCount,
       });
       if (e2) throw e2;
       if (ex.title && src.kind === "web") await db.from("sources").update({ title: ex.title.slice(0, 300) }).eq("id", src.id);
-      // une note s'ouvre dans son éditeur : pas de guide, mais elle compte dans le résumé du notebook
       if (opts.summaries) await enqueueSummaries(db, { workspace_id: src.workspace_id, notebook_id: src.notebook_id, source_id: src.kind === "note" ? undefined : src.id });
-      return { chunks: chunks.length, embedded: Boolean(vectors), language: lang };
+      return { chunks: chunks.length, embedded: Boolean(vectors), language: lang, pages: ex.pageCount };
     } catch (e) {
-      // statut persistant lisible par l'interface ; la décision de réessayer reste au worker
       const code = e instanceof PermanentError ? e.code : "temporary_error";
       await db.from("sources").update({ status: e instanceof PermanentError ? "failed" : "pending", error_code: code }).eq("id", src.id);
       throw e;
