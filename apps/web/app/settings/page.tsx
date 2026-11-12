@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { CreditCard, Database, Gauge, Sparkles, TerminalSquare, User } from "lucide-react";
+import { CreditCard, Database, Gauge, Sparkles, TerminalSquare, ToggleLeft, User } from "lucide-react";
 import { AppHeader } from "@/components/app/app-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/feedback";
@@ -16,6 +16,8 @@ import { OcrSettings } from "./ocr-settings";
 import { ImageGenerationSettings } from "./image-generation-settings";
 import { PasswordForm } from "./password-form";
 import { SystemPromptsSettings } from "./system-prompts";
+import { FeaturesSettings } from "./features-settings";
+import type { OptionalFeature } from "@/lib/validation";
 
 export const metadata: Metadata = { title: "Réglages · Notebook" };
 
@@ -24,7 +26,7 @@ export default async function SettingsPage() {
   if (!user) redirect("/login?next=/settings");
   const supabase = await createUserClient();
   const [{ data: profile }, { data: workspaces }, { data: plans }] = await Promise.all([
-    supabase.from("profiles").select("display_name, output_language, theme, web_notifications").eq("id", user.id).single(),
+    supabase.from("profiles").select("display_name, output_language, theme, web_notifications, disabled_features").eq("id", user.id).single(),
     supabase.from("workspaces").select("id, kind, name, plan_id").order("created_at"),
     supabase.from("plans").select("id, name, price_cents, currency, billing_interval, limits").order("price_cents"),
   ]);
@@ -95,7 +97,20 @@ export default async function SettingsPage() {
               label: "Intelligence artificielle",
               description: "Modèles OpenRouter, OCR des PDF scannés et génération d’images.",
               icon: <Sparkles />,
-              content: <div className="mobile-settings-ai grid gap-5"><OpenRouterSettings /><OcrSettings /><ImageGenerationSettings /></div>,
+              content: <div className="mobile-settings-ai grid gap-5"><OpenRouterSettings /></div>,
+            },
+            {
+              id: "features",
+              label: "Fonctionnalités",
+              description: "Activez ou désactivez la recherche approfondie, le graphe de connaissances, les contradictions, l’OCR des PDF scannés et la génération d’images.",
+              icon: <ToggleLeft />,
+              content: (
+                <div className="grid gap-5">
+                  <FeaturesSettings initial={(profile?.disabled_features ?? []) as OptionalFeature[]} />
+                  <OcrSettings />
+                  <ImageGenerationSettings />
+                </div>
+              ),
             },
             {
               id: "prompts",

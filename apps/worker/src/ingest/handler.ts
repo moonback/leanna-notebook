@@ -54,7 +54,7 @@ export function ingestHandler(db: SupabaseClient, embedder: Embedder | null, opt
             .select("enabled,model_id,engine").eq("user_id", src.created_by).maybeSingle();
           if (settingsError) throw settingsError;
           if (!ocrSettings?.enabled || !ocrSettings.model_id) {
-            throw new PermanentError("needs_ocr", "PDF scanné : activez l'OCR OpenRouter dans Réglages > Intelligence artificielle.");
+            throw new PermanentError("needs_ocr", "PDF scanné : activez l'OCR OpenRouter dans Réglages > Fonctionnalités.");
           }
           const apiKey = process.env.OPENROUTER_API_KEY;
           if (!apiKey) throw new PermanentError("ocr_not_configured", "OPENROUTER_API_KEY est absent côté worker.");

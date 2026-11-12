@@ -58,7 +58,7 @@ const COMMUNITY_COLORS = ["#2563eb", "#db2777", "#059669", "#d97706", "#7c3aed",
 
 export function KnowledgeGraph({ notebookId, canEdit, sources, onOpenPassage, onShowContradictions }: {
   notebookId: string; canEdit: boolean; sources: { id: string; title: string }[];
-  onOpenPassage: (sourceId: string, start: number, end: number) => void; onShowContradictions: () => void;
+  onOpenPassage: (sourceId: string, start: number, end: number) => void; onShowContradictions?: () => void;
 }) {
   const [nodes, setNodes] = React.useState<Node[]>([]);
   const [edges, setEdges] = React.useState<Edge[]>([]);
@@ -177,14 +177,16 @@ export function KnowledgeGraph({ notebookId, canEdit, sources, onOpenPassage, on
               <Stat label="Sources" value={stats.sources} />
               <Stat label="Entités" value={totals?.entities ?? 0} />
               <Stat label="Relations" value={totals?.relations ?? 0} />
-              <Stat
-                label="Contradictions"
-                value={stats.contradictions.open}
-                icon={<TriangleAlert className="size-3" aria-hidden />}
-                warn={stats.contradictions.open > 0}
-                onClick={onShowContradictions}
-                title="Voir les contradictions à vérifier"
-              />
+              {onShowContradictions && (
+                <Stat
+                  label="Contradictions"
+                  value={stats.contradictions.open}
+                  icon={<TriangleAlert className="size-3" aria-hidden />}
+                  warn={stats.contradictions.open > 0}
+                  onClick={onShowContradictions}
+                  title="Voir les contradictions à vérifier"
+                />
+              )}
             </dl>
             {stats.extraction.pending > 0 && (
               <span role="status" className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-accent/30 bg-accent/10 px-2.5 py-1 text-xs font-medium text-accent">

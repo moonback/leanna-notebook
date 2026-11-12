@@ -9,7 +9,7 @@ Leanna Notebook est une application multi-utilisateur disponible sur le web et v
 | Domaine | Capacités repérées dans le code | Réserve |
 |---|---|---|
 | Notebooks | Organisation, membres, liens de partage, visites et copie | Parcours de bout en bout non retesté ici |
-| Sources & documents | Import de PDF, pages web et textes ; extraction PDF page par page, indexation par lots et citations avec repères de page | OCR automatique désactivé par défaut ; activation et modèle configurables dans Réglages → Intelligence artificielle → OCR des PDF scannés |
+| Sources & documents | Import de PDF, pages web et textes ; extraction PDF page par page, indexation par lots et citations avec repères de page | OCR automatique désactivé par défaut ; activation et modèle configurables dans Réglages → Fonctionnalités → OCR des PDF scannés |
 | Chat & recherche | Conversation en streaming, recherche documentaire hybride, citations vérifiables et génération directe de livrables Studio à la demande | Dépend de Supabase, des modèles IA et de sources prêtes et sélectionnées |
 | Studio | Rapports, fiches de révision, quiz, cartes mentales, infographies, chronologies, comparatifs, glossaires, FAQ, diagrammes, contenus éditoriaux, plans d'étude, Audio Overview et images | Les rendus dépendent du worker, des modèles configurés et du type de livrable |
 | Audio Overview | Création d'un script dialogué, synthèse vocale segmentée, mixage ffmpeg et export MP3 privé | Nécessite les identifiants TTS et ffmpeg sur le worker |
@@ -43,7 +43,7 @@ Voir [Deep Research, Knowledge Graph et contradictions](docs/technical/DEEP_RESE
 
 ### PDF volumineux et OCR
 
-L'extraction des PDF natifs est réalisée page par page, avec reconstruction des lignes et conservation des repères de page. La vectorisation est effectuée par lots. Pour les PDF scannés dépourvus de couche texte exploitable, un OCR optionnel peut être activé dans **Réglages → Intelligence artificielle → OCR des PDF scannés**. Vous pouvez choisir le modèle OpenRouter et le moteur OCR. La limite actuelle documentée est de 40 Mo par PDF OCR ; le découpage des très gros scans en lots de pages n'est pas encore disponible. Voir [PDF OCR](docs/technical/PDF_OCR.md).
+L'extraction des PDF natifs est réalisée page par page, avec reconstruction des lignes et conservation des repères de page. La vectorisation est effectuée par lots. Pour les PDF scannés dépourvus de couche texte exploitable, un OCR optionnel peut être activé dans **Réglages → Fonctionnalités → OCR des PDF scannés**. Vous pouvez choisir le modèle OpenRouter et le moteur OCR. La limite actuelle documentée est de 40 Mo par PDF OCR ; le découpage des très gros scans en lots de pages n'est pas encore disponible. Voir [PDF OCR](docs/technical/PDF_OCR.md).
 
 ## Architecture technique
 

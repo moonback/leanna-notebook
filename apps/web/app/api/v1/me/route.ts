@@ -4,7 +4,7 @@ import { log } from "@/lib/log";
 import { createServiceClient, createUserClient, getUser } from "@/lib/supabase/server";
 import { fieldErrors, profilePatchSchema } from "@/lib/validation";
 
-const PROFILE_COLUMNS = "id, display_name, locale, output_language, theme, web_notifications, dashboard_view, created_at";
+const PROFILE_COLUMNS = "id, display_name, locale, output_language, theme, web_notifications, dashboard_view, disabled_features, created_at";
 const err = (status: number, error: string, extra?: object) => NextResponse.json({ error, ...extra }, { status });
 
 /** Profil + workspaces de l'utilisateur (lecture sous RLS). */

@@ -15,6 +15,10 @@ export const LANGUAGES = ["fr", "en", "es", "de", "it", "pt", "nl"] as const;
 export const THEMES = ["light", "dark", "system"] as const;
 
 /** Colonnes de `profiles` modifiables par l'utilisateur (liste blanche). */
+/** Fonctionnalités que l'utilisateur peut désactiver (Réglages → Fonctionnalités) ; même liste que la contrainte SQL. */
+export const OPTIONAL_FEATURES = ["deep_research", "knowledge_graph", "contradictions"] as const;
+export type OptionalFeature = typeof OPTIONAL_FEATURES[number];
+
 export const profilePatchSchema = z
   .object({
     display_name: z.string().trim().max(120, "120 caractères maximum.").nullable(),
@@ -22,6 +26,7 @@ export const profilePatchSchema = z
     theme: z.enum(THEMES),
     web_notifications: z.boolean(),
     dashboard_view: z.enum(["grid", "list"]),
+    disabled_features: z.array(z.enum(OPTIONAL_FEATURES)).max(OPTIONAL_FEATURES.length).transform((v) => [...new Set(v)]),
   })
   .partial()
   .strict()

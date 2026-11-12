@@ -3,7 +3,13 @@ import { ApiError, requireRole, type Role } from "@/lib/api";
 import { createServiceClient } from "@/lib/supabase/server";
 import { UUID } from "@/lib/research";
 
-type Owned = "research_runs" | "knowledge_entities" | "knowledge_relations" | "knowledge_contradictions";
+/** Fonctionnalités désactivées par l'utilisateur dans Réglages → Fonctionnalités. */
+export async function disabledFeatures(userId: string): Promise<string[]> {
+  const { data } = await createServiceClient().from("profiles").select("disabled_features").eq("id", userId).maybeSingle();
+  return (data?.disabled_features as string[] | null) ?? [];
+}
+
+type Owned ="research_runs" | "knowledge_entities" | "knowledge_relations" | "knowledge_contradictions";
 
 /**
  * Autorisation d'une ressource désignée par son id : on retrouve son notebook côté serveur

@@ -172,8 +172,17 @@ export function passagesBlock(chunks: KChunk[]): string {
   return chunks.map((c, i) => `<passage n="${i + 1}"${c.page_start ? ` page="${c.page_start}"` : ""}>\n${c.content}\n</passage>`).join("\n\n");
 }
 
+/** Vrai si l'utilisateur a désactivé la fonctionnalité (Réglages → Fonctionnalités) : rien n'est lancé pour lui. */
+export async function featureDisabled(db: SupabaseClient, userId: string | null | undefined, feature: "knowledge_graph" | "contradictions"): Promise<boolean> {
+  if (!userId) return false;
+  const { data } = await db.from("profiles").select("disabled_features").eq("id", userId).maybeSingle();
+  return ((data?.disabled_features as string[] | null) ?? []).includes(feature);
+}
+
 /** Analyse des contradictions du notebook, différée pour regrouper plusieurs extractions rapprochées. */
 export async function enqueueContradictions(db: SupabaseClient, t: { workspace_id: string; notebook_id: string }) {
+  const { data: nb } = await db.from("notebooks").select("created_by").eq("id", t.notebook_id).maybeSingle();
+  if (await featureDisabled(db, nb?.created_by as string | null, "contradictions")) return;
   const runAfter = new Date(Date.now() + CONTRADICTIONS_DEBOUNCE_MS).toISOString();
   const { data: queued } = await db.from("jobs").select("id").eq("notebook_id", t.notebook_id).eq("kind", "knowledge_contradictions").eq("status", "queued").limit(1);
   if (queued?.length) await db.from("jobs").update({ run_after: runAfter }).eq("id", queued[0]!.id);
@@ -182,6 +191,8 @@ export async function enqueueContradictions(db: SupabaseClient, t: { workspace_i
 
 /** Après une ingestion réussie : extraction du graphe (clé d'idempotence = contenu, une ré-ingestion identique ne refait rien). */
 export async function enqueueKnowledge(db: SupabaseClient, t: { workspace_id: string; notebook_id: string; source_id: string; text: string }) {
+  const { data: src } = await db.from("sources").select("created_by").eq("id", t.source_id).maybeSingle();
+  if (await featureDisabled(db, src?.created_by as string | null, "knowledge_graph")) return;
   const hash = createHash("sha256").update(t.text).digest("hex").slice(0, 24);
   const { error } = await db.from("jobs").upsert({
     workspace_id: t.workspace_id, notebook_id: t.notebook_id, kind: "knowledge_extract", target_id: t.source_id, priority: 155,

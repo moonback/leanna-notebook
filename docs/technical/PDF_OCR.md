@@ -6,7 +6,7 @@ Le worker tente d'abord l'extraction native page par page avec PDF.js. Si le doc
 
 1. Configurer `OPENROUTER_API_KEY` dans l'environnement du serveur web et du worker.
 2. Appliquer la migration `20261112020000_ai_ocr_preferences.sql`.
-3. Ouvrir **Réglages → Intelligence artificielle → OCR des PDF scannés**.
+3. Ouvrir **Réglages → Fonctionnalités → OCR des PDF scannés**.
 4. Activer l'OCR, sélectionner un modèle texte OpenRouter et choisir le moteur PDF :
    - **Mistral OCR** : recommandé pour les documents scannés et les pages image.
    - **Cloudflare AI** : moteur alternatif de conversion PDF en texte.

@@ -57,7 +57,7 @@ function useMediaQuery(query: string): boolean {
   );
 }
 
-export function Workspace({ notebookId, initialTitle, role, allowCopies }: { notebookId: string; initialTitle: string; role: Role; allowCopies: boolean }) {
+export function Workspace({ notebookId, initialTitle, role, allowCopies, disabledFeatures = [] }: { notebookId: string; initialTitle: string; role: Role; allowCopies: boolean; disabledFeatures?: string[] }) {
   const canEdit = role === "editor" || role === "owner";
   const [title, setTitle] = React.useState(initialTitle);
   const [titleSlot, setTitleSlot] = React.useState<HTMLElement | null>(null);
@@ -79,7 +79,10 @@ export function Workspace({ notebookId, initialTitle, role, allowCopies }: { not
   const [researchRun, setResearchRun] = React.useState<string | null>(null);
   // suivi flottant : « Suivre » ouvre l'onglet Recherche sur la bonne recherche (?research=<id> ou événement)
   React.useEffect(() => {
-    const open = (runId: string) => { setCenter("research"); setMobileTab("chat"); setResearchRun(runId); };
+    const open = (runId: string) => {
+      if (disabledFeatures.includes("deep_research")) return;
+      setCenter("research"); setMobileTab("chat"); setResearchRun(runId);
+    };
     const fromUrl = new URLSearchParams(window.location.search).get("research");
     if (fromUrl && /^[0-9a-f-]{36}$/i.test(fromUrl)) open(fromUrl);
     const onEvent = (e: Event) => {
@@ -88,7 +91,7 @@ export function Workspace({ notebookId, initialTitle, role, allowCopies }: { not
     };
     window.addEventListener("notebook:open-research", onEvent);
     return () => window.removeEventListener("notebook:open-research", onEvent);
-  }, [notebookId]);
+  }, [notebookId, disabledFeatures]);
   const mobileSwipeStart = React.useRef<{ x: number; y: number } | null>(null);
   const handleMobileSwipeStart = (event: React.TouchEvent<HTMLDivElement>) => {
     const touch = event.touches[0];
@@ -296,13 +299,14 @@ export function Workspace({ notebookId, initialTitle, role, allowCopies }: { not
     window.dispatchEvent(new CustomEvent("notebook:open-artifact", { detail: artifactId }));
   };
   const sourceList = (sources ?? []).map((s) => ({ id: s.id, title: s.title }));
-  const CENTER = [
+  // onglets masqués quand la fonctionnalité est désactivée dans Réglages → Fonctionnalités
+  const CENTER = ([
     { id: "chat", label: "Chat", icon: <Sparkles aria-hidden /> },
-    { id: "research", label: "Recherche approfondie", short: "Recherche", icon: <Telescope aria-hidden /> },
-    { id: "graph", label: "Graphe de connaissances", short: "Graphe", icon: <Network aria-hidden /> },
-    { id: "contradictions", label: "Contradictions", icon: <Scale aria-hidden /> },
-  ] as const;
-  const centerPanel = (
+    { id: "research", feature: "deep_research", label: "Recherche approfondie", short: "Recherche", icon: <Telescope aria-hidden /> },
+    { id: "graph", feature: "knowledge_graph", label: "Graphe de connaissances", short: "Graphe", icon: <Network aria-hidden /> },
+    { id: "contradictions", feature: "contradictions", label: "Contradictions", icon: <Scale aria-hidden /> },
+  ] as const).filter((t) => !("feature" in t) || !disabledFeatures.includes(t.feature));
+  const centerPanel = CENTER.length === 1 ? chatPanel : (
     <div className="flex h-full min-h-0 min-w-0 flex-col gap-2">
       <div role="tablist" aria-label="Espaces du notebook" className="flex shrink-0 gap-1 overflow-x-auto rounded-lg border bg-surface-raised p-1">
         {CENTER.map((t) => (
@@ -316,7 +320,7 @@ export function Workspace({ notebookId, initialTitle, role, allowCopies }: { not
       {center !== "chat" && (
         <div id={`center-panel-${center}`} role="tabpanel" aria-labelledby={`center-tab-${center}`} className={cn("min-h-0 flex-1 rounded-xl border bg-surface-raised", center === "graph" ? "overflow-hidden" : "overflow-y-auto")}>
           {center === "research" && <DeepResearch notebookId={notebookId} canEdit={canEdit} onOpenSource={(id) => setViewer({ sourceId: id })} onOpenReport={openReport} onSourcesChanged={() => void load()} openRunId={researchRun} />}
-          {center === "graph" && <KnowledgeGraph notebookId={notebookId} canEdit={canEdit} sources={sourceList} onOpenPassage={openPassage} onShowContradictions={() => setCenter("contradictions")} />}
+          {center === "graph" && <KnowledgeGraph notebookId={notebookId} canEdit={canEdit} sources={sourceList} onOpenPassage={openPassage} onShowContradictions={disabledFeatures.includes("contradictions") ? undefined : () => setCenter("contradictions")} />}
           {center === "contradictions" && <Contradictions notebookId={notebookId} canEdit={canEdit} sources={sourceList} onOpenPassage={openPassage} />}
         </div>
       )}

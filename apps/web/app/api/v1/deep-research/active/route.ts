@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { handle, requireUser } from "@/lib/api";
 import { createUserClient } from "@/lib/supabase/server";
 import { ACTIVE_STATUSES, researchProgress } from "@/lib/research";
+import { disabledFeatures } from "@/lib/ownership";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +12,8 @@ export const dynamic = "force-dynamic";
  */
 export const GET = handle(async () => {
   const user = await requireUser();
+  // fonctionnalité désactivée : rien à suivre, le suivi flottant reste masqué
+  if ((await disabledFeatures(user.id)).includes("deep_research")) return NextResponse.json({ runs: [] }, { headers: { "cache-control": "no-store" } });
   const supabase = await createUserClient();
   const since = new Date(Date.now() - 10 * 60_000).toISOString();
   const { data, error } = await supabase.from("research_runs")

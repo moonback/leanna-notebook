@@ -3,6 +3,7 @@ import { ApiError, handle, parseBody, requireRole, requireUser } from "@/lib/api
 import { log } from "@/lib/log";
 import { createServiceClient, createUserClient } from "@/lib/supabase/server";
 import { deepResearchCreateSchema, researchProgress } from "@/lib/research";
+import { disabledFeatures } from "@/lib/ownership";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -24,6 +25,7 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
   const user = await requireUser();
   const { id } = await params;
   await requireRole(id, "editor");
+  if ((await disabledFeatures(user.id)).includes("deep_research")) throw new ApiError(403, "feature_disabled");
   const body = await parseBody(req, deepResearchCreateSchema);
   const idem = req.headers.get("idempotency-key");
   const { data, error } = await createServiceClient().rpc("create_deep_research", {
