@@ -10,6 +10,7 @@ import { normalize, type ChunkTimeRange } from "./chunker.ts";
 
 export type Extracted = { text: string; pageStarts: number[]; pageCount: number | null; title?: string; timeRanges?: ChunkTimeRange[] };
 export type PdfProgress = (page: number, total: number) => Promise<void> | void;
+export type PdfOcr = (file: Uint8Array, pageCount: number) => Promise<string>;
 
 const MAX_WORDS = 500_000;
 const PDF_PAGE_SEPARATOR = "\n\n";
@@ -58,7 +59,7 @@ export function formatPdfPage(items: PdfTextItem[]): string {
  * Extraction page par page : évite de matérialiser simultanément les structures
  * de texte de toutes les pages. Le callback permet au worker de publier la progression.
  */
-async function fromPdf(buf: Uint8Array, onProgress?: PdfProgress): Promise<Extracted> {
+async function fromPdf(buf: Uint8Array, onProgress?: PdfProgress, ocr?: PdfOcr): Promise<Extracted> {
   let pdf;
   try {
     pdf = await getDocumentProxy(buf);
@@ -102,7 +103,30 @@ async function fromPdf(buf: Uint8Array, onProgress?: PdfProgress): Promise<Extra
   }
   const printable = text.replace(/[\s\p{C}]/gu, "").length;
   if (printable < Math.max(20, pageCount * 2)) {
-    throw new PermanentError("needs_ocr", "PDF sans couche texte détectable : un moteur OCR doit être configuré pour traiter ce document.");
+    if (!ocr) throw new PermanentError("needs_ocr", "PDF sans couche texte détectable : activez l'OCR OpenRouter dans les réglages pour traiter ce document.");
+    const recognized = (await ocr(buf, pageCount)).trim();
+    const markers = [...recognized.matchAll(/^\\[PAGE\\s+(\\d+)\\]\\s*$/gim)];
+    if (!markers.length) {
+      const normalized = normalize(recognized);
+      if (!normalized) throw new PermanentError("ocr_empty_result");
+      return { text: normalized, pageStarts: [0], pageCount };
+    }
+    const ocrPages: string[] = [];
+    for (let index = 0; index < markers.length; index++) {
+      const marker = markers[index]!;
+      const start = marker.index! + marker[0].length;
+      const end = markers[index + 1]?.index ?? recognized.length;
+      ocrPages.push(normalize(recognized.slice(start, end)));
+    }
+    const ocrPageStarts: number[] = [];
+    let ocrText = "";
+    for (const [index, page] of ocrPages.entries()) {
+      if (index > 0) ocrText += PDF_PAGE_SEPARATOR;
+      ocrPageStarts.push(ocrText.length);
+      ocrText += page;
+    }
+    if (!ocrText.replace(/[\\s\\p{C}]/gu, "")) throw new PermanentError("ocr_empty_result");
+    return { text: ocrText, pageStarts: ocrPageStarts, pageCount };
   }
   return { text, pageStarts, pageCount };
 }
@@ -144,7 +168,7 @@ export async function extract(
       return finalize({ text: new TextDecoder("utf-8").decode(data.file), pageStarts: [], pageCount: null });
     case "pdf":
       if (!data.file) throw new PermanentError("file_missing");
-      return finalize(await fromPdf(data.file, onPdfProgress));
+      return finalize(await fromPdf(data.file, onPdfProgress, onPdfOcr));
     case "pptx": {
       if (!data.file) throw new PermanentError("file_missing");
       const r = fromPptx(data.file);
@@ -169,7 +193,7 @@ export async function extract(
         if (e instanceof FetchRefused) throw new PermanentError(e.message === "paywall" ? "paywall" : "url_refused", e.message);
         throw e; // réseau : nouvelle tentative
       }
-      if (res.contentType.includes("pdf")) return finalize(await fromPdf(new Uint8Array(res.body), onPdfProgress));
+      if (res.contentType.includes("pdf")) return finalize(await fromPdf(new Uint8Array(res.body), onPdfProgress, onPdfOcr));
       if (!res.contentType.includes("html") && !res.contentType.includes("text/plain")) throw new PermanentError("unsupported_type");
       return finalize(res.contentType.includes("html") ? fromHtml(res.body.toString("utf8")) : { text: res.body.toString("utf8"), pageStarts: [], pageCount: null });
     }
