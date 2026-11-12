@@ -1,6 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from "electron";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { BrowserManager } from "./browser/browser-manager";
 import { isAllowedWebUrl, isSafeExternalUrl, normalizeFilters } from "./shared/validation";
 import { checkForUpdates, initializeAutoUpdater } from "./updater";
 
@@ -32,6 +33,21 @@ function resolveWebUrl(): string {
 const WEB_URL = resolveWebUrl();
 const allowedOrigin = new URL(WEB_URL).origin;
 let mainWindow: BrowserWindow | null = null;
+const browserManager = new BrowserManager((state) => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send("browser:state", state);
+  }
+});
+
+function isTrustedRenderer(event: Electron.IpcMainInvokeEvent): boolean {
+  if (!mainWindow || event.sender !== mainWindow.webContents) return false;
+  try {
+    const frameUrl = event.senderFrame?.url;
+    return Boolean(frameUrl && new URL(frameUrl).origin === allowedOrigin);
+  } catch {
+    return false;
+  }
+}
 
 function registerApplicationMenu(): void {
   const viewItems: Electron.MenuItemConstructorOptions[] = [
@@ -94,10 +110,7 @@ function registerNativeDownloadHandler(): void {
       return;
     }
 
-    // Suspendre immédiatement le téléchargement : le dialogue natif est asynchrone.
-    // Sans pause, Electron peut commencer à écrire dans son emplacement par défaut.
     item.pause();
-
     void dialog.showSaveDialog(parent, {
       title: "Enregistrer le fichier",
       defaultPath: item.getFilename(),
@@ -124,13 +137,13 @@ function registerNativeDownloadHandler(): void {
 function registerIpcHandlers(): void {
   ipcMain.handle("desktop:app-version", () => app.getVersion());
   ipcMain.handle("desktop:check-for-updates", async (event) => {
-    if (!mainWindow || event.sender !== mainWindow.webContents) return { started: false };
+    if (!isTrustedRenderer(event)) return { started: false };
     await checkForUpdates(mainWindow, true);
     return { started: true };
   });
 
   ipcMain.handle("desktop:open-files", async (event, filters: unknown) => {
-    if (!mainWindow || event.sender !== mainWindow.webContents) {
+    if (!isTrustedRenderer(event) || !mainWindow) {
       return { canceled: true, filePaths: [] };
     }
     const result = await dialog.showOpenDialog(mainWindow, {
@@ -141,9 +154,7 @@ function registerIpcHandlers(): void {
   });
 
   ipcMain.handle("desktop:save-file", async (event, options: unknown) => {
-    if (!mainWindow || event.sender !== mainWindow.webContents) {
-      return { canceled: true };
-    }
+    if (!isTrustedRenderer(event) || !mainWindow) return { canceled: true };
     const input = options && typeof options === "object"
       ? options as { defaultPath?: unknown; filters?: unknown }
       : {};
@@ -156,11 +167,63 @@ function registerIpcHandlers(): void {
   });
 
   ipcMain.handle("desktop:open-external", async (event, value: unknown) => {
-    if (!mainWindow || event.sender !== mainWindow.webContents || !isSafeExternalUrl(value)) {
-      return { opened: false };
-    }
+    if (!isTrustedRenderer(event) || !isSafeExternalUrl(value)) return { opened: false };
     await shell.openExternal(value);
     return { opened: true };
+  });
+
+  ipcMain.handle("browser:get-state", (event) =>
+    isTrustedRenderer(event) ? browserManager.getState() : { activeTabId: null, tabs: [] },
+  );
+  ipcMain.handle("browser:create-tab", async (event, input: unknown) => {
+    if (!isTrustedRenderer(event)) return null;
+    const args = input && typeof input === "object"
+      ? input as { url?: unknown; isPrivate?: unknown }
+      : {};
+    if (args.isPrivate !== undefined && typeof args.isPrivate !== "boolean") return null;
+    try {
+      return await browserManager.createTab(args.url, args.isPrivate === true);
+    } catch {
+      return null;
+    }
+  });
+  ipcMain.handle("browser:activate-tab", (event, id: unknown) =>
+    isTrustedRenderer(event) && typeof id === "string" && id.length <= 64
+      ? browserManager.activateTab(id) : false,
+  );
+  ipcMain.handle("browser:close-tab", async (event, id: unknown) =>
+    isTrustedRenderer(event) && typeof id === "string" && id.length <= 64
+      ? browserManager.closeTab(id) : false,
+  );
+  ipcMain.handle("browser:navigate", (event, input: unknown) => {
+    if (!isTrustedRenderer(event) || !input || typeof input !== "object") return false;
+    const args = input as { id?: unknown; address?: unknown };
+    return typeof args.id === "string" && args.id.length <= 64
+      ? browserManager.navigate(args.id, args.address) : false;
+  });
+  ipcMain.handle("browser:go-back", (event, id: unknown) =>
+    isTrustedRenderer(event) && typeof id === "string" && id.length <= 64
+      ? browserManager.goBack(id) : false,
+  );
+  ipcMain.handle("browser:go-forward", (event, id: unknown) =>
+    isTrustedRenderer(event) && typeof id === "string" && id.length <= 64
+      ? browserManager.goForward(id) : false,
+  );
+  ipcMain.handle("browser:reload", (event, id: unknown) =>
+    isTrustedRenderer(event) && typeof id === "string" && id.length <= 64
+      ? browserManager.reload(id) : false,
+  );
+  ipcMain.handle("browser:stop", (event, id: unknown) =>
+    isTrustedRenderer(event) && typeof id === "string" && id.length <= 64
+      ? browserManager.stop(id) : false,
+  );
+  ipcMain.handle("browser:set-bounds", (event, bounds: unknown) =>
+    isTrustedRenderer(event) ? browserManager.setBounds(bounds) : false,
+  );
+  ipcMain.handle("browser:set-visible", (event, visible: unknown) => {
+    if (!isTrustedRenderer(event) || typeof visible !== "boolean") return false;
+    browserManager.setVisible(visible);
+    return true;
   });
 }
 
@@ -182,6 +245,7 @@ function createMainWindow(): void {
       webSecurity: true,
     },
   });
+  browserManager.attach(mainWindow);
 
   mainWindow.once("ready-to-show", () => mainWindow?.show());
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
@@ -196,6 +260,7 @@ function createMainWindow(): void {
     }
   });
   mainWindow.on("closed", () => {
+    void browserManager.dispose();
     mainWindow = null;
   });
 
