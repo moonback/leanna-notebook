@@ -61,7 +61,7 @@ flowchart LR
   DESK[apps/desktop - Electron] --> WEB
 ```
 
-Le worker consomme les jobs persistés en base. Le système décrit dans le code utilise des jobs, quotas et états de progression. Voir [Architecture](docs/ARCHITECTURE.md).
+Le worker consomme les jobs persistés en base. Le système décrit dans le code utilise des jobs, quotas et états de progression. Voir [Architecture de la génération d’images](docs/architecture/IMAGE_GENERATION_ARCHITECTURE.md).
 
 ## Démarrage local
 
