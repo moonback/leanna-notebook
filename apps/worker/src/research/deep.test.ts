@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { budgetLeft, deepResearchHandler, interleave } from "./deep.ts";
+import { budgetLeft, deepResearchHandler, interleave, passAllowance } from "./deep.ts";
 import { canonicalize, pageMetadata, readPage } from "./reader.ts";
 import { tavilyProvider } from "./search.ts";
 import { FetchRefused } from "../ingest/ssrf.ts";
@@ -49,6 +49,14 @@ describe("budget et couverture", () => {
     expect(budgetLeft({ ...run, spent: { tokens: 1000 } }, 60_000).exhausted).toBe(true);
     expect(budgetLeft({ ...run, spent: {} }, 21 * 60_000).exhausted).toBe(true);
     expect(budgetLeft({ ...run, spent: { cost_usd: 2 } }, 60_000, 1.5).exhausted).toBe(true);
+  });
+  it("réserve du budget pour les tours de comblement des lacunes", () => {
+    const deep = { iterations: 2, subquestions: 5, queries: 10, pages: 20, tokens: 1, minutes: 1 };
+    const expert = { iterations: 3, subquestions: 7, queries: 18, pages: 36, tokens: 1, minutes: 1 };
+    expect(passAllowance(deep, { queries: 10, pages: 20 })).toEqual({ queries: 5, pages: 10 });   // il reste un tour complet
+    expect(passAllowance(expert, { queries: 18, pages: 36 })).toEqual({ queries: 6, pages: 12 });
+    expect(passAllowance(expert, { queries: 2, pages: 30 })).toEqual({ queries: 2, pages: 12 });  // jamais plus que le restant
+    expect(passAllowance({ ...deep, iterations: 1 }, { queries: 4, pages: 8 })).toEqual({ queries: 4, pages: 8 });
   });
   it("répartit les pages à lire entre les sous-questions", () => {
     const items = [..."aaaa"].map((_, i) => ({ id: `a${i}`, subquestion_id: "q1" })).concat([{ id: "b0", subquestion_id: "q2" }, { id: "c0", subquestion_id: "q3" }]);

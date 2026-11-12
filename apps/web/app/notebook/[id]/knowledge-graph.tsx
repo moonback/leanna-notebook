@@ -283,6 +283,7 @@ function GraphCanvas({ nodes, edges, selection, indirect, colorFor, onSelect, on
   const drag = React.useRef<{ kind: "node"; node: Node; moved: boolean } | { kind: "pan"; x: number; y: number; vx: number; vy: number } | null>(null);
   const pointers = React.useRef(new Map<number, { x: number; y: number }>());
   const pinch = React.useRef<number | null>(null);
+  const lastTap = React.useRef<{ id: string; t: number } | null>(null);
 
   React.useEffect(() => {
     const el = wrap.current;
@@ -351,6 +352,8 @@ function GraphCanvas({ nodes, edges, selection, indirect, colorFor, onSelect, on
 
   return (
     <div ref={wrap} className="absolute inset-0 touch-none select-none overflow-hidden bg-surface"
+      // le pan du graphe ne doit pas déclencher le balayage entre onglets mobiles du notebook
+      onTouchStart={(e) => e.stopPropagation()} onTouchEnd={(e) => e.stopPropagation()}
       onWheel={(e) => zoomAt(e.clientX, e.clientY, e.deltaY < 0 ? 1.12 : 1 / 1.12)}
       onPointerDown={(e) => {
         pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -375,7 +378,15 @@ function GraphCanvas({ nodes, edges, selection, indirect, colorFor, onSelect, on
         if (pointers.current.size < 2) pinch.current = null;
         const d = drag.current;
         drag.current = null;
-        if (d?.kind === "node") { sim.current?.alphaTarget(0); d.node.fx = null; d.node.fy = null; if (!d.moved) onSelect({ kind: "node", id: d.node.id }); }
+        if (d?.kind === "node") {
+          sim.current?.alphaTarget(0); d.node.fx = null; d.node.fy = null;
+          if (!d.moved) {
+            // double clic / double tap détecté ici : la capture du pointeur empêche un dblclick fiable sur le nœud
+            const now = Date.now(), prev = lastTap.current;
+            if (prev && prev.id === d.node.id && now - prev.t < 350) { lastTap.current = null; onExpand(d.node.id); }
+            else { lastTap.current = { id: d.node.id, t: now }; onSelect({ kind: "node", id: d.node.id }); }
+          }
+        }
         else if (d?.kind === "pan" && Math.abs(e.clientX - d.x) + Math.abs(e.clientY - d.y) < 4 && (e.target as Element).tagName === "svg") onSelect(null);
       }}
       onPointerCancel={(e) => { pointers.current.delete(e.pointerId); pinch.current = null; drag.current = null; }}>
@@ -409,8 +420,7 @@ function GraphCanvas({ nodes, edges, selection, indirect, colorFor, onSelect, on
               <g key={n.id} transform={`translate(${n.x},${n.y})`} opacity={dim ? 0.2 : 1} className="cursor-pointer" tabIndex={0} role="button"
                 aria-label={`${n.name}, ${TYPE_LABEL[n.type] ?? n.type}, ${n.degree} relation(s)`} aria-pressed={selected}
                 onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect({ kind: "node", id: n.id }); } }}
-                onPointerDown={(e) => { e.stopPropagation(); drag.current = { kind: "node", node: n, moved: false }; pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY }); (e.currentTarget.ownerSVGElement?.parentElement as HTMLElement | null)?.setPointerCapture(e.pointerId); }}
-                onDoubleClick={() => onExpand(n.id)}>
+                onPointerDown={(e) => { e.stopPropagation(); drag.current = { kind: "node", node: n, moved: false }; pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY }); (e.currentTarget.ownerSVGElement?.parentElement as HTMLElement | null)?.setPointerCapture(e.pointerId); }}>
                 <circle r={r} fill={colorFor(n)} fillOpacity={0.35 + n.confidence * 0.6} stroke={selected ? "var(--text)" : "var(--surface-raised)"} strokeWidth={selected ? 3 : 1.5} />
                 {n.expandedBy && <circle r={r + 3} fill="none" stroke={colorFor(n)} strokeDasharray="2 3" strokeWidth={1} />}
                 {(view.k > 0.55 || selected || n.degree > 3) && <text y={r + 11 / view.k} fontSize={11 / Math.max(0.7, view.k)} textAnchor="middle" fill="var(--text)" paintOrder="stroke" stroke="var(--surface)" strokeWidth={3 / view.k}>{n.name.length > 28 ? `${n.name.slice(0, 27)}…` : n.name}</text>}

@@ -115,5 +115,7 @@ describe("détection des contradictions — jeux déterministes", () => {
   it("produit une empreinte stable, indépendante de l'ordre et des ids", () => {
     const a = claim("A", "date", "mars 2024"), b = claim("B", "date", "mai 2024");
     expect(fingerprint(a, b)).toBe(fingerprint({ ...b, id: "x" }, { ...a, id: "y" }));
+    // reformulation par le modèle lors d'une réindexation : même valeur normalisée, même empreinte
+    expect(fingerprint(a, b)).toBe(fingerprint({ ...a, value_text: "March 2024" }, b));
   });
 });

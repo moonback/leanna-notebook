@@ -69,9 +69,13 @@ const CATEGORY: Record<ValueType, Category> = {
 };
 const contextKey = (s: string | null) => (s ?? "").normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 
-/** Empreinte stable d'une paire : indépendante des ids (régénérés à chaque ré-extraction) et de l'ordre. */
+/**
+ * Empreinte stable d'une paire : indépendante des ids (régénérés à chaque ré-extraction), de l'ordre et
+ * de la formulation (« mars 2024 » / « March 2024 ») — seule la valeur normalisée compte, pour que les
+ * décisions humaines survivent à une réindexation.
+ */
 export function fingerprint(a: Claim, b: Claim): string {
-  const side = (c: Claim) => `${c.source_id}|${JSON.stringify(c.value_norm)}|${c.value_text.toLowerCase().trim()}`;
+  const side = (c: Claim) => `${c.source_id}|${JSON.stringify(c.value_norm, Object.keys(c.value_norm).sort())}`;
   const [x, y] = [side(a), side(b)].sort();
   return createHash("sha256").update(`${a.subject_entity_id}|${a.attribute}|${x}|${y}`).digest("hex").slice(0, 40);
 }

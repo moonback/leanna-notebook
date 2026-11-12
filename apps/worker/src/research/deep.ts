@@ -80,6 +80,15 @@ export function budgetLeft(run: Pick<Run, "budget" | "spent" | "started_at">, no
   };
 }
 
+/**
+ * Part du budget allouée à UN tour : requêtes et pages réparties entre les tours prévus, pour qu'il reste
+ * de quoi combler les lacunes et qu'un tour reste court (le worker n'est jamais bloqué longtemps).
+ */
+export function passAllowance(budget: Budget, left: { queries: number; pages: number }) {
+  const per = (n: number) => Math.ceil(n / Math.max(1, budget.iterations));
+  return { queries: Math.max(0, Math.min(left.queries, per(budget.queries))), pages: Math.max(0, Math.min(left.pages, per(budget.pages))) };
+}
+
 /** Répartit le budget de pages entre sous-questions (tour à tour) pour couvrir tous les angles. Exporté pour les tests. */
 export function interleave<T extends { subquestion_id: string | null }>(items: T[], max: number): T[] {
   const groups = new Map<string, T[]>();
@@ -145,7 +154,8 @@ class StepContext {
 
   private async status(status: string, stage: string) {
     this.run.status = status;
-    await this.db.from("research_runs").update({ status, stage }).eq("id", this.run.id);
+    // une annulation arrivée entre deux vérifications ne doit jamais être écrasée
+    await this.db.from("research_runs").update({ status, stage }).eq("id", this.run.id).eq("cancel_requested", false);
     await this.ctx.progress(0, stage);
   }
 
@@ -172,7 +182,9 @@ class StepContext {
   }
 
   async fail(code: string, message: string) {
-    await this.db.from("research_runs").update({ status: "failed", stage: "échec", error_code: code, error_message: message.slice(0, 500), finished_at: new Date().toISOString() }).eq("id", this.run.id);
+    const { data: updated } = await this.db.from("research_runs").update({ status: "failed", stage: "échec", error_code: code, error_message: message.slice(0, 500), finished_at: new Date().toISOString() })
+      .eq("id", this.run.id).eq("cancel_requested", false).select("id");
+    if (!updated?.length) return;   // annulée entre-temps : l'annulation a déjà rendu le crédit
     if (this.run.usage_id) await this.db.rpc("settle_usage", { p_id: this.run.usage_id, p_status: "refunded" });
     await this.event("research.failed", `La recherche a échoué (${code}). Elle peut être relancée depuis l'étape « ${this.run.next_step} ».`, { code });
   }
@@ -213,11 +225,11 @@ Réponds UNIQUEMENT en JSON : {"objectives":["…"],"subquestions":[{"text":"…
     if (!this.d.search) throw new PermanentError("research_not_configured", "TAVILY_API_KEY absente côté worker.");
     const iteration = (this.run.spent.iterations ?? 0) + 1;
     const subqs = this.run.plan.subquestions ?? [];
+    const allow = passAllowance(this.run.budget, left);
 
-    // 1. requêtes : celles du plan au premier tour, puis celles qui comblent les lacunes détectées
-    const queries = (iteration === 1
-      ? subqs.flatMap((q) => q.queries.map((query) => ({ subquestion_id: q.id, query })))
-      : this.run.coverage.next_queries ?? []).slice(0, left.queries);
+    // 1. requêtes : celles du plan au premier tour (une par sous-question d'abord), puis celles qui comblent les lacunes
+    const planned = subqs.flatMap((q) => q.queries.map((query, rank) => ({ subquestion_id: q.id, query, rank }))).sort((a, b) => a.rank - b.rank);
+    const queries = (iteration === 1 ? planned : this.run.coverage.next_queries ?? []).slice(0, allow.queries);
     if (!queries.length) return this.next("ingest");
     await this.status("searching", `recherche web · tour ${iteration}`);
     const { data: known } = await this.db.from("research_sources").select("id, url, title, subquestion_id, status, canonical_url, content_sha256").eq("run_id", this.run.id);
@@ -254,11 +266,13 @@ Réponds UNIQUEMENT en JSON : {"objectives":["…"],"subquestions":[{"text":"…
 
     // 2. lecture complète des pages (jamais l'extrait du moteur), réparties entre sous-questions
     await this.status("reading", `lecture des pages · tour ${iteration}`);
-    const toRead = interleave(candidates, Math.max(0, left.pages));
+    // pistes non lues ce tour : restent « candidate » (lues au tour suivant, ou écartées à l'ajout des sources)
+    const toRead = interleave(candidates, allow.pages);
     const hashes = new Set((known ?? []).filter((k) => k.status !== "candidate").map((k) => k.content_sha256 as string | null).filter(Boolean));
     const pages: Array<{ id: string; subquestion_id: string | null; page: Page }> = [];
     for (const c of toRead) {
       if (await this.stopped()) return { cancelled: true };
+      if (budgetLeft(this.run, Date.now(), this.d.maxCostUsd).exhausted) break;
       const res = await this.read(c.url);
       await this.spend({ pages: 1 });
       if ("failed" in res) {
@@ -277,15 +291,12 @@ Réponds UNIQUEMENT en JSON : {"objectives":["…"],"subquestions":[{"text":"…
       await this.event("research.source.discovered", `Page lue : ${res.title || c.title || c.url}.`, { research_source_id: c.id, url: res.url });
       pages.push({ id: c.id, subquestion_id: c.subquestion_id, page: res });
     }
-    for (const c of candidates.filter((x) => !toRead.includes(x))) {
-      await this.db.from("research_sources").update({ status: "rejected", reason: "budget de pages atteint" }).eq("id", c.id);
-    }
-
     // 3. extraction : pertinence + informations, chaque citation vérifiée dans le texte réellement lu
     await this.status("extracting", `extraction des informations · tour ${iteration}`);
     const model = await this.model();
     for (const p of pages) {
       if (await this.stopped()) return { cancelled: true };
+      if (budgetLeft(this.run, Date.now(), this.d.maxCostUsd).exhausted) break;   // pages lues non analysées : relues au besoin
       const sub = subqs.find((q) => q.id === p.subquestion_id);
       let out;
       try {
@@ -376,6 +387,7 @@ Réponds UNIQUEMENT en JSON : {"coverage":[{"id":"q1","covered":true,"note":"…
   // -------------------------------------------------------------- ingest --
   async ingest() {
     await this.status("extracting", "ajout des sources retenues au notebook");
+    await this.db.from("research_sources").update({ status: "rejected", reason: "non lue : budget de pages atteint" }).eq("run_id", this.run.id).eq("status", "candidate");
     const { data: retained } = await this.db.from("research_sources").select("id, url, canonical_url, title, domain, source_id")
       .eq("run_id", this.run.id).eq("status", "retained").is("source_id", null);
     const { data: existing } = await this.db.from("sources").select("id, origin_url").eq("notebook_id", this.run.notebook_id).not("origin_url", "is", null);
@@ -500,6 +512,7 @@ ${formatPassages(passages)}
     const markdown = `${resolved.text.trim()}\n\n## Sources et références\n\n${refs.join("\n")}\n`;
     const title = (/^#\s+(.+)$/m.exec(markdown)?.[1] ?? `Recherche : ${this.run.question}`).slice(0, 300);
 
+    if (await this.stopped()) return { cancelled: true };   // pas de rapport pour une recherche annulée
     const { data: art, error } = await this.db.from("artifacts").insert({
       workspace_id: this.run.workspace_id, notebook_id: this.run.notebook_id, created_by: this.run.created_by, type: "report", title, status: "ready",
       options: { template: "deep_research", report_format: this.run.report_format, research_run_id: this.run.id }, source_ids: sourceIds,
@@ -518,7 +531,9 @@ ${formatPassages(passages)}
   }
 
   private async complete(artifactId: string | null) {
-    await this.db.from("research_runs").update({ status: "completed", stage: "terminée", next_step: "done", artifact_id: artifactId, finished_at: new Date().toISOString() }).eq("id", this.run.id);
+    const { data: updated } = await this.db.from("research_runs").update({ status: "completed", stage: "terminée", next_step: "done", artifact_id: artifactId, finished_at: new Date().toISOString() })
+      .eq("id", this.run.id).eq("cancel_requested", false).select("id");
+    if (!updated?.length) return { cancelled: true };
     if (this.run.usage_id) await this.db.rpc("settle_usage", { p_id: this.run.usage_id, p_status: "committed" });
     await this.event("research.completed", "Recherche terminée.", { artifact_id: artifactId });
     return { completed: true, artifact_id: artifactId };
