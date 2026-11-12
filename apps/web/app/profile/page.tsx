@@ -6,6 +6,7 @@ import {
   LockKeyhole, Mail, Palette, Settings2, ShieldCheck, Sparkles, UserRound,
 } from "lucide-react";
 import { AppHeader } from "@/components/app/app-header";
+import { SignOutButton } from "@/components/app/signout-button";
 import { Badge } from "@/components/ui/feedback";
 import { Button } from "@/components/ui/button";
 import { createUserClient, getUser } from "@/lib/supabase/server";
@@ -107,6 +108,7 @@ export default async function ProfilePage() {
               <p className="mt-2 text-xs leading-relaxed text-text-muted">Ne partagez jamais votre mot de passe. Leanna vous demandera votre mot de passe actuel avant toute modification.</p>
               <Link href="/settings" className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-accent hover:underline">Consulter les réglages <ArrowRight size={13} /></Link>
             </div>
+            <SignOutButton labeled />
           </aside>
         </div>
       </main>

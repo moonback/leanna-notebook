@@ -12,8 +12,11 @@ const CATEGORIES = {
 } as const;
 
 /** J04 : envoyer un avis ; sur un notebook, le signaler. */
-export function FeedbackButton({ notebookId }: { notebookId?: string }) {
-  const [open, setOpen] = React.useState(false);
+export function FeedbackButton({ notebookId, open: openProp, onOpenChange }: { notebookId?: string; open?: boolean; onOpenChange?: (open: boolean) => void }) {
+  const controlled = openProp !== undefined;
+  const [openState, setOpenState] = React.useState(false);
+  const open = controlled ? openProp : openState;
+  const setOpen = (v: boolean) => { if (!controlled) setOpenState(v); onOpenChange?.(v); };
   const [kind, setKind] = React.useState<"feedback" | "abuse">("feedback");
   const [category, setCategory] = React.useState("bug");
   const [body, setBody] = React.useState("");
@@ -36,8 +39,8 @@ export function FeedbackButton({ notebookId }: { notebookId?: string }) {
 
   return (
     <>
-      <Button variant="ghost" size="icon" aria-label="Envoyer un avis ou signaler" onClick={() => { reset("feedback"); setOpen(true); }}><MessageSquareWarning aria-hidden /></Button>
-      <Dialog open={open} onOpenChange={setOpen}>
+      {!controlled && <Button variant="ghost" size="icon" aria-label="Envoyer un avis ou signaler" onClick={() => { reset("feedback"); setOpen(true); }}><MessageSquareWarning aria-hidden /></Button>}
+      <Dialog open={open} onOpenChange={(v) => { if (v && controlled) reset("feedback"); setOpen(v); }}>
         <DialogContent title={kind === "abuse" ? "Signaler ce notebook" : "Envoyer un avis"} description={kind === "abuse" ? "Le signalement est confidentiel : le propriétaire ne voit pas qui l’a envoyé." : "Votre message est lu par l’équipe produit."}>
           <form onSubmit={submit} className="grid gap-4">
             {notebookId && (

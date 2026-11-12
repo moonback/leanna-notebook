@@ -2,12 +2,11 @@ import Link from "next/link";
 import { Compass, Settings, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FeedbackButton } from "./feedback-button";
-import { SignOutButton } from "./signout-button";
 import { MobileBottomNav } from "./mobile-bottom-nav";
 
 /** En-tête commun de l'application (56 px). `children` : titre ou actions propres à la page. */
 /** `notebookId` : active le signalement de ce notebook dans le formulaire d'avis. */
-export function AppHeader({ children, notebookId }: { children?: React.ReactNode; notebookId?: string }) {
+export function AppHeader({ children, notebookId, hideFeedback = false }: { children?: React.ReactNode; notebookId?: string; hideFeedback?: boolean }) {
   return (
     <>
       <header className="sticky top-0 z-[var(--z-sticky)] flex h-[var(--header-h)] items-center gap-3 border-b bg-surface-raised px-3 sm:px-5">
@@ -23,14 +22,13 @@ export function AppHeader({ children, notebookId }: { children?: React.ReactNode
             <Link href="/discover" aria-label="Découvrir des notebooks"><Compass aria-hidden /><span className="hidden md:inline">Découvrir</span></Link>
           </Button>
           <div id="app-header-notebook-actions" className="flex items-center empty:hidden" />
-          <FeedbackButton notebookId={notebookId} />
+          {!notebookId && !hideFeedback && <FeedbackButton />}
           <Button asChild variant="ghost" size="icon" aria-label="Mon profil" title="Mon profil">
             <Link href="/profile"><UserRound aria-hidden /></Link>
           </Button>
           <Button asChild variant="ghost" size="icon" aria-label="Réglages">
             <Link href="/settings"><Settings aria-hidden /></Link>
           </Button>
-          <SignOutButton />
         </nav>
       </header>
       <MobileBottomNav />
