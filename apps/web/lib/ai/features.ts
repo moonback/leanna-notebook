@@ -5,5 +5,8 @@ export const AI_FEATURES = [
   { id: "quiz", label: "Quiz", description: "Génération des questionnaires.", inputModalities: ["text"], outputModalities: ["text"] },
   { id: "mind_map", label: "Cartes mentales", description: "Structuration visuelle des idées.", inputModalities: ["text"], outputModalities: ["text"] },
   { id: "audio_overview", label: "Script Audio Overview", description: "Écriture du dialogue avant synthèse vocale.", inputModalities: ["text"], outputModalities: ["text"] },
+  { id: "deep_research", label: "Recherche approfondie", description: "Planification, analyse des pages et vérification croisée (le rapport utilise le modèle « Rapports »).", inputModalities: ["text"], outputModalities: ["text"] },
+  { id: "knowledge_extraction", label: "Graphe de connaissances", description: "Extraction des entités, relations et affirmations des sources.", inputModalities: ["text"], outputModalities: ["text"] },
+  { id: "contradictions", label: "Contradictions", description: "Qualification des écarts détectés entre sources.", inputModalities: ["text"], outputModalities: ["text"] },
 ] as const;
 export type AiFeatureKey = typeof AI_FEATURES[number]["id"];
