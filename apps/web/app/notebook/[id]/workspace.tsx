@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import { createPortal } from "react-dom";
-import { AlertTriangle, ArrowUp, AudioLines, Bold, BookmarkPlus, BrainCircuit, Code, Eraser, Heading2, Italic, List, ListOrdered, Quote, Settings2, ThumbsDown, ThumbsUp, FileText, Globe, Inbox, Lock, NotebookPen, Pencil, Plus, Square, Sparkles, Trash2, Type, Upload, Search, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, FolderOpen, Telescope, Network, Scale, ExternalLink } from "lucide-react";
+import { AlertTriangle, ArrowUp, AudioLines, Video, Bold, BookmarkPlus, BrainCircuit, Code, Eraser, Heading2, Italic, List, ListOrdered, Quote, Settings2, ThumbsDown, ThumbsUp, FileText, Globe, Inbox, Lock, NotebookPen, Pencil, Plus, Square, Sparkles, Trash2, Type, Upload, Search, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, FolderOpen, Telescope, Network, Scale, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Textarea } from "@/components/ui/field";
 import { Alert, Badge, EmptyState, Progress, Skeleton } from "@/components/ui/feedback";
@@ -51,7 +51,7 @@ const ERRORS: Record<string, string> = {
   lease_expired: "Le traitement a été interrompu. Supprimez puis réimportez la source.",
   archive_too_large: "Fichier compressé trop volumineux une fois décompressé.",
 };
-const KIND_ICON: Record<string, React.ReactNode> = { web: <Globe />, text: <Type />, note: <NotebookPen />, audio: <AudioLines />, video: <FileText /> };
+const KIND_ICON: Record<string, React.ReactNode> = { web: <Globe />, text: <Type />, note: <NotebookPen />, audio: <AudioLines />, video: <Video /> };
 const busyStatus = (s: string) => s === "pending" || s === "processing";
 
 /** Vrai si la requête média correspond (suit le redimensionnement). Rendu serveur : vue bureau. */
