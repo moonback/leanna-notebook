@@ -48,7 +48,7 @@ async function fromTikTok(url: string, transcriber?: Transcriber | null): Promis
   if (!transcriber) throw new PermanentError("transcription_not_configured", "Configurez DEEPGRAM_API_KEY pour transcrire les vidéos TikTok.");
   const parsed = new URL(url);
   if (!/(^|\.)tiktok\.com$/i.test(parsed.hostname)) throw new PermanentError("url_refused");
-  let page;
+  let page: Awaited<ReturnType<typeof safeFetch>>;
   try { page = await safeFetch(url); }
   catch (error) {
     if (error instanceof FetchRefused) throw new PermanentError("tiktok_unavailable", "TikTok refuse l'accès à cette vidéo (" + error.message + ").");
@@ -56,7 +56,7 @@ async function fromTikTok(url: string, transcriber?: Transcriber | null): Promis
   }
   if (!page.contentType.includes("html")) throw new PermanentError("tiktok_unavailable", "La page TikTok n'est pas accessible publiquement.");
   const metadata = parseTikTokVideoData(page.body.toString("utf8"));
-  let media;
+  let media: Awaited<ReturnType<typeof safeFetch>>;
   try { media = await safeFetch(metadata.playAddr, 5, 100 * 1024 * 1024); }
   catch (error) {
     if (error instanceof FetchRefused) throw new PermanentError("tiktok_unavailable", "Le fichier vidéo TikTok est inaccessible (" + error.message + ").");
