@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { dirname } from "node:path";
 
 export type BrowserVisit = {
   id: string;
@@ -134,8 +134,8 @@ export class BrowserDataStore {
 
   private async persist(): Promise<void> {
     const snapshot = JSON.stringify(this.data, null, 2);
-    this.writeQueue = this.writeQueue.then(async () => {
-      const directory = join(this.filePath, "..");
+    this.writeQueue = this.writeQueue.catch(() => undefined).then(async () => {
+      const directory = dirname(this.filePath);
       await mkdir(directory, { recursive: true });
       const temporaryPath = `${this.filePath}.${randomUUID()}.tmp`;
       try {
