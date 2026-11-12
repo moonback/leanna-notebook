@@ -25,15 +25,17 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
   }
 
   const db = createServiceClient();
-  const sourceIds = [...new Set(body.sourceIds)];
-  if (!sourceIds.length) throw new ApiError(422, "no_sources");
+  let sourceIds = [...new Set(body.sourceIds)];
   const [{ data: ready }, { data: deselected }] = await Promise.all([
-    db.from("sources").select("id").eq("notebook_id", id).eq("status", "ready").in("id", sourceIds),
+    db.from("sources").select("id").eq("notebook_id", id).eq("status", "ready"),
     db.from("source_deselections").select("source_id").eq("notebook_id", id).eq("user_id", user.id),
   ]);
   const off = new Set((deselected ?? []).map((source) => source.source_id));
   const validIds = new Set((ready ?? []).filter((source) => !off.has(source.id)).map((source) => source.id));
-  if (sourceIds.some((sourceId) => !validIds.has(sourceId))) throw new ApiError(422, "invalid_sources");
+  // Si Roxane n'a pas interrogé les sources pendant ce tour, on utilise toutes les sources prêtes et sélectionnées.
+  if (!sourceIds.length) sourceIds = [...validIds];
+  else sourceIds = sourceIds.filter((sourceId) => validIds.has(sourceId));
+  if (!sourceIds.length) throw new ApiError(422, "no_sources");
 
   const { data: notebook } = await db.from("notebooks").select("output_language").eq("id", id).single();
   if (!notebook) throw new ApiError(404, "not_found");
