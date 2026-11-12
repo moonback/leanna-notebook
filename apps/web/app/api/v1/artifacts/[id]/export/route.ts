@@ -3,7 +3,7 @@ import { ApiError, handle, requireRole, requireUser } from "@/lib/api";
 import { createServiceClient, createUserClient } from "@/lib/supabase/server";
 
 type Params = { params: Promise<{ id: string }> };
-type ExportFormat = "md" | "txt" | "json" | "html";
+type ExportFormat = "md" | "txt" | "json" | "html" | "mp3";
 
 async function artifactNotebook(id: string) {
   if (!/^[0-9a-f-]{36}$/i.test(id)) throw new ApiError(404, "not_found");
@@ -51,13 +51,28 @@ export const GET = handle(async (req: NextRequest, { params }: Params) => {
   const { id } = await params;
   await requireRole(await artifactNotebook(id), "viewer");
   const format = (req.nextUrl.searchParams.get("format") ?? "md") as ExportFormat;
-  if (!["md", "txt", "json", "html"].includes(format)) throw new ApiError(422, "unsupported_export_format");
+  if (!["md", "txt", "json", "html", "mp3"].includes(format)) throw new ApiError(422, "unsupported_export_format");
 
   const supabase = await createUserClient();
   const { data: artifact, error } = await supabase.from("artifacts")
     .select("id, type, title, status, content").eq("id", id).single();
   if (error || !artifact) throw new ApiError(404, "not_found");
   if (artifact.status !== "ready") throw new ApiError(409, "artifact_not_ready");
+  if (format === "mp3") {
+    if (artifact.type !== "audio") throw new ApiError(422, "unsupported_export_format");
+    const audioPath = (artifact.content as { audio_path?: string } | null)?.audio_path;
+    if (!audioPath) throw new ApiError(404, "audio_file_not_found");
+    const { data: audio, error: audioError } = await supabase.storage.from("artifacts").download(audioPath);
+    if (audioError || !audio) throw new ApiError(404, "audio_file_not_found");
+    return new Response(audio, {
+      headers: {
+        "content-type": "audio/mpeg",
+        "content-disposition": `attachment; filename="audio-overview-${id}.mp3"`,
+        "cache-control": "private, no-store",
+        "x-content-type-options": "nosniff",
+      },
+    });
+  }
 
   const title = artifact.title || "Leanna Notebook";
   const markdown = markdownContent(artifact.type, title, artifact.content);
