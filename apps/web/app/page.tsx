@@ -32,7 +32,7 @@ function PublicHome() {
       <header className="relative z-20 border-b border-border/80 bg-bg/90 backdrop-blur-xl">
         <div className="mx-auto flex h-[4.5rem] max-w-[var(--page-max-w)] items-center justify-between gap-4 px-5 sm:px-8">
           <Link href="/" aria-label="Leanna Notebook, accueil" className="flex items-center gap-3">
-            <span className="grid size-9 place-items-center rounded-xl bg-accent text-on-accent shadow-sm"><BookOpen size={19} strokeWidth={2.2} /></span>
+            <span className="grid size-10 shrink-0 place-items-center overflow-hidden rounded-xl bg-surface-raised"><img src="/logo.png" alt="" className="size-full object-contain" /></span>
             <span className="text-[1.05rem] font-semibold tracking-tight">Leanna<span className="font-normal text-text-muted"> Notebook</span></span>
           </Link>
           <nav aria-label="Navigation principale" className="hidden items-center gap-8 text-sm text-text-muted md:flex">
@@ -160,7 +160,7 @@ function PublicHome() {
 
       <footer className="border-t border-border bg-surface/55">
         <div className="mx-auto flex max-w-[var(--page-max-w)] flex-col gap-5 px-5 py-8 text-xs text-text-subtle sm:px-8 md:flex-row md:items-center md:justify-between">
-          <Link href="/" className="flex items-center gap-2 font-semibold text-text"><span className="grid size-7 place-items-center rounded-lg bg-accent text-on-accent"><BookOpen size={14}/></span> Leanna Notebook</Link>
+          <Link href="/" className="flex items-center gap-2 font-semibold text-text"><span className="grid size-8 shrink-0 place-items-center overflow-hidden rounded-lg bg-surface-raised"><img src="/logo.png" alt="" className="size-full object-contain" /></span> Leanna Notebook</Link>
           <p>Un espace pour rechercher, comprendre et structurer vos connaissances.</p>
           <div className="flex flex-wrap gap-5"><Link href="/login" className="hover:text-text">Connexion</Link><Link href="/signup" className="hover:text-text">Créer un compte</Link><Link href="/privacy" className="hover:text-text">Confidentialité</Link><Link href="/terms" className="hover:text-text">Conditions</Link></div>
         </div>
