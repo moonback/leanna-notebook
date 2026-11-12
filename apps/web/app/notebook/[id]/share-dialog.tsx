@@ -62,7 +62,21 @@ export function ShareButton({ notebookId, allowCopies, open: controlledOpen, onO
     const r = await fetch(`/api/v1/share-links/${l.id}`, { method: "DELETE" });
     if (r.ok) { setLinks((xs) => xs.filter((x) => x.id !== l.id)); setCreated(null); } else toast({ title: "Révocation impossible", tone: "error" });
   }
-  React.useEffect(() => { if (open) void load(); }, [open, load]);
+  const [publicUrl, setPublicUrl] = React.useState<string | null>(null);
+  const loadPublic = React.useCallback(async () => {
+    const r = await fetch(`/api/v1/notebooks/${notebookId}/public`).catch(() => null);
+    if (r?.ok) setPublicUrl((await r.json()).url ?? null);
+  }, [notebookId]);
+  async function togglePublic(v: boolean) {
+    if (v && !(await confirm({ title: "Rendre ce notebook public ?", description: "Toute personne disposant du lien pourra lire le résumé, la liste des sources et les contenus générés, sans compte. Vos conversations et notes restent privées.", confirmLabel: "Rendre public", tone: "primary" }))) return;
+    if (!v && !(await confirm({ title: "Retirer l’accès public ?", description: "Le lien public cessera de fonctionner immédiatement.", confirmLabel: "Rendre privé" }))) return;
+    const r = await fetch(`/api/v1/notebooks/${notebookId}/public`, { method: v ? "POST" : "DELETE" }).catch(() => null);
+    if (!r?.ok) { toast({ title: "Réglage non enregistré", tone: "error" }); return; }
+    const url = (await r.json()).url ?? null;
+    setPublicUrl(url);
+    if (url) await navigator.clipboard?.writeText(url).then(() => toast({ title: "Lien public copié", tone: "success" }), () => undefined);
+  }
+  React.useEffect(() => { if (open) { void load(); void loadPublic(); } }, [open, load, loadPublic]);
 
   async function invite(e: React.FormEvent) {
     e.preventDefault();
@@ -143,6 +157,16 @@ export function ShareButton({ notebookId, allowCopies, open: controlledOpen, onO
             <Switch checked={copies} onCheckedChange={(v) => void toggleCopies(v)} />
             Autoriser les lecteurs à faire une copie (sources et contenus générés, sans vos conversations ni notes)
           </label>
+          <label className="mt-3 flex items-center gap-3 text-sm">
+            <Switch checked={!!publicUrl} onCheckedChange={(v) => void togglePublic(v)} />
+            Rendre le notebook public (lecture seule, sans compte)
+          </label>
+          {publicUrl && (
+            <div className="mt-2 flex items-center gap-2">
+              <Input readOnly aria-label="Lien public" value={publicUrl} onFocus={(e) => e.currentTarget.select()} />
+              <Button type="button" size="sm" variant="secondary" onClick={() => void navigator.clipboard?.writeText(publicUrl).then(() => toast({ title: "Lien copié", tone: "success" }), () => undefined)}>Copier</Button>
+            </div>
+          )}
           {links.length > 0 && (
             <ul className="mt-3 grid gap-0.5">
               {links.map((l) => (

@@ -13,6 +13,8 @@ import { toast } from "@/components/ui/toast";
 export type FeaturedNotebook = {
   id: string; title: string; emoji: string | null; overview: string | null;
   allowCopies: boolean; createdAt: string;
+  /** Renseigné pour un notebook publié par son propriétaire : s'ouvre en lecture seule via /p/<slug>. */
+  publicSlug: string | null;
 };
 const fold = (s: string) => s.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
 const titleOf = (n: FeaturedNotebook) => n.title || "Notebook sans titre";
@@ -41,10 +43,10 @@ export function Discover({ initial, loadError }: { initial: FeaturedNotebook[]; 
     finally { setBusy(null); }
   }
 
-  async function copy(id: string) {
+  async function copy(id: string, isPublic: boolean) {
     setBusy(id);
     try {
-      await openNotebook(id);
+      if (!isPublic) await openNotebook(id);
       const response = await fetch(`/api/v1/notebooks/${id}/copy`, { method: "POST" });
       const json = await response.json();
       if (!response.ok) throw new Error(json.error ?? "copy_failed");
@@ -71,7 +73,7 @@ export function Discover({ initial, loadError }: { initial: FeaturedNotebook[]; 
         <div className="relative grid max-w-2xl gap-3">
           <Badge tone="accent" className="w-fit"><Sparkles aria-hidden className="size-3.5" /> Sélections éditoriales</Badge>
           <h1 className="font-serif text-3xl sm:text-4xl">Découvrir des notebooks</h1>
-          <p className="text-sm text-text-muted sm:text-base">Explorez des notebooks sélectionnés par l’équipe. Ouvrez-les en lecture ou copiez-les dans votre bibliothèque lorsque cette option est proposée.</p>
+          <p className="text-sm text-text-muted sm:text-base">Explorez des notebooks sélectionnés par l’équipe ou publiés par la communauté. Ouvrez-les en lecture ou copiez-les dans votre bibliothèque lorsque cette option est proposée.</p>
           {initial.length > 0 && <p className="text-sm font-medium text-on-accent-soft">{initial.length} sélection{initial.length > 1 ? "s" : ""} disponible{initial.length > 1 ? "s" : ""}</p>}
         </div>
       </header>
@@ -97,7 +99,7 @@ export function Discover({ initial, loadError }: { initial: FeaturedNotebook[]; 
                   <span className="grid size-11 place-items-center rounded-xl bg-accent-soft text-xl" aria-hidden>{n.emoji ?? "📘"}</span>
                   <div className="flex items-center gap-2">
                     {n.allowCopies && <Badge>Copiable</Badge>}
-                    <Badge tone="accent">Sélection</Badge>
+                    {n.publicSlug ? <Badge>Public</Badge> : <Badge tone="accent">Sélection</Badge>}
                   </div>
                 </div>
                 <div className="min-w-0 flex-1">
@@ -106,8 +108,10 @@ export function Discover({ initial, loadError }: { initial: FeaturedNotebook[]; 
                 </div>
                 <p className="text-xs text-text-subtle">Ajouté le {new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", year: "numeric" }).format(new Date(n.createdAt))}</p>
                 <div className="flex flex-wrap gap-2">
-                  <Button size="sm" variant="secondary" onClick={() => void explore(n.id)} loading={busy === n.id}><BookOpen aria-hidden /> Explorer</Button>
-                  {n.allowCopies && <Button size="sm" onClick={() => void copy(n.id)} loading={busy === n.id}><Copy aria-hidden /> Copier</Button>}
+                  {n.publicSlug
+                    ? <Button size="sm" variant="secondary" onClick={() => router.push(`/p/${n.publicSlug}`)}><BookOpen aria-hidden /> Explorer</Button>
+                    : <Button size="sm" variant="secondary" onClick={() => void explore(n.id)} loading={busy === n.id}><BookOpen aria-hidden /> Explorer</Button>}
+                  {n.allowCopies && <Button size="sm" onClick={() => void copy(n.id, !!n.publicSlug)} loading={busy === n.id}><Copy aria-hidden /> Copier</Button>}
                 </div>
               </Card>
             </li>

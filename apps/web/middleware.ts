@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
-const PUBLIC = ["/login", "/signup", "/auth/", "/design", "/privacy", "/terms"];
+const PUBLIC = ["/login", "/signup", "/auth/", "/design", "/privacy", "/terms", "/p/"];
 
 /** Rafraîchit la session à chaque requête et protège les pages de l'application. */
 export async function middleware(request: NextRequest) {

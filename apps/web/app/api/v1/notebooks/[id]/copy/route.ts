@@ -15,11 +15,13 @@ type CopyResult = { notebook_id: string; files: { bucket: string; from: string; 
 export const POST = handle(async (_req: NextRequest, { params }: Params) => {
   const user = await requireUser();
   const { id } = await params;
-  const role = await requireRole(id, "viewer");
   const db = createServiceClient();
 
-  const { data: src } = await db.from("notebooks").select("title, allow_copies").eq("id", id).single();
+  const { data: src } = await db.from("notebooks").select("title, allow_copies, public_slug").eq("id", id).single();
   if (!src) throw new ApiError(404, "not_found");
+  // Un notebook public copiable peut être copié par tout utilisateur connecté, sans rôle préalable.
+  const publicCopy = !!src.public_slug && src.allow_copies;
+  const role = publicCopy ? "viewer" : await requireRole(id, "viewer");
   if (role !== "owner" && !src.allow_copies) throw new ApiError(403, "copies_disabled");
 
   const { data: ws } = await db.from("workspaces").select("id, plans(limits)").eq("owner_id", user.id).eq("kind", "personal").single();
