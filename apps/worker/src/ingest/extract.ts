@@ -105,7 +105,7 @@ async function fromPdf(buf: Uint8Array, onProgress?: PdfProgress, ocr?: PdfOcr):
   if (printable < Math.max(20, pageCount * 2)) {
     if (!ocr) throw new PermanentError("needs_ocr", "PDF sans couche texte détectable : activez l'OCR OpenRouter dans les réglages pour traiter ce document.");
     const recognized = (await ocr(buf, pageCount)).trim();
-    const markers = [...recognized.matchAll(/^\\[PAGE\\s+(\\d+)\\]\\s*$/gim)];
+    const markers = [...recognized.matchAll(/^\[PAGE\s+(\d+)\]\s*$/gim)];
     if (!markers.length) {
       const normalized = normalize(recognized);
       if (!normalized) throw new PermanentError("ocr_empty_result");
@@ -125,7 +125,7 @@ async function fromPdf(buf: Uint8Array, onProgress?: PdfProgress, ocr?: PdfOcr):
       ocrPageStarts.push(ocrText.length);
       ocrText += page;
     }
-    if (!ocrText.replace(/[\\s\\p{C}]/gu, "")) throw new PermanentError("ocr_empty_result");
+    if (!ocrText.replace(/[\s\p{C}]/gu, "")) throw new PermanentError("ocr_empty_result");
     return { text: ocrText, pageStarts: ocrPageStarts, pageCount };
   }
   return { text, pageStarts, pageCount };
@@ -144,6 +144,7 @@ export async function extract(
   data: { file?: Uint8Array; url?: string; noteText?: string; mimeType?: string },
   transcriber?: Transcriber | null,
   onPdfProgress?: PdfProgress,
+  onPdfOcr?: PdfOcr,
 ): Promise<Extracted> {
   switch (kind) {
     case "audio": {
