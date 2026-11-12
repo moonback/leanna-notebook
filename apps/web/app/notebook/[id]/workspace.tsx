@@ -589,14 +589,44 @@ function Chat({ notebookId, readyCount, onOpenCitation, onOpenPassage, canViewSo
   );
 }
 
-/** Réflexion du modèle (reasoning tokens) : repliable, ouverte par défaut pendant le flux. */
+/** Un paragraphe de réflexion scindé en titre d'étape (court, sans point final) + développement. */
+type ThoughtStep = { title: string | null; body: string };
+
+function parseThoughtSteps(text: string): ThoughtStep[] {
+  return text.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean).map((para) => {
+    const nl = para.indexOf("\n");
+    const head = (nl >= 0 ? para.slice(0, nl) : para).trim();
+    const rest = (nl >= 0 ? para.slice(nl + 1) : "").trim();
+    // Une « étape » ressemble à un titre : courte, sans ponctuation finale, parfois en gras markdown.
+    const bare = head.replace(/^\*\*(.+)\*\*:?$/, "$1").replace(/:$/, "").trim();
+    const looksLikeTitle = rest.length > 0 && bare.length > 0 && bare.length <= 60 && !/[.?!]$/.test(bare);
+    return looksLikeTitle ? { title: bare, body: rest } : { title: null, body: para };
+  });
+}
+
+/** Réflexion du modèle (reasoning tokens) : timeline d'étapes, repliable, ouverte pendant le flux. */
 function Thoughts({ text, streaming }: { text: string; streaming: boolean }) {
+  const steps = parseThoughtSteps(text);
   return (
-    <details open={streaming} className="rounded-lg border border-border-subtle p-3">
-      <summary className="flex cursor-pointer items-center gap-1.5 text-sm font-medium text-text-muted">
-        <BrainCircuit aria-hidden className="size-4" /> Réflexion {streaming && <span className="text-text-subtle">en cours…</span>}
+    <details open={streaming} className="group rounded-lg border border-border-subtle bg-surface-sunken/40 open:bg-surface-sunken/60">
+      <summary className="flex cursor-pointer select-none items-center gap-2 px-3 py-2 text-sm font-medium text-text-muted">
+        <BrainCircuit aria-hidden className={cn("size-4 text-accent", streaming && "animate-pulse")} />
+        Réflexion
+        {streaming
+          ? <span className="inline-flex items-center gap-1 text-xs font-normal text-text-subtle">en cours<span className="animate-pulse">…</span></span>
+          : <span className="text-xs font-normal text-text-subtle">({steps.length} étape{steps.length > 1 ? "s" : ""})</span>}
+        <svg aria-hidden viewBox="0 0 20 20" className="ml-auto size-3.5 shrink-0 fill-current text-text-subtle transition-transform group-open:rotate-180"><path d="M5 7l5 6 5-6z" /></svg>
       </summary>
-      <p className="mt-2 whitespace-pre-wrap text-xs leading-6 text-text-muted">{text}</p>
+      <ol className="m-0 grid gap-3 border-t border-border-subtle p-3 pl-4">
+        {steps.map((s, i) => (
+          <li key={i} className="relative border-l border-border-subtle pl-4 last:border-transparent">
+            <span aria-hidden className="absolute -left-[3.5px] top-1 size-[7px] rounded-full bg-accent" />
+            {s.title ? <p className="text-xs font-semibold text-text">{s.title}</p> : null}
+            <p className="mt-0.5 whitespace-pre-wrap text-xs leading-6 text-text-muted">{s.body}</p>
+          </li>
+        ))}
+        {streaming && <li className="relative pl-4"><span aria-hidden className="absolute -left-[3.5px] top-1 size-[7px] animate-pulse rounded-full bg-accent" /></li>}
+      </ol>
     </details>
   );
 }
