@@ -8,7 +8,7 @@ export default async function HomePage() {
   if (!user) redirect("/login");
   const supabase = await createUserClient();
   const [{ data: notebooks, error }, { data: profile }, { data: workspaces }] = await Promise.all([
-    supabase.from("notebooks").select("id, title, emoji, workspace_id, created_by, created_at, last_activity_at, sources(count)")
+    supabase.from("notebooks").select("id, title, emoji, workspace_id, created_by, created_at, last_activity_at, public_slug, sources(count)")
       .order("last_activity_at", { ascending: false }).limit(200),
     supabase.from("profiles").select("dashboard_view, display_name").eq("id", user.id).single(),
     supabase.from("workspaces").select("id").eq("owner_id", user.id),
@@ -18,6 +18,7 @@ export default async function HomePage() {
     id: n.id, title: n.title, emoji: n.emoji, createdAt: n.created_at, lastActivityAt: n.last_activity_at,
     sourceCount: (n.sources as unknown as { count: number }[])[0]?.count ?? 0,
     owned: mine.has(n.workspace_id),
+    isPublic: Boolean(n.public_slug),
   }));
 
   return (

@@ -2,7 +2,8 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { BookOpen, LayoutGrid, List, MoreVertical, Pencil, Plus, SearchX, Trash2 } from "lucide-react";
+import { BookOpen, Globe, LayoutGrid, List, Lock, MoreVertical, Pencil, Plus, SearchX, Trash2 } from "lucide-react";
+import { useConfirm } from "@/components/ui/confirm";
 import { AppHeader } from "@/components/app/app-header";
 import { Button } from "@/components/ui/button";
 import { Field, Input, SearchInput } from "@/components/ui/field";
@@ -12,7 +13,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/controls";
 import { Card, Table, Td, Th, Tr } from "@/components/ui/surfaces";
 import { toast } from "@/components/ui/toast";
 
-export type NotebookRow = { id: string; title: string; emoji: string | null; createdAt: string; lastActivityAt: string; sourceCount: number; owned: boolean };
+export type NotebookRow = { id: string; title: string; emoji: string | null; createdAt: string; lastActivityAt: string; sourceCount: number; owned: boolean; isPublic: boolean };
 type Tab = "all" | "mine" | "shared";
 
 const fmt = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", year: "numeric" });
@@ -29,7 +30,22 @@ export function Dashboard({ initial, loadError, initialView }: { initial: Notebo
   const [creating, setCreating] = React.useState(false);
   const [renaming, setRenaming] = React.useState<NotebookRow | null>(null);
   const [deleting, setDeleting] = React.useState<NotebookRow | null>(null);
+  const [confirm, confirmDialog] = useConfirm();
   React.useEffect(() => { setItems(initial); }, [initial]);
+
+  async function togglePublic(n: NotebookRow) {
+    const next = !n.isPublic;
+    const ok = await confirm(next
+      ? { title: "Rendre ce notebook public ?", description: "Toute personne disposant du lien pourra le lire, et il apparaîtra dans « Découvrir ». Vos conversations et notes restent privées.", confirmLabel: "Rendre public", tone: "primary" }
+      : { title: "Retirer l’accès public ?", description: "Le lien public cessera de fonctionner et le notebook disparaîtra de « Découvrir ».", confirmLabel: "Rendre privé" });
+    if (!ok) return;
+    const res = await fetch(`/api/v1/notebooks/${n.id}/public`, { method: next ? "POST" : "DELETE" }).catch(() => null);
+    if (!res?.ok) { toast({ title: "Réglage non enregistré", tone: "error" }); return; }
+    setItems((xs) => xs.map((x) => (x.id === n.id ? { ...x, isPublic: next } : x)));
+    const url = next ? (await res.json()).url as string | null : null;
+    if (url) await navigator.clipboard?.writeText(url).then(() => toast({ title: "Notebook public", description: "Lien copié.", tone: "success" }), () => toast({ title: "Notebook public", tone: "success" }));
+    else toast({ title: next ? "Notebook public" : "Notebook privé", tone: "success" });
+  }
 
   const visible = items.filter((n) => (tab === "all" || (tab === "mine") === n.owned) && fold(titleOf(n)).includes(fold(query.trim())));
 
@@ -61,6 +77,7 @@ export function Dashboard({ initial, loadError, initialView }: { initial: Notebo
       </DropdownMenuTrigger>
       <DropdownMenuContent>
         <DropdownMenuItem icon={<Pencil aria-hidden />} onSelect={() => setRenaming(n)}>Renommer</DropdownMenuItem>
+        <DropdownMenuItem icon={n.isPublic ? <Lock aria-hidden /> : <Globe aria-hidden />} onSelect={() => void togglePublic(n)}>{n.isPublic ? "Rendre privé" : "Rendre public"}</DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem danger icon={<Trash2 aria-hidden />} onSelect={() => setDeleting(n)}>Supprimer</DropdownMenuItem>
       </DropdownMenuContent>
@@ -69,6 +86,7 @@ export function Dashboard({ initial, loadError, initialView }: { initial: Notebo
 
   return (
     <>
+    {confirmDialog}
     <AppHeader>
       <SearchInput aria-label="Rechercher un notebook" placeholder="Rechercher" value={query} onChange={(e) => setQuery(e.target.value)} className="mx-auto w-full max-w-md" />
       <Button size="sm" className="shrink-0" onClick={create} loading={creating}><Plus aria-hidden /> <span className="hidden sm:inline">Nouveau notebook</span><span className="sr-only sm:hidden">Nouveau notebook</span></Button>
@@ -112,7 +130,7 @@ export function Dashboard({ initial, loadError, initialView }: { initial: Notebo
                 </div>
                 <div className="min-w-0">
                   <Link href={`/notebook/${n.id}`} className="line-clamp-2 font-semibold after:absolute after:inset-0">{titleOf(n)}</Link>
-                  <p className="mt-1 text-xs text-text-subtle">{sources(n.sourceCount)} · {fmt.format(new Date(n.createdAt))}</p>
+                  <p className="mt-1 flex items-center gap-1.5 text-xs text-text-subtle"><Visibility isPublic={n.isPublic} /> {sources(n.sourceCount)} · {fmt.format(new Date(n.createdAt))}</p>
                 </div>
               </Card>
             </li>
@@ -128,7 +146,7 @@ export function Dashboard({ initial, loadError, initialView }: { initial: Notebo
                 <Tr key={n.id} className="relative">
                   <Td className="max-w-0 w-full">
                     <Link href={`/notebook/${n.id}`} className="flex min-w-0 items-center gap-2.5 font-medium after:absolute after:inset-0">
-                      <span aria-hidden className="shrink-0">{n.emoji ?? "📘"}</span><span className="truncate">{titleOf(n)}</span>
+                      <span aria-hidden className="shrink-0">{n.emoji ?? "📘"}</span><span className="truncate">{titleOf(n)}</span><Visibility isPublic={n.isPublic} />
                     </Link>
                   </Td>
                   <Td className="hidden whitespace-nowrap text-text-muted sm:table-cell">{sources(n.sourceCount)}</Td>
@@ -146,6 +164,17 @@ export function Dashboard({ initial, loadError, initialView }: { initial: Notebo
       <DeleteDialog notebook={deleting} onClose={() => setDeleting(null)} onDone={(id) => setItems((xs) => xs.filter((x) => x.id !== id))} />
     </main>
     </>
+  );
+}
+
+/** Pastille de visibilité : globe = public, cadenas = privé. */
+function Visibility({ isPublic }: { isPublic: boolean }) {
+  const label = isPublic ? "Public" : "Privé";
+  const Icon = isPublic ? Globe : Lock;
+  return (
+    <span title={label} className={`inline-flex shrink-0 items-center ${isPublic ? "text-accent" : "text-text-subtle"}`}>
+      <Icon aria-hidden className="size-3.5" /><span className="sr-only">{label}</span>
+    </span>
   );
 }
 
