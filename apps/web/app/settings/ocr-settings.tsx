@@ -57,11 +57,11 @@ export function OcrSettings() {
         <div>
           <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.14em] text-primary"><span className="size-2 rounded-full bg-primary" /> OCR des PDF scannés</div>
           <h3 className="mt-2 text-lg font-semibold">Reconnaissance de texte par OpenRouter</h3>
-          <p className="mt-1 max-w-2xl text-sm leading-6 text-text-muted">L'OCR se déclenche automatiquement uniquement lorsqu'un PDF ne contient pas de texte exploitable. Le modèle sélectionné restitue le texte page par page.</p>
+          <p className="mt-1 max-w-2xl text-sm leading-6 text-text-muted">L&apos;OCR se déclenche automatiquement uniquement lorsqu&apos;un PDF ne contient pas de texte exploitable. Le modèle sélectionné restitue le texte page par page.</p>
         </div>
         <label className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm">
           <input type="checkbox" checked={settings.enabled} onChange={(e) => setSettings((s) => ({ ...s, enabled: e.target.checked }))} disabled={loading} />
-          Activer l'OCR automatique
+          Activer l&apos;OCR automatique
         </label>
       </div>
 
