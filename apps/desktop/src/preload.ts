@@ -1,52 +1,52 @@
 import { contextBridge, ipcRenderer } from "electron";
 import type {
   DesktopApi,
+  DesktopBrowserApi,
+  DesktopBrowserCommand,
+  DesktopBrowserInvokeApi,
   DesktopBrowserState,
-  DesktopBrowserVisit,
-  DesktopBrowserBookmark,
-  DesktopBrowserPageContent,
   DesktopFileFilter,
   DesktopUpdateStatus,
 } from "./shared/desktop-api";
 
+// Un preload en bac à sable ne peut pas importer de module local : la liste est déclarée ici.
+// `satisfies` + le test `Missing` ci-dessous garantissent qu'elle couvre exactement le contrat typé.
+const BROWSER_METHODS = [
+  "init", "getState", "createTab", "activateTab", "closeTab", "duplicateTab", "moveTab", "navigate", "goBack",
+  "goForward", "reload", "stop", "setZoom", "runCommand", "key", "setBounds", "setVisible", "getSettings",
+  "updateSettings", "getHistory", "removeVisit", "clearHistory", "getBookmarks", "addBookmark", "updateBookmark",
+  "removeBookmark", "addFolder", "renameFolder", "removeFolder", "cancelDownload", "showDownloadInFolder",
+  "removeDownload", "getPermissions", "setPermission", "clearBrowsingData",
+] as const satisfies readonly (keyof DesktopBrowserInvokeApi)[];
+
+type Missing = Exclude<keyof DesktopBrowserInvokeApi, typeof BROWSER_METHODS[number]>;
+const allMethodsListed: Missing extends never ? true : never = true;
+void allMethodsListed;
+
+function subscribe<T>(channel: string, callback: (payload: T) => void): () => void {
+  const listener = (_event: Electron.IpcRendererEvent, payload: T) => callback(payload);
+  ipcRenderer.on(channel, listener);
+  return () => ipcRenderer.removeListener(channel, listener);
+}
+
+const browser = {
+  ...Object.fromEntries(BROWSER_METHODS.map((method) => [
+    method, (...args: unknown[]) => ipcRenderer.invoke(`browser:${method}`, ...args),
+  ])),
+  onState: (callback: (state: DesktopBrowserState) => void) => subscribe("browser:state", callback),
+  onCommand: (callback: (command: DesktopBrowserCommand) => void) => subscribe("browser:command", callback),
+} as unknown as DesktopBrowserApi;
+
 const api: DesktopApi = {
   getVersion: () => ipcRenderer.invoke("desktop:app-version"),
   checkForUpdates: () => ipcRenderer.invoke("desktop:check-for-updates"),
-  onUpdateStatus: (callback: (status: DesktopUpdateStatus) => void) => {
-    const listener = (_event: Electron.IpcRendererEvent, status: DesktopUpdateStatus) => callback(status);
-    ipcRenderer.on("desktop:update-status", listener);
-    return () => ipcRenderer.removeListener("desktop:update-status", listener);
-  },
+  onUpdateStatus: (callback: (status: DesktopUpdateStatus) => void) => subscribe("desktop:update-status", callback),
   openFiles: (filters?: DesktopFileFilter[]) =>
     ipcRenderer.invoke("desktop:open-files", filters),
   saveFile: (defaultPath?: string, filters?: DesktopFileFilter[]) =>
     ipcRenderer.invoke("desktop:save-file", { defaultPath, filters }),
   openExternal: (url: string) => ipcRenderer.invoke("desktop:open-external", url),
-
-  getBrowserState: () => ipcRenderer.invoke("browser:get-state"),
-  onBrowserState: (callback: (state: DesktopBrowserState) => void) => {
-    const listener = (_event: Electron.IpcRendererEvent, state: DesktopBrowserState) => callback(state);
-    ipcRenderer.on("browser:state", listener);
-    return () => ipcRenderer.removeListener("browser:state", listener);
-  },
-  createBrowserTab: (url?: string, isPrivate = false) =>
-    ipcRenderer.invoke("browser:create-tab", { url, isPrivate }),
-  activateBrowserTab: (id: string) => ipcRenderer.invoke("browser:activate-tab", id),
-  closeBrowserTab: (id: string) => ipcRenderer.invoke("browser:close-tab", id),
-  navigateBrowserTab: (id: string, address: string) =>
-    ipcRenderer.invoke("browser:navigate", { id, address }),
-  browserGoBack: (id: string) => ipcRenderer.invoke("browser:go-back", id),
-  browserGoForward: (id: string) => ipcRenderer.invoke("browser:go-forward", id),
-  browserReload: (id: string) => ipcRenderer.invoke("browser:reload", id),
-  browserStop: (id: string) => ipcRenderer.invoke("browser:stop", id),
-  setBrowserBounds: (bounds) => ipcRenderer.invoke("browser:set-bounds", bounds),
-  setBrowserVisible: (visible: boolean) => ipcRenderer.invoke("browser:set-visible", visible),
-  extractBrowserPage: (id: string) => ipcRenderer.invoke("browser:extract-page", id) as Promise<DesktopBrowserPageContent | null>,
-  getBrowserHistory: () => ipcRenderer.invoke("browser:get-history") as Promise<DesktopBrowserVisit[]>,
-  clearBrowserHistory: () => ipcRenderer.invoke("browser:clear-history"),
-  getBrowserBookmarks: () => ipcRenderer.invoke("browser:get-bookmarks") as Promise<DesktopBrowserBookmark[]>,
-  addBrowserBookmark: (url: string, title: string) => ipcRenderer.invoke("browser:add-bookmark", { url, title }) as Promise<DesktopBrowserBookmark | null>,
-  removeBrowserBookmark: (id: string) => ipcRenderer.invoke("browser:remove-bookmark", id),
+  browser,
 };
 
 contextBridge.exposeInMainWorld("leannaDesktop", api);

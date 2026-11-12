@@ -22,6 +22,9 @@ export interface DesktopUpdateStatus {
   message?: string;
 }
 
+// ── Leanna Browser : DTO sérialisables échangés avec le renderer ─────────────
+// Aucun objet Electron ne traverse ce contrat.
+
 export interface DesktopBrowserTab {
   id: string;
   url: string;
@@ -31,30 +34,103 @@ export interface DesktopBrowserTab {
   canGoBack: boolean;
   canGoForward: boolean;
   isPrivate: boolean;
-  error?: string;
+  /** Zoom en pourcentage. */
+  zoom: number;
+  security: "secure" | "insecure" | "internal";
+  error: { code: number; message: string; url: string } | null;
+  crashed: boolean;
+  blockedPopups: number;
+}
+
+export interface DesktopBrowserDownload {
+  id: string;
+  url: string;
+  filename: string;
+  path: string;
+  state: "progressing" | "paused" | "completed" | "cancelled" | "interrupted";
+  receivedBytes: number;
+  totalBytes: number;
+  startedAt: number;
+  risky: boolean;
 }
 
 export interface DesktopBrowserState {
   activeTabId: string | null;
   tabs: DesktopBrowserTab[];
+  fullscreen: boolean;
+  downloads: DesktopBrowserDownload[];
 }
 
 export type DesktopBrowserBounds = { x: number; y: number; width: number; height: number };
+export type DesktopAgentMode = "observation" | "assistance" | "autonomous";
+export type DesktopSearchEngine = "google" | "duckduckgo" | "bing" | "brave" | "qwant";
 
-export interface DesktopBrowserPageContent { url: string; title: string; text: string }
-
-export interface DesktopBrowserVisit {
-  id: string;
-  url: string;
-  title: string;
-  visitedAt: number;
+export interface DesktopBrowserSettings {
+  searchEngine: DesktopSearchEngine;
+  homepage: string;
+  restoreTabs: boolean;
+  popups: "block" | "tab";
+  cookies: "keep" | "clear-on-exit";
+  permissions: "ask" | "deny";
+  agentMode: DesktopAgentMode;
+  confirmations: "sensitive-only" | "every-action";
+  aiPanelOpen: boolean;
 }
 
-export interface DesktopBrowserBookmark {
-  id: string;
-  url: string;
-  title: string;
-  createdAt: number;
+export interface DesktopBrowserVisit { id: string; url: string; title: string; visitedAt: number }
+export interface DesktopBrowserBookmark { id: string; url: string; title: string; folder: string; createdAt: number }
+export type DesktopPermissionDecision = "allow" | "deny";
+
+export type DesktopBrowserCommand =
+  | "new-tab" | "close-tab" | "next-tab" | "previous-tab" | "duplicate-tab"
+  | "reload" | "hard-reload" | "stop" | "back" | "forward"
+  | "zoom-in" | "zoom-out" | "zoom-reset" | "fullscreen"
+  | "focus-address" | "toggle-ai-panel" | "bookmark" | "show-history" | "show-downloads";
+
+export interface DesktopKeyInput { key: string; control?: boolean; meta?: boolean; shift?: boolean; alt?: boolean }
+
+/** Méthodes appelables (canal `browser:<nom>`). Les deux abonnements sont à part. */
+export interface DesktopBrowserInvokeApi {
+  init(): Promise<{ state: DesktopBrowserState; settings: DesktopBrowserSettings }>;
+  getState(): Promise<DesktopBrowserState>;
+  createTab(input?: { url?: string; isPrivate?: boolean }): Promise<DesktopBrowserTab | null>;
+  activateTab(id: string): Promise<boolean>;
+  closeTab(id: string): Promise<boolean>;
+  duplicateTab(id: string): Promise<DesktopBrowserTab | null>;
+  moveTab(id: string, toIndex: number): Promise<boolean>;
+  navigate(id: string, address: string): Promise<boolean>;
+  goBack(id: string): Promise<boolean>;
+  goForward(id: string): Promise<boolean>;
+  reload(id: string): Promise<boolean>;
+  stop(id: string): Promise<boolean>;
+  setZoom(id: string, direction: "in" | "out" | "reset"): Promise<boolean>;
+  runCommand(command: DesktopBrowserCommand): Promise<boolean>;
+  key(input: DesktopKeyInput): Promise<boolean>;
+  setBounds(bounds: DesktopBrowserBounds): Promise<boolean>;
+  setVisible(visible: boolean): Promise<boolean>;
+  getSettings(): Promise<DesktopBrowserSettings>;
+  updateSettings(patch: Partial<DesktopBrowserSettings>): Promise<DesktopBrowserSettings>;
+  getHistory(query?: string): Promise<DesktopBrowserVisit[]>;
+  removeVisit(id: string): Promise<boolean>;
+  clearHistory(sinceMs?: number): Promise<number>;
+  getBookmarks(query?: string): Promise<{ bookmarks: DesktopBrowserBookmark[]; folders: string[] }>;
+  addBookmark(input: { url: string; title: string; folder?: string }): Promise<DesktopBrowserBookmark | null>;
+  updateBookmark(id: string, patch: { title?: string; folder?: string }): Promise<DesktopBrowserBookmark | null>;
+  removeBookmark(id: string): Promise<boolean>;
+  addFolder(name: string): Promise<string | null>;
+  renameFolder(from: string, to: string): Promise<boolean>;
+  removeFolder(name: string): Promise<boolean>;
+  cancelDownload(id: string): Promise<boolean>;
+  showDownloadInFolder(id: string): Promise<boolean>;
+  removeDownload(id: string): Promise<boolean>;
+  getPermissions(): Promise<Record<string, Record<string, DesktopPermissionDecision>>>;
+  setPermission(origin: string, permission: string, decision: DesktopPermissionDecision | null): Promise<boolean>;
+  clearBrowsingData(): Promise<boolean>;
+}
+
+export interface DesktopBrowserApi extends DesktopBrowserInvokeApi {
+  onState(callback: (state: DesktopBrowserState) => void): () => void;
+  onCommand(callback: (command: DesktopBrowserCommand) => void): () => void;
 }
 
 export interface DesktopApi {
@@ -64,25 +140,8 @@ export interface DesktopApi {
   openFiles(filters?: DesktopFileFilter[]): Promise<DesktopFileSelection>;
   saveFile(defaultPath?: string, filters?: DesktopFileFilter[]): Promise<DesktopSaveSelection>;
   openExternal(url: string): Promise<{ opened: boolean }>;
-
-  getBrowserState(): Promise<DesktopBrowserState>;
-  onBrowserState(callback: (state: DesktopBrowserState) => void): () => void;
-  createBrowserTab(url?: string, isPrivate?: boolean): Promise<DesktopBrowserTab | null>;
-  activateBrowserTab(id: string): Promise<boolean>;
-  closeBrowserTab(id: string): Promise<boolean>;
-  navigateBrowserTab(id: string, address: string): Promise<boolean>;
-  browserGoBack(id: string): Promise<boolean>;
-  browserGoForward(id: string): Promise<boolean>;
-  browserReload(id: string): Promise<boolean>;
-  browserStop(id: string): Promise<boolean>;
-  setBrowserBounds(bounds: DesktopBrowserBounds): Promise<boolean>;
-  setBrowserVisible(visible: boolean): Promise<boolean>;
-  extractBrowserPage(id: string): Promise<DesktopBrowserPageContent | null>;
-  getBrowserHistory(): Promise<DesktopBrowserVisit[]>;
-  clearBrowserHistory(): Promise<boolean>;
-  getBrowserBookmarks(): Promise<DesktopBrowserBookmark[]>;
-  addBrowserBookmark(url: string, title: string): Promise<DesktopBrowserBookmark | null>;
-  removeBrowserBookmark(id: string): Promise<boolean>;
+  /** Leanna Browser. Chaque méthode correspond au canal IPC `browser:<méthode>`. */
+  browser: DesktopBrowserApi;
 }
 
 declare global {
