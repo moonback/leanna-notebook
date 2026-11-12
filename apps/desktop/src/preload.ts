@@ -2,6 +2,8 @@ import { contextBridge, ipcRenderer } from "electron";
 import type {
   DesktopApi,
   DesktopBrowserState,
+  DesktopBrowserVisit,
+  DesktopBrowserBookmark,
   DesktopFileFilter,
   DesktopUpdateStatus,
 } from "./shared/desktop-api";
@@ -38,6 +40,11 @@ const api: DesktopApi = {
   browserStop: (id: string) => ipcRenderer.invoke("browser:stop", id),
   setBrowserBounds: (bounds) => ipcRenderer.invoke("browser:set-bounds", bounds),
   setBrowserVisible: (visible: boolean) => ipcRenderer.invoke("browser:set-visible", visible),
+  getBrowserHistory: () => ipcRenderer.invoke("browser:get-history") as Promise<DesktopBrowserVisit[]>,
+  clearBrowserHistory: () => ipcRenderer.invoke("browser:clear-history"),
+  getBrowserBookmarks: () => ipcRenderer.invoke("browser:get-bookmarks") as Promise<DesktopBrowserBookmark[]>,
+  addBrowserBookmark: (url: string, title: string) => ipcRenderer.invoke("browser:add-bookmark", { url, title }) as Promise<DesktopBrowserBookmark | null>,
+  removeBrowserBookmark: (id: string) => ipcRenderer.invoke("browser:remove-bookmark", id),
 };
 
 contextBridge.exposeInMainWorld("leannaDesktop", api);
