@@ -124,6 +124,10 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
     throw e;
   }
 
+  if (artifactRequest) {
+    await requireRole(conv.notebook_id, "editor");
+    if (!process.env.OPENROUTER_API_KEY || !process.env.OPENROUTER_CHAT_MODEL) throw new ApiError(503, "ai_not_configured");
+  }
   const { data: usageId, error: qe } = await db.rpc("reserve_usage", { p_ws: conv.workspace_id, p_user: user.id, p_feature: "chat" });
   if (qe) throw qe;
 
@@ -132,8 +136,6 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
   const artifactRequest = detectStudioArtifactRequest(text);
   let requestedArtifact: { id: string; type: StudioArtifactType } | null = null;
   if (artifactRequest) {
-    await requireRole(conv.notebook_id, "editor");
-    if (!process.env.OPENROUTER_API_KEY || !process.env.OPENROUTER_CHAT_MODEL) throw new ApiError(503, "ai_not_configured");
     const options = artifactRequest.template
       ? { template: artifactRequest.template, language: nb?.output_language ?? profile?.output_language ?? "fr", reportFormat: "document", sourceScope: "selected" }
       : { language: nb?.output_language ?? profile?.output_language ?? "fr", sourceScope: "selected" };
