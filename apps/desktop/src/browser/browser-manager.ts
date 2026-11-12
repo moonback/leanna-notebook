@@ -121,7 +121,7 @@ export class BrowserManager {
     const next = this.tabs.get(id);
     if (!next || !this.window || this.window.isDestroyed()) return false;
     const previous = this.activeTabId ? this.tabs.get(this.activeTabId) : undefined;
-    if (previous && previous.id !== id) {
+    if (previous) {
       try { this.window.contentView.removeChildView(previous.view); } catch { /* déjà détachée */ }
     }
     this.activeTabId = id;
@@ -274,6 +274,9 @@ export class BrowserManager {
     });
     contents.on("page-title-updated", (_event, title) => {
       tab.title = title.slice(0, 300) || tab.url;
+      if (isSafeBrowserUrl(tab.url)) {
+        this.onVisit({ url: tab.url, title: tab.title, isPrivate: tab.isPrivate });
+      }
       this.publish();
     });
     contents.on("page-favicon-updated", (_event, favicons) => {
