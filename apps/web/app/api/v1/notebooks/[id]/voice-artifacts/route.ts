@@ -27,8 +27,12 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
   const db = createServiceClient();
   const sourceIds = [...new Set(body.sourceIds)];
   if (!sourceIds.length) throw new ApiError(422, "no_sources");
-  const { data: ready } = await db.from("sources").select("id").eq("notebook_id", id).eq("status", "ready").in("id", sourceIds);
-  const validIds = new Set((ready ?? []).map((source) => source.id));
+  const [{ data: ready }, { data: deselected }] = await Promise.all([
+    db.from("sources").select("id").eq("notebook_id", id).eq("status", "ready").in("id", sourceIds),
+    db.from("source_deselections").select("source_id").eq("notebook_id", id).eq("user_id", user.id),
+  ]);
+  const off = new Set((deselected ?? []).map((source) => source.source_id));
+  const validIds = new Set((ready ?? []).filter((source) => !off.has(source.id)).map((source) => source.id));
   if (sourceIds.some((sourceId) => !validIds.has(sourceId))) throw new ApiError(422, "invalid_sources");
 
   const { data: notebook } = await db.from("notebooks").select("output_language").eq("id", id).single();
