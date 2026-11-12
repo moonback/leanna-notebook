@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { BrowserWindow, WebContentsView, session, type Session } from "electron";
+import { BrowserWindow, WebContentsView, dialog, session, type Session } from "electron";
+import { basename } from "node:path";
 import {
   isSafeBrowserUrl,
   normalizeBrowserBounds,
@@ -253,10 +254,27 @@ export class BrowserManager {
     // sera ajoutée avant d'activer les permissions caméra/micro/géolocalisation.
     browserSession.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
     browserSession.setPermissionCheckHandler(() => false);
-    browserSession.on("will-download", (event, item) => {
-      // Pas de téléchargement silencieux ni d'écriture automatique dans le profil.
-      item.cancel();
-      event.preventDefault();
+    browserSession.on("will-download", (event, item, contents) => {
+      const parent = this.window;
+      const belongsToBrowser = [...this.tabs.values()].some((tab) => tab.view.webContents === contents);
+      if (!parent || parent.isDestroyed() || !belongsToBrowser) {
+        item.cancel();
+        event.preventDefault();
+        return;
+      }
+      // Chaque téléchargement nécessite un chemin choisi explicitement par l'utilisateur.
+      item.pause();
+      void dialog.showSaveDialog(parent, {
+        title: "Enregistrer le téléchargement",
+        defaultPath: basename(item.getFilename()),
+      }).then((result) => {
+        if (result.canceled || !result.filePath) {
+          item.cancel();
+          return;
+        }
+        item.setSavePath(result.filePath);
+        item.resume();
+      }).catch(() => item.cancel());
     });
   }
 
