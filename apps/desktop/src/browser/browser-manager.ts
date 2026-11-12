@@ -184,7 +184,7 @@ export class BrowserManager {
       return {
         url: tab.url,
         title: typeof result.title === "string" ? result.title.slice(0, 300) : tab.title,
-        text: result.text.slice(0, 3_500_000),
+        text: result.text.slice(0, 3_400_000),
       };
     } catch {
       return null;
