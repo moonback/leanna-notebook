@@ -9,7 +9,7 @@ import { Dialog, DialogClose, DialogContent, Tooltip } from "@/components/ui/ove
 import { useConfirm } from "@/components/ui/confirm";
 import { Checkbox, Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/controls";
 import { ListRow, Panel } from "@/components/ui/surfaces";
-import { Citation } from "@/components/ui/citation";
+import { Markdown } from "@/components/ui/markdown";
 import { toast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 import { Studio } from "./studio";
@@ -622,7 +622,7 @@ function Thoughts({ text, streaming }: { text: string; streaming: boolean }) {
           <li key={i} className="relative border-l border-border-subtle pl-4 last:border-transparent">
             <span aria-hidden className="absolute -left-[3.5px] top-1 size-[7px] rounded-full bg-accent" />
             {s.title ? <p className="text-xs font-semibold text-text">{s.title}</p> : null}
-            <p className="mt-0.5 whitespace-pre-wrap text-xs leading-6 text-text-muted">{s.body}</p>
+            <div className="mt-0.5 text-xs leading-6 text-text-muted [&_p]:whitespace-pre-wrap"><Markdown text={s.body} citations={[]} /></div>
           </li>
         ))}
         {streaming && <li className="relative pl-4"><span aria-hidden className="absolute -left-[3.5px] top-1 size-[7px] animate-pulse rounded-full bg-accent" /></li>}
@@ -631,24 +631,9 @@ function Thoughts({ text, streaming }: { text: string; streaming: boolean }) {
   );
 }
 
-/** Réponse : paragraphes + pastilles de citation à la place des marqueurs [n]. */
+/** Réponse : rendu markdown (titres, listes, code...) + pastilles de citation à la place des marqueurs [n]. */
 function Answer({ text, citations, onOpen, sourceTitle }: { text: string; citations: Cite[]; onOpen?: (c: Cite) => void; sourceTitle: (id: string) => string | undefined }) {
-  const byMarker = new Map(citations.map((c) => [c.marker, c]));
-  return (
-    <div className="grid gap-3 font-serif text-reading">
-      {text.split(/\n{2,}/).map((para, i) => (
-        <p key={i} className="whitespace-pre-wrap">
-          {para.split(/(\[\d+\])/g).map((part, j) => {
-            const m = /^\[(\d+)\]$/.exec(part);
-            const c = m && byMarker.get(Number(m[1]));
-            if (!m) return <React.Fragment key={j}>{part}</React.Fragment>;
-            if (!c) return <span key={j} className="font-mono text-xs text-text-subtle">{part}</span>; // pendant le flux
-            return <Citation key={j} n={c.marker} source={sourceTitle(c.source_id) ?? "Source supprimée"} quote={c.quote_text} verified={c.verified} onOpen={onOpen ? () => onOpen(c) : undefined} />;
-          })}
-        </p>
-      ))}
-    </div>
-  );
+  return <Markdown text={text} citations={citations} onOpenCitation={onOpen} sourceTitle={sourceTitle} />;
 }
 
 /** Pouce haut / bas ; un avis négatif peut porter un motif facultatif. */
