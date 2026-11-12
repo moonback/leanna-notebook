@@ -43,6 +43,7 @@ export class BrowserManager {
   private activeTabId: string | null = null;
   private bounds: BrowserBounds = DEFAULT_BOUNDS;
   private readonly onState: (state: BrowserState) => void;
+  private readonly configuredSessions = new WeakSet<Session>();
 
   constructor(onState: (state: BrowserState) => void) {
     this.onState = onState;
@@ -222,6 +223,8 @@ export class BrowserManager {
   }
 
   private configureSession(browserSession: Session): void {
+    if (this.configuredSessions.has(browserSession)) return;
+    this.configuredSessions.add(browserSession);
     // Autorisations distantes refusées par défaut. Une UI de consentement par origine
     // sera ajoutée avant d'activer les permissions caméra/micro/géolocalisation.
     browserSession.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
