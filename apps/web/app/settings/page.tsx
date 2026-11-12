@@ -61,7 +61,7 @@ export default async function SettingsPage() {
               label: "Préférences",
               description: "Profil, langue, apparence et notifications.",
               icon: <User />,
-              content: profile ? <ProfileForm initial={{ ...profile, theme: profile.theme as "light" | "dark" | "system" }} /> : <p role="alert" className="text-sm text-danger">Profil introuvable.</p>,
+              content: profile ? <ProfileForm showPreferences initial={{ ...profile, theme: profile.theme as "light" | "dark" | "system" }} /> : <p role="alert" className="text-sm text-danger">Profil introuvable.</p>,
             },
             {
               id: "security",
