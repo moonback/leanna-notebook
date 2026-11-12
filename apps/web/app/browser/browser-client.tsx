@@ -69,7 +69,9 @@ export function BrowserClient({ notebookId }: { notebookId?: string } = {}) {
     setAvailable(true);
     let alive = true;
     const unsubscribe = api.onBrowserState((next) => {
-      if (alive) setState(next);
+      if (!alive) return;
+      setState(next);
+      void api.getBrowserHistory().then((items) => { if (alive) setHistory(items); }).catch(() => undefined);
     });
     void api.getBrowserState().then(async (current) => {
       if (!alive) return;
@@ -248,7 +250,7 @@ export function BrowserClient({ notebookId }: { notebookId?: string } = {}) {
             autoComplete="off"
           />
         </div>
-        {notebookId && <Button type="button" size="sm" variant="secondary" disabled={!activeTab || addingSource} onClick={() => void addPageToNotebook()}><BookPlus aria-hidden /> {addingSource ? "Import…" : "Ajouter au notebook"}</Button>}
+        {notebookId && <Button type="button" size="sm" variant="secondary" disabled={!activeTab || activeTab.loading || addingSource} onClick={() => void addPageToNotebook()}><BookPlus aria-hidden /> {addingSource ? "Import…" : "Ajouter au notebook"}</Button>}
         <Button type="button" size="icon-sm" variant="ghost" aria-label="Ajouter aux favoris" title="Ajouter aux favoris" disabled={!activeTab || !(activeTab.url.startsWith("http://") || activeTab.url.startsWith("https://"))} onClick={() => void saveBookmark()}>
           {bookmarks.some((item) => item.url === activeTab?.url) ? <BookmarkCheck aria-hidden /> : <Bookmark aria-hidden />}
         </Button>
