@@ -37,9 +37,9 @@ function detectStudioArtifactRequest(input: string): { type: StudioArtifactType;
     ["diagram", /\b(diagramme|schema|flowchart)\b/],
     ["editorial", /\b(newsletter|article de blog|publication|contenu editorial)\b/],
     ["study_plan", /\b(plan d'etude|planning de revision|programme de revision)\b/],
+    ["report", /\b(rapport|report|synthese|briefing|guide pratique|fiche pratique|guide detaille|document)\b/],
     ["audio", /\b(audio overview|podcast|resume audio)\b/],
     ["image", /\b(image|illustration|visuel|visuelle|affiche)\b/],
-    ["report", /\b(rapport|report|synthese|briefing|guide pratique|fiche pratique|guide detaille|document)\b/],
   ];
   const match = types.find(([, pattern]) => pattern.test(value));
   if (!match) return null;
