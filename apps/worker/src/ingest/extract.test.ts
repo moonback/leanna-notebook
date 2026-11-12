@@ -9,7 +9,7 @@ describe("formatPdfPage", () => {
       { str: "Deuxième", transform: [1, 0, 0, 1, 10, 80], width: 40 },
       { str: "ligne", transform: [1, 0, 0, 1, 53, 80], width: 20 },
     ];
-    expect(formatPdfPage(items)).toBe("Leanna Notebook\\nDeuxième ligne");
+    expect(formatPdfPage(items)).toBe("Leanna Notebook\nDeuxième ligne");
   });
 
   it("ne crée pas d'espace entre deux fragments contigus", () => {
