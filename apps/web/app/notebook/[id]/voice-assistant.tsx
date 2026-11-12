@@ -541,7 +541,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
             : "!inset-x-0 !bottom-0 !left-0 !top-auto !h-auto !max-h-none !w-full !max-w-none !translate-x-0 !translate-y-0 !rounded-t-2xl !rounded-b-none !gap-0 !p-0 [&>div:first-child]:!sr-only"}`}
         >
           {!expanded ? (
-            <div className="flex min-h-[76px] items-center gap-3 border-t bg-surface-raised py-2.5 pl-3 pr-14 sm:pl-5 sm:pr-16">
+            <div className="mobile-voice-sheet-header flex min-h-[76px] items-center gap-3 border-t bg-surface-raised py-2.5 pl-3 pr-14 sm:pl-5 sm:pr-16">
               <div className={`relative grid size-10 shrink-0 place-items-center rounded-full border text-sm font-semibold transition-colors ${state === "speaking" ? "border-accent/50 bg-accent/10 text-accent" : "border-border bg-surface text-text"}`}>
                 L
                 {state !== "idle" && state !== "error" && <span className="absolute -bottom-0.5 -right-0.5 size-3 rounded-full border-2 border-surface-raised bg-emerald-500" />}
@@ -558,7 +558,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
                   {Array.from({length: 9}, (_, i) => <span key={i} className={`w-1 rounded-full bg-current ${state === "speaking" ? "animate-pulse" : "opacity-50"}`} style={{height: `${7 + ((i * 11) % 17)}px`, animationDelay: `${i * 70}ms`}} />)}
                 </div>
               ) : null}
-              <div className="flex shrink-0 items-center gap-1.5">
+              <div className="mobile-voice-controls flex shrink-0 items-center gap-1.5">
                 <Button size="sm" variant={roxaneEnabled ? "secondary" : "ghost"} onClick={toggleRoxane} aria-pressed={roxaneEnabled} title={roxaneEnabled ? "Désactiver Roxane" : "Activer Roxane"} className="hidden sm:inline-flex">
                   <Sparkles aria-hidden /> {roxaneEnabled ? "Roxane" : "Ajouter Roxane"}
                 </Button>
@@ -575,7 +575,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
             </div>
           ) : (
             <div className="flex h-full min-h-0 flex-col bg-surface">
-              <header className="flex h-16 shrink-0 items-center justify-between gap-3 border-b pl-4 pr-14 sm:pl-7 sm:pr-16">
+              <header className="mobile-voice-expanded-header flex h-16 shrink-0 items-center justify-between gap-3 border-b pl-4 pr-14 sm:pl-7 sm:pr-16">
                 <div className="flex min-w-0 items-center gap-3">
                   <div className="grid size-9 place-items-center rounded-xl bg-accent/10 text-accent"><AudioLines className="size-4" /></div>
                   <div className="min-w-0">
@@ -596,7 +596,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
 
               <main className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)]">
                 <section className="flex min-h-0 flex-col items-center justify-center gap-7 overflow-y-auto px-5 py-8 sm:px-10">
-                  <div className="flex w-full max-w-xl items-center justify-center gap-5 sm:gap-10">
+                  <div className="mobile-voice-personas flex w-full max-w-xl items-center justify-center gap-5 sm:gap-10">
                     <div className="flex flex-col items-center gap-3">
                       <div className={`grid size-16 place-items-center rounded-[22px] border text-xl font-semibold shadow-sm transition-all sm:size-20 ${state === "speaking" ? "border-accent/50 bg-accent/10 text-accent shadow-accent/10" : "border-border bg-surface-raised text-text"}`}>L</div>
                       <div className="text-center"><p className="text-sm font-semibold">Leanna</p><p className="text-[11px] text-text-muted">Assistante principale</p></div>
@@ -610,12 +610,12 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
                     </div>
                   </div>
 
-                  <div className="max-w-md text-center">
+                  <div className="mobile-voice-status max-w-md text-center">
                     <p className="text-base font-medium">{state === "idle" ? "Prêt pour votre prochaine question" : state === "connecting" ? "Préparation de votre espace vocal…" : state === "error" ? "La connexion a rencontré un problème" : state === "speaking" ? "Leanna vous répond" : "Je vous écoute"}</p>
                     <p className="mt-1.5 text-sm leading-relaxed text-text-muted">{state === "idle" ? "Posez une question à voix haute. Leanna recherche dans les sources de ce notebook et vous répond naturellement." : status}</p>
                   </div>
 
-                  <div className="flex flex-wrap items-center justify-center gap-2">
+                  <div className="mobile-voice-session-actions flex flex-wrap items-center justify-center gap-2">
                     {state === "idle" || state === "error" ? (
                       <Button onClick={() => void start()} disabled={disabled} className="min-w-44"><Mic aria-hidden /> Démarrer la conversation</Button>
                     ) : (
@@ -628,8 +628,8 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
                   <p className="max-w-lg text-center text-[11px] leading-relaxed text-text-subtle">Roxane est désactivée par défaut. Lorsqu’elle est activée, elle reste silencieuse pendant les deux premiers échanges et intervient uniquement si elle apporte un éclairage réellement utile.</p>
                 </section>
 
-                <aside className="flex min-h-0 flex-col border-t bg-surface-raised/60 lg:border-l lg:border-t-0">
-                  <div className="flex h-14 shrink-0 items-center justify-between border-b px-4">
+                <aside className="mobile-voice-history flex min-h-0 flex-col border-t bg-surface-raised/60 lg:border-l lg:border-t-0">
+                  <div className="mobile-voice-history-toolbar flex h-14 shrink-0 items-center justify-between border-b px-4">
                     <div><p className="text-sm font-semibold">Conversation</p><p className="text-[11px] text-text-muted">{turnHistory.length} échange{turnHistory.length > 1 ? "s" : ""} archivé{turnHistory.length > 1 ? "s" : ""}</p></div>
                     <div className="flex items-center gap-1">
                       <Button size="icon" variant="ghost" aria-label="Copier la conversation" title="Copier" onClick={() => void copyConversation()} disabled={turnHistory.length === 0}>{copied ? <Check aria-hidden /> : <Copy aria-hidden />}</Button>
@@ -655,7 +655,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
                   </div>
                 </aside>
               </main>
-              <footer className="flex h-12 shrink-0 items-center justify-between border-t px-4 text-[11px] text-text-subtle sm:px-7">
+              <footer className="mobile-voice-footer flex h-12 shrink-0 items-center justify-between border-t px-4 text-[11px] text-text-subtle sm:px-7">
                 <span>Les réponses de Leanna s’appuient sur les sources sélectionnées.</span>
                 <span className="hidden sm:inline">Gemini Live · Audio temps réel</span>
               </footer>

@@ -66,13 +66,13 @@ export function SystemPromptsSettings() {
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[250px_minmax(0,1fr)]">
-      <Card className="h-fit overflow-hidden p-2">
+    <div className="mobile-prompts-layout grid gap-4 lg:grid-cols-[250px_minmax(0,1fr)]">
+      <Card className="mobile-prompts-list h-fit overflow-hidden p-2">
         <div className="relative p-2">
           <Search className="absolute left-5 top-1/2 size-4 -translate-y-1/2 text-text-subtle" />
           <input aria-label="Rechercher un prompt" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Rechercher…" className="h-9 w-full rounded-md border border-border-input bg-surface-raised pl-9 pr-3 text-sm outline-none focus-visible:border-focus" />
         </div>
-        <div className="grid gap-1">
+        <div className="mobile-prompts-items grid gap-1">
           {filtered.map((prompt) => (
             <button key={prompt.key} type="button" onClick={() => setActiveKey(prompt.key)} className={`flex items-center justify-between gap-2 rounded-md px-3 py-2.5 text-left text-sm transition-colors ${active.key === prompt.key ? "bg-accent-soft text-text" : "text-text-muted hover:bg-surface-sunken hover:text-text"}`}>
               <span className="min-w-0"><span className="block font-medium">{prompt.label}</span><span className="block text-xs text-text-subtle">{prompt.group}</span></span>
@@ -83,7 +83,7 @@ export function SystemPromptsSettings() {
         </div>
       </Card>
 
-      <Card className="grid min-w-0 gap-4 p-5">
+      <Card className="mobile-prompts-editor grid min-w-0 gap-4 p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2"><Sparkles className="size-4 text-accent" /><h2 className="text-lg font-semibold">{active.label}</h2></div>
