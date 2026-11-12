@@ -36,6 +36,7 @@ const ERRORS: Record<string, string> = {
   transcription_not_configured: "La transcription audio n’est pas configurée côté serveur.",
   transcription_config: "Le service de transcription audio est mal configuré.",
   tiktok_unavailable: "Cette vidéo TikTok est inaccessible ou ne peut pas être récupérée publiquement.",
+  tiktok_media_invalid: "Le fichier vidéo fourni par TikTok est invalide ou dans un format non pris en charge.",
   tiktok_media_invalid: "Le média vidéo fourni par TikTok est invalide.",
   no_speech: "Aucune parole exploitable détectée dans ce fichier audio.",
   embeddings_config: "Indexation impossible : configuration des embeddings invalide.",
