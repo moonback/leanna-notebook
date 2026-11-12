@@ -45,6 +45,9 @@ export function parseTikTokVideoData(html: string): TikTokVideoData {
 }
 
 async function fromTikTok(url: string, transcriber?: Transcriber | null): Promise<Extracted> {
+  const startedAt = Date.now();
+  const host = (() => { try { return new URL(url).hostname; } catch { return "invalid-url"; } })();
+  console.info("[tiktok-ingest] start", { host, transcriberConfigured: Boolean(transcriber) });
   if (!transcriber) throw new PermanentError("transcription_not_configured", "Configurez DEEPGRAM_API_KEY pour transcrire les vidéos TikTok.");
   const parsed = new URL(url);
   if (!/(^|\.)tiktok\.com$/i.test(parsed.hostname)) throw new PermanentError("url_refused");
@@ -54,19 +57,29 @@ async function fromTikTok(url: string, transcriber?: Transcriber | null): Promis
     if (error instanceof FetchRefused) throw new PermanentError("tiktok_unavailable", "TikTok refuse l'accès à cette vidéo (" + error.message + ").");
     throw error;
   }
+  console.info("[tiktok-ingest] page_fetched", { contentType: page.contentType, bytes: page.body.length, elapsedMs: Date.now() - startedAt });
   if (!page.contentType.includes("html")) throw new PermanentError("tiktok_unavailable", "La page TikTok n'est pas accessible publiquement.");
-  const metadata = parseTikTokVideoData(page.body.toString("utf8"));
+  let metadata: TikTokVideoData;
+  try { metadata = parseTikTokVideoData(page.body.toString("utf8")); }
+  catch (error) { console.warn("[tiktok-ingest] metadata_parse_failed", { error: error instanceof Error ? error.message : String(error), htmlBytes: page.body.length }); throw error; }
+  console.info("[tiktok-ingest] metadata_extracted", { titleLength: metadata.title.length, mediaHost: (() => { try { return new URL(metadata.playAddr).hostname; } catch { return "invalid"; } })() });
   let media: Awaited<ReturnType<typeof safeFetch>>;
   try { media = await safeFetch(metadata.playAddr, 5, 100 * 1024 * 1024); }
   catch (error) {
     if (error instanceof FetchRefused) throw new PermanentError("tiktok_unavailable", "Le fichier vidéo TikTok est inaccessible (" + error.message + ").");
     throw error;
   }
+  console.info("[tiktok-ingest] media_fetched", { contentType: media.contentType, bytes: media.body.length, elapsedMs: Date.now() - startedAt });
   if (!media.contentType.startsWith("video/") && !media.contentType.includes("octet-stream")) {
     throw new PermanentError("tiktok_media_invalid", "TikTok n'a pas fourni un fichier vidéo exploitable.");
   }
-  const transcript = await transcriber.transcribe(new Uint8Array(media.body), "video/mp4");
+  const transcriptionStartedAt = Date.now();
+  let transcript: Awaited<ReturnType<Transcriber["transcribe"]>>;
+  try { transcript = await transcriber.transcribe(new Uint8Array(media.body), media.contentType.startsWith("video/") ? media.contentType.split(";")[0] : "video/mp4"); }
+  catch (error) { console.error("[tiktok-ingest] transcription_failed", { model: transcriber.model, mediaBytes: media.body.length, mediaType: media.contentType, errorCode: error instanceof PermanentError ? error.code : undefined, error: error instanceof Error ? error.message : String(error), elapsedMs: Date.now() - transcriptionStartedAt }); throw error; }
   const text = transcript.segments.length ? transcript.segments.map((s) => normalize(s.text)).join("\n\n") : normalize(transcript.text);
+  console.info("[tiktok-ingest] transcription_completed", { model: transcriber.model, segmentCount: transcript.segments.length, transcriptChars: text.length, elapsedMs: Date.now() - transcriptionStartedAt });
+  if (!text.trim()) console.warn("[tiktok-ingest] empty_transcript", { segmentCount: transcript.segments.length, rawTextChars: transcript.text.length });
   const timeRanges: ChunkTimeRange[] = [];
   let offset = 0;
   for (const [index, segment] of transcript.segments.entries()) {
@@ -74,7 +87,11 @@ async function fromTikTok(url: string, transcriber?: Transcriber | null): Promis
     timeRanges.push({ char_start: offset, char_end: offset + clean.length, start_ms: segment.start_ms, end_ms: segment.end_ms });
     offset += clean.length + (index < transcript.segments.length - 1 ? 2 : 0);
   }
-  return finalize({ text, pageStarts: [], pageCount: null, title: metadata.title, timeRanges });
+  try {
+    const result = finalize({ text, pageStarts: [], pageCount: null, title: metadata.title, timeRanges });
+    console.info("[tiktok-ingest] completed", { words: result.text.split(/\s+/).filter(Boolean).length, timeRanges: timeRanges.length, totalMs: Date.now() - startedAt });
+    return result;
+  } catch (error) { console.error("[tiktok-ingest] finalize_failed", { errorCode: error instanceof PermanentError ? error.code : undefined, transcriptChars: text.length, totalMs: Date.now() - startedAt }); throw error; }
 }
 
 
