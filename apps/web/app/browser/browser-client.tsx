@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import {
-  ArrowLeft, ArrowRight, Globe, Lock, LoaderCircle, Plus, RotateCw, ShieldAlert, X,
+  ArrowLeft, ArrowRight, Bookmark, BookmarkCheck, Clock3, Globe, Lock, LoaderCircle, Plus, RotateCw, ShieldAlert, Trash2, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -19,6 +19,8 @@ type BrowserTab = {
 };
 type BrowserState = { activeTabId: string | null; tabs: BrowserTab[] };
 type BrowserBounds = { x: number; y: number; width: number; height: number };
+type BrowserBookmark = { id: string; url: string; title: string; createdAt: number };
+type BrowserVisit = { id: string; url: string; title: string; visitedAt: number };
 type BrowserApi = {
   getBrowserState(): Promise<BrowserState>;
   onBrowserState(callback: (state: BrowserState) => void): () => void;
@@ -32,6 +34,11 @@ type BrowserApi = {
   browserStop(id: string): Promise<boolean>;
   setBrowserBounds(bounds: BrowserBounds): Promise<boolean>;
   setBrowserVisible(visible: boolean): Promise<boolean>;
+  getBrowserHistory(): Promise<BrowserVisit[]>;
+  clearBrowserHistory(): Promise<boolean>;
+  getBrowserBookmarks(): Promise<BrowserBookmark[]>;
+  addBrowserBookmark(url: string, title: string): Promise<BrowserBookmark | null>;
+  removeBrowserBookmark(id: string): Promise<boolean>;
 };
 
 function getApi(): BrowserApi | undefined {
@@ -43,6 +50,10 @@ export function BrowserClient() {
   const [state, setState] = React.useState<BrowserState>({ activeTabId: null, tabs: [] });
   const [address, setAddress] = React.useState("");
   const [privateNext, setPrivateNext] = React.useState(false);
+  const [bookmarks, setBookmarks] = React.useState<BrowserBookmark[]>([]);
+  const [history, setHistory] = React.useState<BrowserVisit[]>([]);
+  const [libraryOpen, setLibraryOpen] = React.useState(false);
+  const [libraryTab, setLibraryTab] = React.useState<"bookmarks" | "history">("bookmarks");
   const viewportRef = React.useRef<HTMLDivElement>(null);
 
   const activeTab = state.tabs.find((tab) => tab.id === state.activeTabId) ?? null;
@@ -61,6 +72,8 @@ export function BrowserClient() {
     void api.getBrowserState().then(async (current) => {
       if (!alive) return;
       setState(current);
+      const [savedBookmarks, savedHistory] = await Promise.all([api.getBrowserBookmarks(), api.getBrowserHistory()]);
+      if (alive) { setBookmarks(savedBookmarks); setHistory(savedHistory); }
       if (current.tabs.length === 0) await api.createBrowserTab();
       await api.setBrowserVisible(true);
     }).catch(() => {
@@ -109,6 +122,24 @@ export function BrowserClient() {
     if (!api) return;
     await api.createBrowserTab(undefined, privateNext);
     setPrivateNext(false);
+  }
+
+  async function saveBookmark() {
+    if (!activeTab || !(activeTab.url.startsWith("http://") || activeTab.url.startsWith("https://"))) return;
+    const saved = await getApi()?.addBrowserBookmark(activeTab.url, activeTab.title);
+    if (saved) setBookmarks((items) => [saved, ...items.filter((item) => item.url !== saved.url)]);
+  }
+
+  async function removeBookmark(id: string) {
+    if (await getApi()?.removeBrowserBookmark(id)) setBookmarks((items) => items.filter((item) => item.id !== id));
+  }
+
+  async function openSavedUrl(url: string) {
+    const api = getApi();
+    if (!api) return;
+    if (activeTab) await api.navigateBrowserTab(activeTab.id, url);
+    else await api.createBrowserTab(url);
+    setLibraryOpen(false);
   }
 
   async function closeTab(event: React.MouseEvent, id: string) {
@@ -162,6 +193,9 @@ export function BrowserClient() {
           <Plus aria-hidden />
         </Button>
         <div className="ml-auto flex shrink-0 items-center gap-1">
+          <Button size="icon-sm" variant="ghost" aria-label="Favoris et historique" title="Favoris et historique" onClick={() => setLibraryOpen((value) => !value)}>
+            <Clock3 aria-hidden />
+          </Button>
           <Button size="icon-sm" variant={privateNext ? "soft" : "ghost"} aria-label="Prochain onglet privé" title="Prochain onglet privé" onClick={() => setPrivateNext((value) => !value)}>
             <Lock aria-hidden />
           </Button>
@@ -193,8 +227,36 @@ export function BrowserClient() {
             autoComplete="off"
           />
         </div>
+        <Button type="button" size="icon-sm" variant="ghost" aria-label="Ajouter aux favoris" title="Ajouter aux favoris" disabled={!activeTab || !(activeTab.url.startsWith("http://") || activeTab.url.startsWith("https://"))} onClick={() => void saveBookmark()}>
+          {bookmarks.some((item) => item.url === activeTab?.url) ? <BookmarkCheck aria-hidden /> : <Bookmark aria-hidden />}
+        </Button>
         <Button type="submit" size="sm" disabled={!activeTab || !address.trim()}>Ouvrir</Button>
       </form>
+
+      {libraryOpen && (
+        <section className="max-h-64 shrink-0 overflow-y-auto border-b border-border bg-surface p-3" aria-label="Bibliothèque du navigateur">
+          <div className="mb-2 flex items-center gap-2">
+            <Button size="sm" variant={libraryTab === "bookmarks" ? "soft" : "ghost"} onClick={() => setLibraryTab("bookmarks")}><Bookmark aria-hidden /> Favoris ({bookmarks.length})</Button>
+            <Button size="sm" variant={libraryTab === "history" ? "soft" : "ghost"} onClick={() => setLibraryTab("history")}><Clock3 aria-hidden /> Historique ({history.length})</Button>
+            {libraryTab === "history" && history.length > 0 && <Button size="sm" variant="ghost" className="ml-auto" onClick={async () => { if (await getApi()?.clearBrowserHistory()) setHistory([]); }}><Trash2 aria-hidden /> Effacer</Button>}
+          </div>
+          {(libraryTab === "bookmarks" ? bookmarks : history).length === 0 ? (
+            <p className="px-2 py-4 text-center text-xs text-text-muted">{libraryTab === "bookmarks" ? "Aucun favori enregistré." : "Aucune page consultée dans l’historique."}</p>
+          ) : (
+            <ul className="grid gap-1">
+              {(libraryTab === "bookmarks" ? bookmarks : history).map((item) => (
+                <li key={item.id} className="flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5 hover:bg-surface-raised">
+                  <button type="button" className="min-w-0 flex-1 text-left" onClick={() => void openSavedUrl(item.url)}>
+                    <span className="block truncate text-sm">{item.title}</span>
+                    <span className="block truncate text-xs text-text-muted">{item.url}</span>
+                  </button>
+                  {libraryTab === "bookmarks" && <Button size="icon-sm" variant="ghost" aria-label="Supprimer le favori" onClick={() => void removeBookmark(item.id)}><X aria-hidden /></Button>}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
 
       {activeTab?.error && (
         <div className="flex shrink-0 items-center gap-2 border-b border-border bg-danger/10 px-4 py-2 text-xs text-danger">
