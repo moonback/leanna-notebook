@@ -22,33 +22,33 @@ type StudioArtifactType = "report" | "flashcards" | "quiz" | "mind_map" | "infog
 
 /** Détecte uniquement une demande explicite de création d'un livrable Studio. */
 function detectStudioArtifactRequest(input: string): { type: StudioArtifactType; template?: string } | null {
-  const value = input.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase();
-  const action = /\\b(cree|gener(e|er|ez)|prepare|produis|realise|construis|fabrique|fais-moi|fais moi|make|create|generate|prepare)\\b/.test(value);
+  const value = input.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const action = /\b(cree|gener(e|er|ez)|prepare|produis|realise|construis|fabrique|fais-moi|fais moi|make|create|generate|prepare)\b/.test(value);
   if (!action) return null;
   const types: Array<[StudioArtifactType, RegExp]> = [
-    ["flashcards", /\\b(fiches? de revision|flashcards|cartes memoire)\\b/],
-    ["quiz", /\\b(quiz|qcm|questionnaire)\\b/],
-    ["mind_map", /\\b(carte mentale|mind ?map)\\b/],
-    ["infographic", /\\b(infographie|infographic)\\b/],
-    ["timeline", /\\b(chronologie|frise chronologique|timeline)\\b/],
-    ["comparison", /\\b(comparatif|comparaison|tableau comparatif)\\b/],
-    ["glossary", /\\b(glossaire)\\b/],
-    ["faq", /\\b(faq|foire aux questions)\\b/],
-    ["diagram", /\\b(diagramme|schema|flowchart)\\b/],
-    ["editorial", /\\b(newsletter|article de blog|publication|contenu editorial)\\b/],
-    ["study_plan", /\\b(plan d'etude|planning de revision|programme de revision)\\b/],
-    ["audio", /\\b(audio overview|podcast|resume audio)\\b/],
-    ["report", /\\b(rapport|report|synthese|briefing|guide pratique|fiche pratique|guide detaille|document)\\b/],
+    ["flashcards", /\b(fiches? de revision|flashcards|cartes memoire)\b/],
+    ["quiz", /\b(quiz|qcm|questionnaire)\b/],
+    ["mind_map", /\b(carte mentale|mind ?map)\b/],
+    ["infographic", /\b(infographie|infographic)\b/],
+    ["timeline", /\b(chronologie|frise chronologique|timeline)\b/],
+    ["comparison", /\b(comparatif|comparaison|tableau comparatif)\b/],
+    ["glossary", /\b(glossaire)\b/],
+    ["faq", /\b(faq|foire aux questions)\b/],
+    ["diagram", /\b(diagramme|schema|flowchart)\b/],
+    ["editorial", /\b(newsletter|article de blog|publication|contenu editorial)\b/],
+    ["study_plan", /\b(plan d'etude|planning de revision|programme de revision)\b/],
+    ["audio", /\b(audio overview|podcast|resume audio)\b/],
+    ["report", /\b(rapport|report|synthese|briefing|guide pratique|fiche pratique|guide detaille|document)\b/],
   ];
   const match = types.find(([, pattern]) => pattern.test(value));
   if (!match) return null;
   if (match[0] !== "report") return { type: match[0] };
-  const template = /\\b(guide d'etude|study guide)\\b/.test(value) ? "study_guide"
-    : /\\b(article de blog)\\b/.test(value) ? "blog_post"
-    : /\\b(plan d'action)\\b/.test(value) ? "action_plan"
-    : /\\b(guide pratique|fiche pratique)\\b/.test(value) ? "practical_sheet"
-    : /\\b(guide detaille)\\b/.test(value) ? "detailed_guide"
-    : /\\b(specification|cahier des charges)\\b/.test(value) ? "specification"
+  const template = /\b(guide d'etude|study guide)\b/.test(value) ? "study_guide"
+    : /\b(article de blog)\b/.test(value) ? "blog_post"
+    : /\b(plan d'action)\b/.test(value) ? "action_plan"
+    : /\b(guide pratique|fiche pratique)\b/.test(value) ? "practical_sheet"
+    : /\b(guide detaille)\b/.test(value) ? "detailed_guide"
+    : /\b(specification|cahier des charges)\b/.test(value) ? "specification"
     : "briefing";
   return { type: "report", template };
 }
