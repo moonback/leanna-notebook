@@ -181,6 +181,10 @@ function registerIpcHandlers(): void {
   ipcMain.handle("browser:get-state", (event) =>
     isTrustedRenderer(event) ? browserManager.getState() : { activeTabId: null, tabs: [] },
   );
+  ipcMain.handle("browser:extract-page", (event, id: unknown) =>
+    isTrustedRenderer(event) && typeof id === "string" && id.length <= 64
+      ? browserManager.extractPage(id) : null,
+  );
   ipcMain.handle("browser:get-history", async (event) =>
     isTrustedRenderer(event) && browserDataStore ? browserDataStore.getHistory() : [],
   );
