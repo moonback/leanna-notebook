@@ -240,7 +240,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
             browserResponse = outcome;
           }
           socket.current?.send(JSON.stringify({ toolResponse: { functionResponses: [{ id: call.id, name: call.name, response: { result: JSON.stringify(browserResponse) } }] } }));
-          setStatus(outcome.status === "ok" ? "Action Browser vérifiée." : outcome.status === "confirmation_required" ? "Confirmation Browser requise." : "Action Browser non exécutée.");
+          setStatus(browserResponse.status === "ok" ? "Action Browser vérifiée." : "Action Browser non exécutée.");
         } catch (error) {
           socket.current?.send(JSON.stringify({ toolResponse: { functionResponses: [{ id: call.id, name: call.name, response: { error: error instanceof Error ? error.message : "Action Browser impossible." } }] } }));
         }
