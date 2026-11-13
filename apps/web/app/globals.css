@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "./tokens.css";
+@import "./glass.css";
 
 /* next/font génère des noms de famille hachés : on branche les tokens dessus. */
 @theme inline {
