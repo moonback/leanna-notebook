@@ -139,6 +139,8 @@ La configuration doit rester cohérente entre le web et le worker. Ne versionnez
 | `pnpm db:test` | Tests pgTAP |
 | `pnpm desktop:dev` | Client Electron en développement |
 | `pnpm desktop:build` / `pnpm desktop:dist:win` | Build desktop / Windows |
+| `pnpm desktop:test` | Tests unitaires du client desktop (dont Leanna Browser) |
+| `pnpm --dir apps/desktop test:e2e` | Parcours de bout en bout de Leanna Browser dans Electron (Playwright) |
 
 Ces commandes proviennent des manifestes du dépôt ; elles n'ont pas été exécutées pendant cette passe distante.
 
