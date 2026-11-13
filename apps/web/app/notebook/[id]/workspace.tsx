@@ -245,7 +245,7 @@ export function Workspace({ notebookId, initialTitle, role, allowCopies, disable
           Importez un PDF, une page web ou un texte : les réponses citeront ces documents.
         </EmptyState>
       ) : (
-        <div className="grid gap-0.5 p-2">
+        <div className="mobile-source-list grid gap-0.5 p-2">
           {ready.length > 0 && (
             <label className="flex items-center justify-between gap-3 px-3 py-2 text-sm text-text-muted">
               <span>{selectedCount}/{ready.length} sélectionnée{selectedCount > 1 ? "s" : ""}</span>
