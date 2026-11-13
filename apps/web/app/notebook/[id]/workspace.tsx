@@ -245,7 +245,7 @@ export function Workspace({ notebookId, initialTitle, role, allowCopies, disable
           Importez un PDF, une page web ou un texte : les réponses citeront ces documents.
         </EmptyState>
       ) : (
-        <div className="grid gap-0.5 p-2">
+        <div className="mobile-source-list grid gap-0.5 p-2">
           {ready.length > 0 && (
             <label className="flex items-center justify-between gap-3 px-3 py-2 text-sm text-text-muted">
               <span>{selectedCount}/{ready.length} sélectionnée{selectedCount > 1 ? "s" : ""}</span>
@@ -804,7 +804,7 @@ function ChatSettingsDialog({ open, onClose, notebookId }: { open: boolean; onCl
               {radio("response_length", [["short", "Courte"], ["default", "Normale"], ["long", "Détaillée"]])}
             </fieldset>
             {error && form.chat_style !== "custom" && <p role="alert" className="text-sm text-danger">{error}</p>}
-            <div className="flex justify-end gap-2">
+            <div className="mobile-source-import-actions flex justify-end gap-2">
               <DialogClose asChild><Button type="button" variant="secondary">Annuler</Button></DialogClose>
               <Button type="submit" loading={saving}>Enregistrer</Button>
             </div>
@@ -920,9 +920,9 @@ function AddSourcesDialog({ open, onOpenChange, notebookId, onAdded, onWebSearch
           </button>
         </div>
         <div className="flex items-center gap-3 text-xs uppercase tracking-wide text-text-muted" aria-hidden><span className="h-px flex-1 bg-border" />ou importer<span className="h-px flex-1 bg-border" /></div>
-        <form onSubmit={submit} className="grid gap-4">
+        <form onSubmit={submit} className="mobile-source-import-form grid min-h-0 gap-4">
           <Tabs value={tab} onValueChange={setTab}>
-            <TabsList aria-label="Type de source">
+            <TabsList aria-label="Type de source" className="mobile-source-tabs">
               <TabsTrigger value="file"><Upload className="mr-1.5 inline size-3.5" aria-hidden />Fichier / dossier</TabsTrigger>
               <TabsTrigger value="url"><Globe className="mr-1.5 inline size-3.5" aria-hidden />Page web</TabsTrigger>
               <TabsTrigger value="text"><Type className="mr-1.5 inline size-3.5" aria-hidden />Texte</TabsTrigger>
