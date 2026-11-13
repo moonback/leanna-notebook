@@ -99,7 +99,27 @@ function playActivationChime(ctx: AudioContext) {
   } catch { /* le son est un confort, jamais bloquant */ }
 }
 
-export function VoiceAssistant({ notebookId, conversationId, disabled = false, onOpenCitation, browserApi, saveBrowserRequest }: { notebookId: string; conversationId: string; disabled?: boolean; onOpenCitation: (passage: Passage) => void; browserApi?: DesktopBrowserApi; saveBrowserRequest?: (request: DesktopSaveRequest) => Promise<{ ok: boolean; message: string }> }) {
+type BubbleTone = "user" | "leanna" | "roxane";
+const BUBBLE_STYLE: Record<BubbleTone, { box: string; label: string; name: string }> = {
+  user: { box: "ml-auto max-w-[94%] rounded-2xl rounded-br-md bg-surface-secondary", label: "text-text-subtle", name: "Vous" },
+  leanna: { box: "max-w-[96%] rounded-2xl rounded-bl-md border bg-surface-raised", label: "text-accent", name: "Leanna" },
+  roxane: { box: "max-w-[96%] rounded-2xl rounded-bl-md border border-violet-500/20 bg-violet-500/[0.04]", label: "text-violet-500", name: "Roxane" },
+};
+function Bubble({ tone, text }: { tone: BubbleTone; text: string }) {
+  const style = BUBBLE_STYLE[tone];
+  return (
+    <div className={`${style.box} px-3 py-2`}>
+      <p className={`mb-1 text-[10px] font-semibold uppercase tracking-wider ${style.label}`}>{style.name}</p>
+      <p className="whitespace-pre-wrap text-sm leading-relaxed">{text}</p>
+    </div>
+  );
+}
+
+/**
+ * `inline` : affiche le Studio vocal directement dans un panneau (barre latérale de Leanna Browser) au lieu du
+ * bouton + Dialog. Le composant doit rester monté pour que la session Gemini Live survive aux changements d'onglet.
+ */
+export function VoiceAssistant({ notebookId, conversationId, disabled = false, onOpenCitation, browserApi, saveBrowserRequest, inline = false }: { notebookId: string; conversationId: string; disabled?: boolean; onOpenCitation: (passage: Passage) => void; browserApi?: DesktopBrowserApi; saveBrowserRequest?: (request: DesktopSaveRequest) => Promise<{ ok: boolean; message: string }>; inline?: boolean }) {
   const [open, setOpen] = React.useState(false);
   const [expanded, setExpanded] = React.useState(false);
   const [state, setState] = React.useState<VoiceState>("idle");
@@ -653,6 +673,98 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
     mutedRef.current = !mutedRef.current;
     setMuted(mutedRef.current);
     setStatus(mutedRef.current ? "Microphone coupé · Leanna ne vous entend plus." : "Microphone actif · je vous écoute.");
+  }
+
+  if (inline) {
+    const idle = state === "idle" || state === "error";
+    const active = state === "speaking" || state === "listening";
+    const empty = turnHistory.length === 0 && !transcript && !answer && !roxaneAnswer;
+    const badge = state === "idle" ? "En veille" : state === "connecting" ? "Connexion" : state === "error" ? "Erreur" : state === "speaking" ? "Leanna parle" : "À l’écoute";
+    const sourceList = (list: Passage[]) => list.map((source) => (
+      <Citation key={`${source.sourceId}:${source.charStart}:${source.charEnd}`} n={source.number} source={source.title} quote={source.excerpt} onOpen={() => onOpenCitation(source)} />
+    ));
+    return (
+      <section aria-label="Studio vocal" data-voice-panel className="flex min-h-0 flex-1 flex-col bg-surface">
+        <header className="shrink-0 border-b border-border px-3 py-2">
+          <div className="flex items-center gap-2">
+            <div className="grid size-8 shrink-0 place-items-center rounded-lg bg-accent/10 text-accent"><AudioLines className="size-4" aria-hidden /></div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold">Studio vocal</p>
+              <p className="truncate text-xs text-text-muted" aria-live="polite">{idle ? "Prêt · Vos sources sont disponibles" : status}</p>
+            </div>
+            <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${state === "error" ? "bg-danger/10 text-danger" : idle ? "bg-surface-secondary text-text-muted" : "bg-emerald-500/10 text-emerald-600"}`}>{badge}</span>
+          </div>
+        </header>
+
+        <div className="shrink-0 border-b border-border px-3 py-4">
+          <div className="flex items-center justify-center gap-4">
+            <div className="flex flex-col items-center gap-1.5">
+              <div className={`grid size-12 place-items-center rounded-2xl border text-base font-semibold transition-all ${state === "speaking" ? "border-accent/50 bg-accent/10 text-accent" : "border-border bg-surface-raised text-text"}`}>L</div>
+              <p className="text-xs font-semibold">Leanna</p>
+            </div>
+            <div className="flex h-8 flex-1 items-center justify-center gap-0.5 text-accent" aria-hidden="true">
+              {Array.from({ length: 13 }, (_, i) => <span key={i} className={`w-1 rounded-full bg-current transition-all ${active ? "animate-pulse opacity-90" : "opacity-20"}`} style={{ height: `${5 + ((i * 13) % 19)}px`, animationDelay: `${i * 55}ms` }} />)}
+            </div>
+            <div className="flex flex-col items-center gap-1.5">
+              <div className={`grid size-12 place-items-center rounded-2xl border text-base font-semibold transition-all ${roxaneEnabled ? "border-violet-500/30 bg-violet-500/5 text-violet-500" : "border-dashed border-border bg-surface-raised text-text-subtle"}`}>R</div>
+              <p className="text-xs font-semibold">Roxane</p>
+            </div>
+          </div>
+          <p className="mt-3 text-center text-sm font-medium">{state === "idle" ? "Prêt pour votre prochaine question" : state === "connecting" ? "Préparation de votre espace vocal…" : state === "error" ? "La connexion a rencontré un problème" : state === "speaking" ? "Leanna vous répond" : "Je vous écoute"}</p>
+          {state === "error" && <p className="mt-1 text-center text-xs leading-relaxed text-text-muted">{status}</p>}
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+            {idle ? (
+              <Button size="sm" onClick={() => void start()} disabled={disabled}><Mic aria-hidden /> Démarrer la conversation</Button>
+            ) : (
+              <>
+                <Button size="sm" variant={muted ? "soft" : "secondary"} onClick={toggleMute}>{muted ? <MicOff aria-hidden /> : <Mic aria-hidden />}{muted ? "Réactiver le micro" : "Couper le micro"}</Button>
+                <Button size="sm" variant="secondary" onClick={stop}><PhoneOff aria-hidden /> Terminer</Button>
+              </>
+            )}
+            <Button size="sm" variant={roxaneEnabled ? "secondary" : "ghost"} onClick={toggleRoxane} aria-pressed={roxaneEnabled} title={roxaneEnabled ? "Désactiver Roxane" : "Activer Roxane"}>
+              <Sparkles aria-hidden /> {roxaneEnabled ? "Roxane activée" : "Ajouter Roxane"}
+            </Button>
+          </div>
+        </div>
+
+        <div className="flex h-10 shrink-0 items-center justify-between border-b border-border px-3">
+          <p className="text-xs font-semibold">Conversation <span className="font-normal text-text-muted">· {turnHistory.length} échange{turnHistory.length > 1 ? "s" : ""}</span></p>
+          <div className="flex items-center gap-1">
+            <Button size="icon-sm" variant="ghost" aria-label="Copier la conversation" title="Copier" onClick={() => void copyConversation()} disabled={turnHistory.length === 0}>{copied ? <Check aria-hidden /> : <Copy aria-hidden />}</Button>
+            <Button size="icon-sm" variant="ghost" aria-label="Effacer l'historique affiché" title="Effacer l'historique" onClick={() => setTurnHistory([])} disabled={turnHistory.length === 0}><Trash2 aria-hidden /></Button>
+          </div>
+        </div>
+        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
+          {turnHistory.map((turn, index) => (
+            <div key={index} className="space-y-2">
+              <Bubble tone="user" text={turn.user} />
+              <Bubble tone="leanna" text={turn.assistant} />
+              {turn.roxane && <Bubble tone="roxane" text={turn.roxane} />}
+              {turn.sources.length > 0 && <details className="rounded-lg border px-3 py-2"><summary className="cursor-pointer text-xs font-medium text-text-muted">{turn.sources.length} source{turn.sources.length > 1 ? "s" : ""}</summary><div className="mt-2 space-y-2">{sourceList(turn.sources)}</div></details>}
+            </div>
+          ))}
+          {(transcript || answer || roxaneAnswer) && (
+            <div className="space-y-2">
+              {transcript && <Bubble tone="user" text={transcript} />}
+              {answer && <Bubble tone="leanna" text={answer} />}
+              {roxaneAnswer && <Bubble tone="roxane" text={roxaneAnswer} />}
+            </div>
+          )}
+          {sources.length > 0 && <details className="rounded-lg border px-3 py-2"><summary className="cursor-pointer text-xs font-medium text-text-muted">{sources.length} source{sources.length > 1 ? "s" : ""} consultée{sources.length > 1 ? "s" : ""}</summary><div className="mt-2 space-y-2">{sourceList(sources)}</div></details>}
+          {empty && (
+            <div className="grid min-h-32 place-items-center text-center">
+              <div>
+                <p className="text-sm font-medium">Votre échange apparaîtra ici</p>
+                <p className="mx-auto mt-1 max-w-56 text-xs leading-relaxed text-text-muted">La transcription, les réponses et les sources seront regroupées dans cet espace.</p>
+              </div>
+            </div>
+          )}
+        </div>
+        <footer className="shrink-0 border-t border-border px-3 py-2 text-[11px] leading-4 text-text-subtle">
+          Roxane est désactivée par défaut : elle reste silencieuse pendant les deux premiers échanges. · Gemini Live
+        </footer>
+      </section>
+    );
   }
 
   return (

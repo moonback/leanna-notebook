@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ArrowUpRight, BookmarkPlus, Check, Download, FileText, Globe, Mic, PanelsTopLeft, Plus, RotateCw, Search, TriangleAlert } from "lucide-react";
+import { ArrowUpRight, AudioLines, BookmarkPlus, Check, Download, FileText, Globe, Mic, PanelsTopLeft, Plus, RotateCw, Search, Sparkles, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   getBrowserApi, shouldForwardKey,
@@ -33,6 +33,7 @@ export function BrowserClient({ notebookId }: { notebookId?: string } = {}) {
   const [failed, setFailed] = React.useState(false);
   const [panel, setPanel] = React.useState<BrowserPanel | null>(null);
   const [bookmarks, setBookmarks] = React.useState<{ bookmarks: DesktopBrowserBookmark[]; folders: string[] }>({ bookmarks: [], folders: [] });
+  const [aiTab, setAiTab] = React.useState<"chat" | "voice">("chat");
   const [libraryTab, setLibraryTab] = React.useState<LibraryTab>("bookmarks");
   const target = useTargetNotebook(notebookId);
   const viewportRef = React.useRef<HTMLDivElement>(null);
@@ -293,8 +294,6 @@ export function BrowserClient({ notebookId }: { notebookId?: string } = {}) {
           <Toolbar api={api} tab={activeTab} fullscreen={state.fullscreen} bookmarked={Boolean(bookmark)} onToggleBookmark={toggleBookmark}
             panel={panel} onPanel={togglePanel} addressRef={addressRef} />
         </div>
-        {target.selected && <VoiceAssistant key={target.selected} notebookId={target.selected} conversationId="" browserApi={api} onOpenCitation={() => undefined}
-          saveBrowserRequest={(request) => saveToNotebook(window.fetch.bind(window), target.selected, request)} />}
       </div>
 
       <div className="flex min-h-0 flex-1">
@@ -328,19 +327,44 @@ export function BrowserClient({ notebookId }: { notebookId?: string } = {}) {
           )}
         </div>
 
-        {panel && settings && (
-          <aside className="flex w-[380px] shrink-0 flex-col border-l border-border bg-surface" aria-label="Panneau latéral" data-browser-panel={panel}>
-            {panel === "ai"
-              ? (
+        {settings && (
+          // Toujours monté : la session vocale (Gemini Live) doit survivre à la fermeture du panneau ou à un changement d'onglet.
+          <aside className={`${panel ? "flex" : "hidden"} w-[380px] shrink-0 flex-col border-l border-border bg-surface`} aria-label="Panneau latéral" data-browser-panel={panel ?? "closed"}>
+            {panel === "ai" && (
+              <div role="tablist" aria-label="Mode de Leanna" className="grid shrink-0 grid-cols-2 gap-1 border-b border-border p-1.5">
+                {([["chat", "Discussion", Sparkles], ["voice", "Studio vocal", AudioLines]] as const).map(([id, label, Icon]) => (
+                  <button key={id} type="button" role="tab" aria-selected={aiTab === id} data-ai-tab={id} onClick={() => setAiTab(id)}
+                    className={`flex items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs transition-colors ${aiTab === id ? "bg-surface-raised font-medium text-text shadow-sm" : "text-text-muted hover:text-text"}`}>
+                    <Icon className="size-3.5" aria-hidden />{label}
+                  </button>
+                ))}
+              </div>
+            )}
+            {target.selected && (
+              <div className={panel === "ai" && aiTab === "voice" ? "flex min-h-0 flex-1 flex-col" : "hidden"}>
+                <VoiceAssistant key={target.selected} inline notebookId={target.selected} conversationId="" browserApi={api} onOpenCitation={() => undefined}
+                  saveBrowserRequest={(request) => saveToNotebook(window.fetch.bind(window), target.selected, request)} />
+              </div>
+            )}
+            {panel === "ai" && aiTab === "voice" && !target.selected && (
+              <div className="flex min-h-0 flex-1 flex-col justify-between">
+                <p className="p-4 text-sm leading-6 text-text-muted">Choisissez un notebook pour utiliser le Studio vocal : Leanna s’appuiera sur ses sources.</p>
+                <div className="border-t border-border p-3"><NotebookSaveBar api={api} tab={activeTab} target={target} /></div>
+              </div>
+            )}
+            {panel === "ai" && (
+              <div className={aiTab === "chat" ? "flex min-h-0 flex-1 flex-col" : "hidden"}>
                 <AiPanel api={api} tab={activeTab} settings={settings} onSettings={setSettings} notebookId={notebookId}
                   save={(request) => saveToNotebook(window.fetch.bind(window), target.selected, request)}>
                   <NotebookSaveBar api={api} tab={activeTab} target={target} />
                 </AiPanel>
-              )
-              : panel === "library"
-                ? <LibraryPanel api={api} tab={libraryTab} onTab={setLibraryTab} bookmarks={bookmarks} onBookmarksChanged={refreshBookmarks} downloads={state.downloads}
-                    onOpen={(url) => void (activeTab ? api.navigate(activeTab.id, url) : api.createTab({ url }))} />
-                : <SettingsPanel api={api} settings={settings} onSettings={setSettings} />}
+              </div>
+            )}
+            {panel === "library" && (
+              <LibraryPanel api={api} tab={libraryTab} onTab={setLibraryTab} bookmarks={bookmarks} onBookmarksChanged={refreshBookmarks} downloads={state.downloads}
+                onOpen={(url) => void (activeTab ? api.navigate(activeTab.id, url) : api.createTab({ url }))} />
+            )}
+            {panel === "settings" && <SettingsPanel api={api} settings={settings} onSettings={setSettings} />}
           </aside>
         )}
       </div>
