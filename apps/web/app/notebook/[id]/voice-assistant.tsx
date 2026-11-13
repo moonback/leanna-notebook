@@ -424,7 +424,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
       audioContext.current = ctx;
       await ctx.resume();
       const tokenResponse = await fetch(`/api/v1/notebooks/${notebookId}/voice-token`, {
-        method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ voice: "Aoede", persona: "leanna" })
+        method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ voice: "Aoede", persona: "leanna", browser: Boolean(browserApi) })
       });
       const tokenPayload = await tokenResponse.json();
       if (!tokenResponse.ok) throw new Error(tokenPayload.error === "voice_not_configured" ? "Ajoutez GEMINI_API_KEY côté serveur." : "Impossible d'ouvrir la session vocale de Leanna.");
