@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { passageTitle } from "./github-source";
+import { githubFilePath, passageTitle } from "./github-source";
 import { githubRepoName, sourceItemSchema } from "./validation";
 
 describe("sources GitHub", () => {
@@ -16,5 +16,13 @@ describe("sources GitHub", () => {
     expect(passageTitle(src, 1)).toBe("acme/app");
     expect(passageTitle({ title: "doc.pdf", github_files: null }, 4)).toBe("doc.pdf");
     expect(passageTitle(undefined, 1)).toBe("source");
+  });
+  it("donne le chemin du fichier cité, jamais pour la vue d'ensemble ni pour une autre source", () => {
+    const files = ["(vue d'ensemble)", "README.md"];
+    expect(githubFilePath({ github_files: files }, 2)).toBe("README.md");
+    expect(githubFilePath({ github_files: files }, 1)).toBeNull();
+    expect(githubFilePath({ github_files: files }, 9)).toBeNull();
+    expect(githubFilePath({ github_files: null }, 2)).toBeNull();
+    expect(githubFilePath(undefined, 2)).toBeNull();
   });
 });

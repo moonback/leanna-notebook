@@ -3,7 +3,7 @@ import { z } from "zod";
 import { ApiError, handle, parseBody, requireRole, requireUser } from "@/lib/api";
 import { embedQuery } from "@/lib/ai/openrouter";
 import { createServiceClient } from "@/lib/supabase/server";
-import { passageTitle, SOURCE_FILES_SELECT } from "@/lib/github-source";
+import { githubFilePath, passageTitle, SOURCE_FILES_SELECT } from "@/lib/github-source";
 
 export const runtime = "nodejs";
 type Params = { params: Promise<{ id: string }> };
@@ -54,7 +54,7 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
         sourceId: h.source_id,
         title: passageTitle(byId.get(h.source_id), h.page_start),
         excerpt: h.content,
-        page: h.page_start,
+        page: githubFilePath(byId.get(h.source_id), h.page_start) ? null : h.page_start,
         timeStartMs: h.time_start_ms,
         charStart: h.char_start,
         charEnd: h.char_end

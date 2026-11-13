@@ -13,6 +13,8 @@ export type Extracted = {
   text: string; pageStarts: number[]; pageCount: number | null; title?: string; timeRanges?: ChunkTimeRange[];
   /** Vrai : un chunk ne déborde jamais d'une page sur la suivante (dépôts GitHub : une page = un fichier). */
   breakAtPages?: boolean;
+  /** Vrai : texte déjà normalisé (code : indentation conservée), le handler ne le renormalise pas. */
+  preformatted?: boolean;
   /** Métadonnées à fusionner dans sources.external_ref. */
   externalRef?: Record<string, unknown>;
 };
@@ -214,7 +216,7 @@ export async function extract(
       if (!data.url) throw new PermanentError("invalid_github_url");
       const repo = await fromGithub(data.url);
       return finalize({ text: repo.text, pageStarts: repo.pageStarts, pageCount: repo.pageCount, title: repo.title,
-        breakAtPages: true, externalRef: { github: repo.github } });
+        breakAtPages: true, preformatted: true, externalRef: { github: repo.github } });
     }
     default:
       throw new PermanentError("unsupported_type", `Type non pris en charge à ce jalon : ${kind}`);

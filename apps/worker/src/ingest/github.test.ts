@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { zipSync, strToU8 } from "fflate";
-import { buildRepoDocument, filePriority, fromGithub, isIndexable, parseGithubUrl, readRepoZip } from "./github.ts";
-import { chunk, normalize } from "./chunker.ts";
+import { buildRepoDocument, filePriority, fromGithub, isIndexable, latestGithubCommit, parseGithubUrl, readRepoZip, sameCommit } from "./github.ts";
+import { chunk, normalizeCode } from "./chunker.ts";
 import { FetchRefused } from "./ssrf.ts";
 
 describe("parseGithubUrl", () => {
@@ -43,13 +43,17 @@ describe("buildRepoDocument", () => {
   ];
   it("produit une vue d'ensemble puis une page par fichier, offsets exacts après normalisation", () => {
     const doc = buildRepoDocument({ owner: "acme", repo: "demo", commit: "abc1234" }, files, 3);
-    expect(normalize(doc.text)).toBe(doc.text);
+    expect(normalizeCode(doc.text)).toBe(doc.text);
     expect(doc.pageCount).toBe(3);
     expect(doc.github.files).toEqual(["(vue d'ensemble)", "README.md", "src/index.ts"]);
     expect(doc.text.slice(doc.pageStarts[0], doc.pageStarts[0]! + 30)).toContain("Dépôt GitHub acme/demo");
     expect(doc.text.slice(doc.pageStarts[1])).toMatch(/^=== Fichier : README\.md ===/);
     expect(doc.text.slice(doc.pageStarts[2])).toMatch(/^=== Fichier : src\/index\.ts ===/);
     expect(doc.text).toContain("3 ignoré(s)");
+  });
+  it("conserve l'indentation du code", () => {
+    const doc = buildRepoDocument({ owner: "acme", repo: "demo" }, [{ path: "a.py", content: "def f():\r\n\tif x:   \n        return 1\n" }]);
+    expect(doc.text).toContain("=== Fichier : a.py ===\ndef f():\n  if x:\n        return 1");
   });
   it("aucun chunk ne chevauche deux fichiers", () => {
     const doc = buildRepoDocument({ owner: "acme", repo: "demo" }, files);
@@ -92,5 +96,27 @@ describe("readRepoZip / fromGithub", () => {
   it("dépôt introuvable → erreur permanente lisible", async () => {
     await expect(fromGithub("https://github.com/acme/nope", (async () => { throw new FetchRefused("http_404"); }) as never))
       .rejects.toMatchObject({ code: "github_not_found" });
+  });
+});
+
+describe("mise à jour d'un dépôt", () => {
+  const sha = "1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b";
+  it("lit le SHA du dernier commit de la référence", async () => {
+    let called = "";
+    const latest = await latestGithubCommit("https://github.com/acme/demo/tree/main", (async (url: string) => {
+      called = url;
+      return { url, contentType: "application/vnd.github.sha", body: Buffer.from(`${sha}\n`) };
+    }) as never);
+    expect(called).toBe("https://api.github.com/repos/acme/demo/commits/main");
+    expect(latest).toBe(sha);
+  });
+  it("renvoie null si GitHub est injoignable (on réimporte alors par prudence)", async () => {
+    expect(await latestGithubCommit("https://github.com/acme/demo", (async () => { throw new Error("réseau"); }) as never)).toBeNull();
+  });
+  it("compare le commit court de l'archive au SHA complet", () => {
+    expect(sameCommit("1a2b3c4", sha)).toBe(true);
+    expect(sameCommit("ffffff1", sha)).toBe(false);
+    expect(sameCommit(null, sha)).toBe(false);
+    expect(sameCommit("1a2b3c4", null)).toBe(false);
   });
 });

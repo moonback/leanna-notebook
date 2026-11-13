@@ -1,6 +1,6 @@
 import { unzipSync } from "fflate";
 import { PermanentError } from "../worker.ts";
-import { normalize } from "./chunker.ts";
+import { normalizeCode } from "./chunker.ts";
 import { FetchRefused, safeFetch } from "./ssrf.ts";
 
 /**
@@ -92,7 +92,7 @@ export function buildRepoDocument(repo: GithubRepo & { commit?: string | null },
   const kept: RepoFile[] = [];
   let words = 0;
   for (const f of ordered) {
-    const content = normalize(f.content);
+    const content = normalizeCode(f.content);
     if (!content) continue;
     const w = countWords(content) + 4;
     if (words + w > WORD_BUDGET) continue; // un gros fichier en moins, les suivants peuvent encore tenir
@@ -102,7 +102,7 @@ export function buildRepoDocument(repo: GithubRepo & { commit?: string | null },
   const truncated = ordered.length - kept.length;
   const readme = kept.find((f) => /^readme(\.|$)/i.test(f.path));
   const tree = kept.map((f) => f.path);
-  const overview = normalize([
+  const overview = normalizeCode([
     `Dépôt GitHub ${repo.owner}/${repo.repo}${repo.ref ? ` (référence ${repo.ref})` : ""}${repo.commit ? ` · commit ${repo.commit}` : ""}`,
     `Adresse : https://github.com/${repo.owner}/${repo.repo}`,
     `${kept.length} fichier(s) indexé(s)${skipped ? `, ${skipped} ignoré(s) (binaires, dépendances, fichiers générés ou trop gros)` : ""}${truncated ? `, ${truncated} non inclus faute de place` : ""}.`,
@@ -113,7 +113,7 @@ export function buildRepoDocument(repo: GithubRepo & { commit?: string | null },
     ...(readme ? ["", `Extrait du ${readme.path} :`, readme.content.slice(0, 6000)] : []),
   ].join("\n"));
 
-  const pages = [overview, ...kept.map((f) => normalize(`=== Fichier : ${f.path} ===\n${f.content}`))];
+  const pages = [overview, ...kept.map((f) => normalizeCode(`=== Fichier : ${f.path} ===\n${f.content}`))];
   const pageStarts: number[] = [];
   let text = "";
   for (const [i, page] of pages.entries()) {
@@ -170,6 +170,30 @@ function notebookText(json: string): string {
 
 const GITHUB_HOSTS = ["api.github.com", "codeload.github.com"];
 
+function authHeaders(): Record<string, string> | undefined {
+  const token = process.env.GITHUB_TOKEN; // optionnel : relève la limite de 60 requêtes/heure de l'API anonyme
+  return token ? { authorization: `Bearer ${token}` } : undefined;
+}
+
+/**
+ * SHA du dernier commit de la référence (ou de la branche par défaut), via une requête légère.
+ * Null si indéterminable : l'appelant réimporte alors par prudence.
+ */
+export async function latestGithubCommit(rawUrl: string, fetcher: typeof safeFetch = safeFetch): Promise<string | null> {
+  const repo = parseGithubUrl(rawUrl);
+  if (!repo) return null;
+  try {
+    const res = await fetcher(`https://api.github.com/repos/${repo.owner}/${repo.repo}/commits/${encodeURIComponent(repo.ref ?? "HEAD")}`, 0,
+      { maxBytes: 4096, allowHosts: GITHUB_HOSTS, accept: "application/vnd.github.sha", headers: authHeaders() });
+    const sha = res.body.toString("utf8").trim();
+    return /^[0-9a-f]{40}$/.test(sha) ? sha : null;
+  } catch { return null; }
+}
+
+/** Vrai si le commit connu (court, issu de l'archive) désigne le même commit que le SHA complet. */
+export const sameCommit = (known: string | null | undefined, latest: string | null) =>
+  Boolean(known && latest && known.length >= 7 && latest.startsWith(known));
+
 /** Télécharge et assemble un dépôt public. Erreurs attendues : PermanentError avec code stable. */
 export async function fromGithub(rawUrl: string, fetcher: typeof safeFetch = safeFetch) {
   const repo = parseGithubUrl(rawUrl);
@@ -177,9 +201,7 @@ export async function fromGithub(rawUrl: string, fetcher: typeof safeFetch = saf
   const archive = `https://api.github.com/repos/${repo.owner}/${repo.repo}/zipball${repo.ref ? `/${encodeURIComponent(repo.ref)}` : ""}`;
   let res;
   try {
-    const token = process.env.GITHUB_TOKEN; // optionnel : relève la limite de 60 requêtes/heure de l'API anonyme
-    res = await fetcher(archive, 5, { maxBytes: MAX_ARCHIVE_BYTES, allowHosts: GITHUB_HOSTS, accept: "application/zip, application/vnd.github+json",
-      ...(token ? { headers: { authorization: `Bearer ${token}` } } : {}) });
+    res = await fetcher(archive, 5, { maxBytes: MAX_ARCHIVE_BYTES, allowHosts: GITHUB_HOSTS, accept: "application/zip, application/vnd.github+json", headers: authHeaders() });
   } catch (e) {
     if (e instanceof FetchRefused) {
       if (e.message === "http_404") throw new PermanentError("github_not_found", "Dépôt introuvable ou privé (seuls les dépôts publics sont pris en charge).");

@@ -7,6 +7,7 @@ import { enqueueSummaries } from "../studio/summaries.ts";
 import type { Transcriber } from "../ai/transcription.ts";
 import { openRouterPdfOcr, type PdfOcrEngine } from "../ai/ocr.ts";
 import { enqueueKnowledge } from "../knowledge/extract.ts";
+import { latestGithubCommit, sameCommit } from "./github.ts";
 
 const FTS_CONFIG: Record<string, string> = { fr: "french", en: "english", es: "spanish", de: "german", it: "italian", pt: "portuguese", nl: "dutch" };
 
@@ -23,12 +24,22 @@ export function detectLanguage(text: string): string {
  * Job ingest_source : télécharge l'original, extrait page par page, découpe, embedde,
  * puis remplace les chunks en UNE transaction (replace_chunks). Les étapes sont publiées.
  */
-export function ingestHandler(db: SupabaseClient, embedder: Embedder | null, opts: { summaries?: boolean; knowledge?: boolean; transcriber?: Transcriber | null } = {}): Handler {
+export function ingestHandler(db: SupabaseClient, embedder: Embedder | null, opts: { summaries?: boolean; knowledge?: boolean; transcriber?: Transcriber | null; latestCommit?: (url: string) => Promise<string | null> } = {}): Handler {
   return async (job, ctx) => {
     const { data: src, error } = await db.from("sources").select("id, kind, storage_path, origin_url, notebook_id, workspace_id, created_by, note_body, mime_type, external_ref")
       .eq("id", job.target_id!).single();
     if (error || !src) throw new PermanentError("source_not_found");
     if (src.workspace_id !== job.workspace_id || src.notebook_id !== job.notebook_id) throw new PermanentError("tenant_mismatch");
+
+    // Mise à jour d'un dépôt GitHub déjà indexé : rien à refaire si le dernier commit n'a pas changé.
+    const knownCommit = (src.external_ref as { github?: { commit?: string | null } } | null)?.github?.commit;
+    if (src.kind === "github" && knownCommit && src.origin_url) {
+      const { count } = await db.from("chunks").select("id", { count: "exact", head: true }).eq("source_id", src.id);
+      if (count && sameCommit(knownCommit, await (opts.latestCommit ?? latestGithubCommit)(src.origin_url))) {
+        await db.from("sources").update({ status: "ready", error_code: null, synced_at: new Date().toISOString() }).eq("id", src.id);
+        return { unchanged: true, commit: knownCommit };
+      }
+    }
 
     await db.from("sources").update({ status: "processing", error_code: null }).eq("id", src.id);
     try {
@@ -67,9 +78,9 @@ export function ingestHandler(db: SupabaseClient, embedder: Embedder | null, opt
           return ocr.extract(pdf, pageCount);
         },
       );
-      const text = normalize(ex.text);
+      const text = ex.preformatted ? ex.text : normalize(ex.text);
       const lang = detectLanguage(text);
-      if (ex.breakAtPages && text !== ex.text) throw new Error("page_offsets_not_normalized"); // offsets de page calculés sur un texte déjà normalisé
+      if (ex.breakAtPages && !ex.preformatted && text !== ex.text) throw new Error("page_offsets_not_normalized"); // offsets de page calculés sur le texte final
       const chunks = chunk(text, { pageStarts: ex.pageStarts, timeRanges: ex.timeRanges, hardCuts: ex.breakAtPages ? ex.pageStarts : [] });
       if (await ctx.cancelled()) return { cancelled: true };
 

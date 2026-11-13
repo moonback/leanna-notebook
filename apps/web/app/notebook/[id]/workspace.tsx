@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import { createPortal } from "react-dom";
-import { AlertTriangle, ArrowUp, AudioLines, Bold, BookmarkPlus, BrainCircuit, Code, Eraser, Heading2, Italic, List, ListOrdered, Quote, Settings2, ThumbsDown, ThumbsUp, FileText, Globe, Inbox, Lock, NotebookPen, Pencil, Plus, Square, Sparkles, Trash2, Type, Upload, Search, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, FolderOpen, Telescope, Network, Scale, ExternalLink, GitBranch } from "lucide-react";
+import { AlertTriangle, ArrowUp, AudioLines, Bold, BookmarkPlus, BrainCircuit, Code, Eraser, Heading2, Italic, List, ListOrdered, Quote, Settings2, ThumbsDown, ThumbsUp, FileText, Globe, Inbox, Lock, NotebookPen, Pencil, Plus, Square, Sparkles, Trash2, Type, Upload, Search, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, FolderOpen, Telescope, Network, Scale, ExternalLink, GitBranch, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Textarea } from "@/components/ui/field";
 import { Alert, Badge, EmptyState, Progress, Skeleton } from "@/components/ui/feedback";
@@ -23,7 +23,7 @@ import type { NumberedVoicePassage } from "./voice-turn";
 
 export type Role = "chat" | "viewer" | "editor" | "owner";
 type Source = { id: string; kind: string; title: string; status: string; error_code: string | null; word_count: number | null };
-type Cite = { marker: number; source_id: string; quote_text: string; char_start: number; char_end: number; verified: boolean };
+type Cite = { marker: number; source_id: string; quote_text: string; char_start: number; char_end: number; verified: boolean; file?: string };
 type Overview = { text: string | null; questions: string[]; pending: boolean; readySources: number };
 type Message = { id: string; role: "user" | "assistant"; content: string; status: string; citations?: Cite[]; feedback?: number | null; thoughts?: string | null };
 
@@ -229,6 +229,13 @@ export function Workspace({ notebookId, initialTitle, role, allowCopies, disable
     else toast({ title: "Suppression impossible", tone: "error" });
   }
 
+  async function syncSource(s: Source) {
+    const res = await fetch(`/api/v1/sources/${s.id}/sync`, { method: "POST" });
+    if (!res.ok) return toast({ title: "Mise à jour impossible", tone: "error" });
+    setSources((xs) => xs?.map((x) => (x.id === s.id ? { ...x, status: "pending", error_code: null } : x)) ?? null);
+    toast({ title: "Mise à jour du dépôt lancée", description: "Le code n’est réindexé que si le dépôt a changé depuis le dernier import.", tone: "success" });
+  }
+
   const ready = (sources ?? []).filter((s) => s.status === "ready");
   const selectedCount = ready.filter((s) => !deselected.has(s.id)).length;
   const allSelected = ready.length > 0 && selectedCount === ready.length;
@@ -268,6 +275,7 @@ export function Workspace({ notebookId, initialTitle, role, allowCopies, disable
                   <span className="flex items-center gap-1">
                     {s.status === "failed" && <Badge tone="danger">Échec</Badge>}
                     {busyStatus(s.status) && <Badge tone="accent">En cours</Badge>}
+                    {canEdit && s.kind === "github" && (s.status === "ready" || s.status === "failed") && <Button size="icon-sm" variant="ghost" aria-label={`Mettre à jour le dépôt ${s.title}`} title="Mettre à jour depuis GitHub" className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100" onClick={() => void syncSource(s)}><RefreshCw aria-hidden /></Button>}
                     {canEdit && s.kind !== "note" && <Button size="icon-sm" variant="ghost" aria-label={`Renommer ${s.title}`} className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100" onClick={() => setRenaming(s)}><Pencil aria-hidden /></Button>}
                     {canEdit && <Button size="icon-sm" variant="ghost" aria-label={`Supprimer ${s.title}`} className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100" onClick={() => removeSource(s)}><Trash2 aria-hidden /></Button>}
                     {s.status === "ready" && (
@@ -1106,7 +1114,7 @@ function SourceViewer({ state, onClose, onAsk }: { state: { sourceId: string; ra
                 ))}
               </section>
             ) : (
-              <p className={cn("whitespace-pre-wrap font-serif text-reading")}>
+              <p className={cn("whitespace-pre-wrap", source.kind === "github" ? "font-mono text-sm leading-6" : "font-serif text-reading")}>
                 {state?.range ? <>{text.slice(0, a)}<mark ref={mark} className="rounded-xs bg-highlight px-0.5 text-on-highlight">{text.slice(a, b)}</mark>{text.slice(b)}</> : text}
               </p>
             )}

@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Citation } from "@/components/ui/citation";
 
-export type MdCitation = { marker: number; source_id: string; quote_text: string; char_start: number; char_end: number; verified: boolean };
+export type MdCitation = { marker: number; source_id: string; quote_text: string; char_start: number; char_end: number; verified: boolean; /** Dépôt GitHub : chemin du fichier cité. */ file?: string };
 
 type InlineProps = {
   text: string;
@@ -21,7 +21,7 @@ function Inline({ text, citations, onOpenCitation, sourceTitle }: InlineProps) {
           const c = citations.get(Number(cite[1]));
           if (!c) return <span key={i} className="font-mono text-xs text-text-subtle">{part}</span>; // pendant le flux
           return (
-            <Citation key={i} n={c.marker} source={sourceTitle?.(c.source_id) ?? "Source supprimée"} quote={c.quote_text}
+            <Citation key={i} n={c.marker} source={`${sourceTitle?.(c.source_id) ?? "Source supprimée"}${c.file ? ` › ${c.file}` : ""}`} quote={c.quote_text}
               verified={c.verified} onOpen={onOpenCitation ? () => onOpenCitation(c) : undefined} />
           );
         }

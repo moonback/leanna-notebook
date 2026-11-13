@@ -9,6 +9,20 @@ export function normalize(text: string): string {
     .trim();
 }
 
+/**
+ * Variante pour le code (dépôts GitHub) : garde l'indentation et les espaces internes,
+ * retire seulement les blancs de fin de ligne et les lignes vides en excès. Idempotente.
+ */
+export function normalizeCode(text: string): string {
+  return text
+    .normalize("NFC")
+    .replace(/\r\n?/g, "\n")
+    .replace(/\t/g, "  ")
+    .replace(/[ \f\v\u00a0]+$/gm, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .replace(/^\n+|\s+$/g, "");
+}
+
 export type Chunk = { ordinal: number; content: string; char_start: number; char_end: number; page_start: number | null; token_count: number; time_start_ms?: number; time_end_ms?: number };
 
 /** Estimation de tokens sans tokenizer (≈ 4 caractères par token, prudent pour le français). */
