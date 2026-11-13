@@ -1,0 +1,172 @@
+/* Leanna Browser only — cinematic compact voice surface. */
+.voiceScope { display: contents; }
+
+:global(body:has([data-browser-voice-scope]) .mobile-voice-dialog) {
+  position: fixed !important;
+  inset: 72px 18px auto auto !important;
+  width: min(390px, calc(100vw - 36px)) !important;
+  max-width: min(390px, calc(100vw - 36px)) !important;
+  max-height: min(78dvh, 620px) !important;
+  overflow: hidden !important;
+  transform: none !important;
+  border: 1px solid rgba(161, 146, 255, .28) !important;
+  border-radius: 24px !important;
+  padding: 0 !important;
+  color: #f5f3ff !important;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(115, 83, 255, .24), transparent 54%),
+    linear-gradient(155deg, rgba(17, 19, 39, .97), rgba(8, 12, 27, .985)) !important;
+  box-shadow: 0 24px 90px rgba(0, 0, 0, .48), 0 0 44px rgba(111, 78, 255, .13), inset 0 1px rgba(255,255,255,.08) !important;
+  backdrop-filter: blur(28px) saturate(145%) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(145%) !important;
+}
+
+:global(body:has([data-browser-voice-scope]) [data-radix-dialog-overlay]) {
+  background: rgba(4, 7, 20, .22) !important;
+  backdrop-filter: blur(3px) !important;
+}
+
+:global(body:has([data-browser-voice-scope]) .mobile-voice-sheet-header) {
+  position: relative !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  justify-items: center !important;
+  gap: 12px !important;
+  min-height: 0 !important;
+  border: 0 !important;
+  padding: 28px 22px 20px !important;
+  color: #f5f3ff !important;
+  background: transparent !important;
+  text-align: center !important;
+}
+
+:global(body:has([data-browser-voice-scope]) .mobile-voice-sheet-header)::before {
+  position: absolute;
+  z-index: 0;
+  top: 24px;
+  left: 50%;
+  width: 142px;
+  height: 142px;
+  border: 1px solid rgba(154, 130, 255, .26);
+  border-radius: 50%;
+  content: "";
+  pointer-events: none;
+  transform: translateX(-50%);
+  box-shadow: 0 0 28px rgba(111, 78, 255, .15), inset 0 0 28px rgba(111, 78, 255, .08);
+  animation: browser-voice-ring 7s linear infinite;
+}
+
+:global(body:has([data-browser-voice-scope]) .mobile-voice-sheet-header > div:first-child) {
+  position: relative !important;
+  z-index: 1;
+  display: grid !important;
+  width: 104px !important;
+  height: 104px !important;
+  place-items: center !important;
+  border: 1px solid rgba(172, 155, 255, .68) !important;
+  border-radius: 50% !important;
+  color: #fff !important;
+  font-size: 34px !important;
+  font-weight: 500 !important;
+  background:
+    radial-gradient(circle at 36% 28%, rgba(255,255,255,.9), rgba(191,177,255,.42) 9%, transparent 30%),
+    radial-gradient(circle at 50% 55%, rgba(111,78,255,.75), rgba(32,42,101,.9) 48%, rgba(7,13,33,.96) 76%) !important;
+  box-shadow: 0 0 24px rgba(132, 100, 255, .56), 0 0 66px rgba(72, 112, 255, .24), inset 0 0 24px rgba(255,255,255,.14) !important;
+  animation: browser-voice-orb 4.8s ease-in-out infinite;
+}
+
+:global(body:has([data-browser-voice-scope]) .mobile-voice-sheet-header > div:first-child::before),
+:global(body:has([data-browser-voice-scope]) .mobile-voice-sheet-header > div:first-child::after) {
+  position: absolute;
+  inset: -11px;
+  border: 1px solid rgba(130, 173, 255, .34);
+  border-radius: 50%;
+  content: "";
+  pointer-events: none;
+}
+:global(body:has([data-browser-voice-scope]) .mobile-voice-sheet-header > div:first-child::after) {
+  inset: -19px;
+  border-color: rgba(174, 126, 255, .2);
+  transform: rotateX(68deg) rotateZ(-18deg);
+}
+
+:global(body:has([data-browser-voice-scope]) .mobile-voice-sheet-header > div:nth-child(2)) {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  text-align: center !important;
+}
+:global(body:has([data-browser-voice-scope]) .mobile-voice-sheet-header > div:nth-child(2) p:first-child) {
+  color: #fff !important;
+  font-size: 15px !important;
+  letter-spacing: .02em;
+}
+:global(body:has([data-browser-voice-scope]) .mobile-voice-sheet-header > div:nth-child(2) p:last-child) {
+  margin-top: 5px;
+  color: rgba(222, 225, 255, .7) !important;
+  font-size: 12px !important;
+}
+:global(body:has([data-browser-voice-scope]) .mobile-voice-sheet-header > div:nth-child(3)) {
+  display: flex !important;
+  height: 22px !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 4px !important;
+  margin-top: -3px;
+  color: #8bdcff !important;
+  filter: drop-shadow(0 0 8px rgba(83, 185, 255, .62));
+}
+:global(body:has([data-browser-voice-scope]) .mobile-voice-sheet-header > div:first-child:has(span.bg-emerald-500)) {
+  box-shadow: 0 0 30px rgba(132, 100, 255, .72), 0 0 86px rgba(72, 112, 255, .36), inset 0 0 28px rgba(255,255,255,.18) !important;
+}
+:global(body:has([data-browser-voice-scope]) .mobile-voice-controls) {
+  position: relative;
+  z-index: 1;
+  display: flex !important;
+  width: 100%;
+  justify-content: center;
+  gap: 9px !important;
+  margin-top: 6px;
+}
+:global(body:has([data-browser-voice-scope]) .mobile-voice-controls button) {
+  min-height: 42px;
+  border: 1px solid rgba(180, 176, 255, .22);
+  border-radius: 14px;
+  color: #f5f3ff;
+  background: rgba(255,255,255,.07);
+  box-shadow: inset 0 1px rgba(255,255,255,.06);
+}
+:global(body:has([data-browser-voice-scope]) .mobile-voice-controls button:hover) {
+  background: rgba(130, 111, 255, .2);
+}
+:global(body:has([data-browser-voice-scope]) .mobile-voice-controls button[aria-label="Déployer le studio vocal"]) {
+  display: none !important;
+}
+:global(body:has([data-browser-voice-scope]) .mobile-voice-controls button:last-child) {
+  border-color: rgba(172, 133, 255, .38);
+  background: linear-gradient(135deg, rgba(119, 82, 255, .3), rgba(57, 122, 255, .18));
+}
+
+@keyframes browser-voice-orb {
+  0%, 100% { transform: scale(.97); filter: hue-rotate(0deg); }
+  50% { transform: scale(1.035); filter: hue-rotate(16deg); }
+}
+@keyframes browser-voice-ring {
+  from { transform: translateX(-50%) rotate(0deg); }
+  to { transform: translateX(-50%) rotate(360deg); }
+}
+
+@media (max-width: 600px) {
+  :global(body:has([data-browser-voice-scope]) .mobile-voice-dialog) {
+    inset: auto 10px 14px !important;
+    width: calc(100vw - 20px) !important;
+    max-width: none !important;
+    max-height: min(72dvh, 560px) !important;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  :global(body:has([data-browser-voice-scope]) .mobile-voice-sheet-header)::before,
+  :global(body:has([data-browser-voice-scope]) .mobile-voice-sheet-header > div:first-child) {
+    animation: none !important;
+  }
+}
