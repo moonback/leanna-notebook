@@ -99,7 +99,7 @@ function playActivationChime(ctx: AudioContext) {
   } catch { /* le son est un confort, jamais bloquant */ }
 }
 
-export function VoiceAssistant({ notebookId, conversationId, disabled = false, onOpenCitation, browserApi, saveBrowserRequest, openRequest = 0, hideTrigger = false }: { notebookId: string; conversationId: string; disabled?: boolean; onOpenCitation: (passage: Passage) => void; browserApi?: DesktopBrowserApi; saveBrowserRequest?: (request: DesktopSaveRequest) => Promise<{ ok: boolean; message: string }>; openRequest?: number; hideTrigger?: boolean }) {
+export function VoiceAssistant({ notebookId, conversationId, disabled = false, onOpenCitation, browserApi, saveBrowserRequest, openRequest = 0, hideTrigger = false, onOpenChange }: { notebookId: string; conversationId: string; disabled?: boolean; onOpenCitation: (passage: Passage) => void; browserApi?: DesktopBrowserApi; saveBrowserRequest?: (request: DesktopSaveRequest) => Promise<{ ok: boolean; message: string }>; openRequest?: number; hideTrigger?: boolean; onOpenChange?: (open: boolean) => void }) {
   const [open, setOpen] = React.useState(false);
   const [expanded, setExpanded] = React.useState(false);
   const [state, setState] = React.useState<VoiceState>("idle");
@@ -665,7 +665,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
         <AudioLines aria-hidden /> {state === "idle" || state === "error" ? "Mode vocal" : "Studio vocal actif"}
       </Button>}
 
-      <Dialog open={open} onOpenChange={(value) => { setOpen(value); if (!value) setExpanded(false); }}>
+      <Dialog open={open} onOpenChange={(value) => { setOpen(value); onOpenChange?.(value); if (!value) setExpanded(false); }}>
         <DialogContent
           title="Studio vocal"
           description="Une conversation naturelle avec vos sources."
