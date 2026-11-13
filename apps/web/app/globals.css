@@ -1468,3 +1468,53 @@ header.glass-toolbar nav button {
 @media (prefers-reduced-motion: reduce) {
   .mobile-auth-header a:first-child { transition: none; }
 }
+
+
+/* Shared feedback states: empty, inline alerts and transient notifications. */
+.mobile-empty-state {
+  min-height: 15rem;
+  justify-content: center;
+  gap: .8rem;
+  padding: clamp(2rem, 5vw, 3.5rem) 1.5rem;
+  border: 1px dashed color-mix(in srgb, var(--accent) 20%, var(--border));
+  border-radius: 1.2rem;
+  background:
+    radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--accent-soft) 48%, transparent), transparent 65%),
+    color-mix(in srgb, var(--surface-raised) 76%, transparent);
+}
+.mobile-empty-state-icon {
+  width: 3.5rem;
+  height: 3.5rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 14%, transparent);
+  border-radius: 1.1rem;
+  box-shadow: 0 5px 16px color-mix(in srgb, var(--accent) 10%, transparent);
+}
+.mobile-empty-state-title { text-wrap: balance; }
+.mobile-empty-state > p { line-height: 1.7; }
+.mobile-empty-state > div:last-child { margin-top: .35rem; }
+.mobile-inline-alert {
+  border: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+  border-radius: .85rem;
+  line-height: 1.55;
+}
+.mobile-toast {
+  border: 1px solid color-mix(in srgb, var(--border) 76%, var(--accent));
+  background: color-mix(in srgb, var(--surface-raised) 94%, transparent);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 14px 42px color-mix(in srgb, var(--text) 13%, transparent);
+}
+.mobile-toast button { min-height: 2rem; }
+@media (max-width: 767px) {
+  .mobile-empty-state {
+    min-height: 12rem;
+    padding: 2rem 1rem;
+    border-radius: 1rem;
+  }
+  .mobile-empty-state-icon { width: 3rem; height: 3rem; }
+  .mobile-toast-viewport {
+    bottom: max(.75rem, env(safe-area-inset-bottom));
+    width: calc(100vw - 1.25rem);
+  }
+  .mobile-toast { padding: .85rem; border-radius: .9rem; }
+}
