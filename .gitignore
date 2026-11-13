@@ -9,4 +9,5 @@ replica/screens/*.png
 apps/desktop/dist
 apps/desktop/release
 .Leanna-audit.log
-.project-knowledge.jsonapps/desktop/e2e-artifacts
+.project-knowledge.json
+apps/desktop/e2e-artifacts
