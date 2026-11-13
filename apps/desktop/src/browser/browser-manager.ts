@@ -248,6 +248,7 @@ export class BrowserManager {
       next.pendingUrl = null;
       this.load(next, url);
     }
+    this.syncLauncherVisibility();
     this.publish();
     return true;
   }
@@ -269,6 +270,7 @@ export class BrowserManager {
       const fallback = this.tabs[Math.min(index, this.tabs.length - 1)];
       if (fallback) this.activateTab(fallback.id);
     }
+    this.syncLauncherVisibility();
     this.publish();
     return true;
   }
@@ -513,7 +515,7 @@ export class BrowserManager {
     const launcher = new BrowserWindow({
       parent, width: 76, height: 76, show: false, frame: false, transparent: true,
       backgroundColor: "#00000000", hasShadow: false, resizable: false, movable: false,
-      minimizable: false, maximizable: false, closable: false, focusable: false, skipTaskbar: true,
+      minimizable: false, maximizable: false, closable: false, focusable: true, skipTaskbar: true,
       webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true },
     });
     this.launcherWindow = launcher;
@@ -522,7 +524,10 @@ export class BrowserManager {
     launcher.webContents.on("will-navigate", (event, url) => {
       if (url !== "leanna-launcher://open-voice") { event.preventDefault(); return; }
       event.preventDefault();
-      if (this.visible && this.launcherEnabled && this.activeTabId) this.deps.onOpenVoice();
+      if (this.visible && this.launcherEnabled && this.activeTabId) {
+        this.deps.onOpenVoice();
+        if (this.window && !this.window.isDestroyed()) this.window.focus();
+      }
     });
     launcher.on("closed", () => { if (this.launcherWindow === launcher) this.launcherWindow = null; });
     const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
