@@ -144,6 +144,7 @@ export interface DesktopBrowserInvokeApi {
   key(input: DesktopKeyInput): Promise<boolean>;
   setBounds(bounds: DesktopBrowserBounds): Promise<boolean>;
   setVisible(visible: boolean): Promise<boolean>;
+  setLauncherEnabled(enabled: boolean): Promise<boolean>;
   getSettings(): Promise<DesktopBrowserSettings>;
   updateSettings(patch: Partial<DesktopBrowserSettings>): Promise<DesktopBrowserSettings>;
   getHistory(query?: string): Promise<DesktopBrowserVisit[]>;
@@ -179,6 +180,7 @@ export interface DesktopBrowserInvokeApi {
 export interface DesktopBrowserApi extends DesktopBrowserInvokeApi {
   onState(callback: (state: DesktopBrowserState) => void): () => void;
   onCommand(callback: (command: DesktopBrowserCommand) => void): () => void;
+  onOpenVoice(callback: () => void): () => void;
 }
 
 export interface DesktopApi {
