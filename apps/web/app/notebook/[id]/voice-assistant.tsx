@@ -141,7 +141,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
   const stop = React.useCallback(() => {
     rlog("stop() appelé", { nodes: playbackNodes.current.size, roxaneSpeaking: roxaneSpeaking.current, stack: new Error().stack?.split("\n").slice(2, 5).join(" | ") });
     intentionalClose.current = true;
-    if (browserApi && browserMissionStarted.current) { void browserApi.agentAbort().catch(() => undefined); browserMissionStarted.current = false; }
+    if (browserApi && browserMissionStarted.current) { void browserApi.agentAbort({ owner: "voice" }).catch(() => undefined); browserMissionStarted.current = false; }
     socket.current?.close();
     socket.current = null;
     roxaneSocket.current?.close();
@@ -207,13 +207,13 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
         try {
           if (!browserApi) throw new Error("Le navigateur intégré n'est pas disponible dans cette session.");
           if (!browserMissionStarted.current) {
-            await browserApi.agentStart({ text: userTurn.current.slice(0, 8000), reset: false });
+            await browserApi.agentStart({ text: userTurn.current.slice(0, 8000), reset: false, owner: "voice" });
             browserMissionStarted.current = true;
           }
-          let outcome = await browserApi.agentCall({ name: call.name.slice("browser_".length), args: call.args ?? {} });
+          let outcome = await browserApi.agentCall({ name: call.name.slice("browser_".length), args: call.args ?? {}, owner: "voice" });
           if (outcome.status === "confirmation_required") {
             const approved = window.confirm(`Leanna souhaite effectuer cette action :\n\n${outcome.summary}\n\nMotif : ${outcome.reason}\n\nAutoriser cette action ?`);
-            outcome = await browserApi.agentResolve({ actionId: outcome.actionId, approve: approved });
+            outcome = await browserApi.agentResolve({ actionId: outcome.actionId, approve: approved, owner: "voice" });
           }
           socket.current?.send(JSON.stringify({ toolResponse: { functionResponses: [{ id: call.id, name: call.name, response: { result: JSON.stringify(outcome) } }] } }));
           setStatus(outcome.status === "ok" ? "Action Browser vérifiée." : outcome.status === "confirmation_required" ? "Confirmation Browser requise." : "Action Browser non exécutée.");
@@ -504,6 +504,10 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
             await askRoxane(completedTurnNumber);
           } else {
             setStatus(roxaneEnabledRef.current ? `Échange ${completedTurnNumber}/2 · Roxane reste en écoute.` : "Leanna a répondu · Roxane est désactivée.");
+          }
+          if (browserApi && browserMissionStarted.current) {
+            await browserApi.agentEnd({ owner: "voice" }).catch(() => false);
+            browserMissionStarted.current = false;
           }
           const completedTurn = { user: userTurn.current.trim(), assistant: leannaAnswer, roxane: roxaneTurnText.current.trim(), sources: turnPassages.current.snapshot() };
           await persistVoiceTurn();
