@@ -3,12 +3,35 @@ import { z } from "zod";
 import { ApiError, handle, parseBody, requireRole, requireUser } from "@/lib/api";
 import { VOICE_SYSTEM_PROMPTS } from "@/lib/ai/prompts";
 import { createServiceClient } from "@/lib/supabase/server";
+import { TOOLS as BROWSER_TOOLS } from "@/lib/browser/tools";
 
 export const runtime = "nodejs";
 type Params = { params: Promise<{ id: string }> };
 
 const MODEL = "gemini-3.8-live";
 const voiceSchema = z.object({ voice: z.enum(["Aoede", "Charon", "Fenrir", "Kore", "Puck", "Leda", "Orus", "Zephyr"]).default("Aoede"), persona: z.enum(["leanna", "roxane"]).default("leanna") }).strict();
+
+function geminiSchema(schema: { type: string; properties?: Record<string, any>; required?: readonly string[] }): Record<string, unknown> {
+  const properties = Object.fromEntries(Object.entries(schema.properties ?? {}).map(([key, value]) => {
+    const property: Record<string, unknown> = {
+      type: value.type === "string" ? "STRING" : value.type === "boolean" ? "BOOLEAN" : "ARRAY",
+      description: value.description,
+    };
+    if (value.enum) property.enum = [...value.enum];
+    if (value.minLength !== undefined) property.minLength = value.minLength;
+    if (value.maxLength !== undefined) property.maxLength = value.maxLength;
+    if (value.type === "array") property.items = { type: "STRING" };
+    return [key, property];
+  }));
+  return { type: "OBJECT", properties, ...(schema.required?.length ? { required: [...schema.required] } : {}) };
+}
+
+const browserFunctionDeclarations = BROWSER_TOOLS.map((tool) => ({
+  name: `browser_${tool.name}`,
+  description: tool.description,
+  parameters: geminiSchema(tool.parameters),
+}));
+
 
 /** Fournit un jeton Gemini Live à usage unique : la clé longue durée ne quitte jamais le serveur. */
 export const POST = handle(async (req: NextRequest, { params }: Params) => {
@@ -54,6 +77,7 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
           required: ["type", "prompt"]
         }
       }
+      ...browserFunctionDeclarations
     ] }] } : {})
   };
 
