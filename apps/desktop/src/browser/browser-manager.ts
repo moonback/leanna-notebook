@@ -382,7 +382,11 @@ export class BrowserManager {
    * Exécute une fonction autonome dans le monde isolé de l'onglet. `fn` ne doit rien capturer :
    * seul son code source est transmis, avec `arg` sérialisé en JSON.
    */
-  async runInPage<A, R>(id: string, fn: (arg: A) => R | Promise<R>, arg: A, preludes: string[] = [], timeoutMs = 10_000): Promise<R> {
+  async runInPage<A, R>(
+    id: string, fn: (arg: A) => R | Promise<R>, arg: A, preludes: string[] = [], timeoutMs = 10_000,
+    /** Vrai pour une action faite au nom de l'utilisateur (clic, saisie) : sans activation, Chromium saute l'entrée d'historique créée. */
+    userGesture = false,
+  ): Promise<R> {
     const tab = this.find(id);
     if (!tab || tab.crashed || tab.view.webContents.isDestroyed()) throw new Error("tab_unavailable");
     if (tab.pendingUrl) {
@@ -397,7 +401,7 @@ export class BrowserManager {
     let timer: NodeJS.Timeout | undefined;
     try {
       return await Promise.race([
-        tab.view.webContents.executeJavaScriptInIsolatedWorld(ISOLATED_WORLD_ID, sources, false) as Promise<R>,
+        tab.view.webContents.executeJavaScriptInIsolatedWorld(ISOLATED_WORLD_ID, sources, userGesture) as Promise<R>,
         new Promise<never>((_resolve, reject) => { timer = setTimeout(() => reject(new Error("page_script_timeout")), timeoutMs); }),
       ]);
     } finally {

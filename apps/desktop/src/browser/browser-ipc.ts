@@ -1,4 +1,5 @@
 import { ipcMain, type IpcMainInvokeEvent } from "electron";
+import { BrowserAgent } from "./browser-agent";
 import type { BrowserDataStore } from "./browser-data-store";
 import { extractPage, getSelection } from "./browser-extract";
 import type { BrowserManager } from "./browser-manager";
@@ -23,7 +24,23 @@ const record = (value: unknown): Record<string, unknown> =>
 
 /** Handlers `browser:*` du moteur et des données locales. Chaque argument est revalidé ici. */
 export function browserHandlers({ manager, store }: BrowserIpcDeps): Record<string, Handler> {
+  // L'agent ne reçoit qu'une façade de fonctions : aucun objet Electron, aucun accès au stockage.
+  const agent = new BrowserAgent({
+    getSettings: () => manager.getSettings(), getState: () => manager.getState(), getTab: (id) => manager.getTab(id),
+    getActiveTabId: () => manager.getActiveTabId(), createTab: (options) => manager.createTab(options), closeTab: (id) => manager.closeTab(id),
+    navigate: (id, url) => manager.navigate(id, url), goBack: (id) => manager.goBack(id), goForward: (id) => manager.goForward(id),
+    reload: (id) => manager.reload(id), stop: (id) => manager.stop(id), waitForLoad: (id, timeout) => manager.waitForLoad(id, timeout),
+    runInPage: (id, fn, arg) => manager.runInPage(id, fn, arg), capture: (id) => manager.capture(id),
+    actInPage: (id, fn, arg) => manager.runInPage(id, fn, arg, [], 10_000, true),
+    extract: (id, options) => extractPage(manager, id, options), selection: (id) => getSelection(manager, id),
+  });
   return {
+    // Agent : le mode d'autonomie est lu dans les réglages à chaque appel, jamais fourni par l'appelant.
+    agentStart: (input) => agent.startMission(record(input).text, record(input).reset === true),
+    agentCall: (input) => agent.call(record(input).name, record(input).args),
+    agentResolve: (input) => agent.resolve(record(input).actionId, record(input).approve),
+    agentAbort: () => { agent.abort(); return true; },
+
     init: async () => {
       await manager.init();
       return { state: manager.getState(), settings: manager.getSettings() };

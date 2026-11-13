@@ -99,6 +99,20 @@ export interface DesktopPageContent {
   tables: { caption: string; rows: string[][] }[];
 }
 
+export interface DesktopSaveRequest {
+  mode: "link" | "text" | "summary" | "selection";
+  url: string;
+  title: string;
+  favicon: string | null;
+  text?: string;
+  summary?: string;
+}
+
+export type DesktopAgentOutcome =
+  | { status: "ok"; tool: string; summary: string; result: Record<string, unknown>; image?: string; save?: DesktopSaveRequest }
+  | { status: "confirmation_required"; tool: string; summary: string; actionId: string; reason: string }
+  | { status: "refused" | "denied" | "error"; tool: string; summary: string; error: string; message: string };
+
 export interface DesktopBrowserVisit { id: string; url: string; title: string; visitedAt: number }
 export interface DesktopBrowserBookmark { id: string; url: string; title: string; folder: string; createdAt: number }
 export type DesktopPermissionDecision = "allow" | "deny";
@@ -148,6 +162,13 @@ export interface DesktopBrowserInvokeApi {
   /** Contenu nettoyé et borné de l'onglet (`full` : texte complet, pour l'enregistrement dans le Notebook). */
   extractPage(id: string, options?: { full?: boolean }): Promise<DesktopPageContent>;
   getSelection(id: string): Promise<string>;
+  /** Début d'un tour utilisateur pour l'agent (`reset` : nouvelle conversation). */
+  agentStart(input: { text: string; reset?: boolean }): Promise<{ mission: number; mode: DesktopAgentMode }>;
+  /** Appel d'outil proposé par le modèle : validé, soumis aux garde-fous, exécuté ou mis en attente. */
+  agentCall(input: { name: string; args: unknown }): Promise<DesktopAgentOutcome>;
+  /** Décision de l'utilisateur sur une action en attente de confirmation. */
+  agentResolve(input: { actionId: string; approve: boolean }): Promise<DesktopAgentOutcome>;
+  agentAbort(): Promise<boolean>;
   getPermissions(): Promise<Record<string, Record<string, DesktopPermissionDecision>>>;
   setPermission(origin: string, permission: string, decision: DesktopPermissionDecision | null): Promise<boolean>;
   clearBrowsingData(): Promise<boolean>;

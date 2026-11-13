@@ -17,6 +17,7 @@ const BROWSER_METHODS = [
   "updateSettings", "getHistory", "removeVisit", "clearHistory", "getBookmarks", "addBookmark", "updateBookmark",
   "removeBookmark", "addFolder", "renameFolder", "removeFolder", "cancelDownload", "showDownloadInFolder",
   "removeDownload", "getPermissions", "setPermission", "clearBrowsingData", "extractPage", "getSelection",
+  "agentStart", "agentCall", "agentResolve", "agentAbort",
 ] as const satisfies readonly (keyof DesktopBrowserInvokeApi)[];
 
 type Missing = Exclude<keyof DesktopBrowserInvokeApi, typeof BROWSER_METHODS[number]>;

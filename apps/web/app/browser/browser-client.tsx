@@ -7,6 +7,7 @@ import {
   getBrowserApi, shouldForwardKey,
   type DesktopBrowserApi, type DesktopBrowserBookmark, type DesktopBrowserCommand, type DesktopBrowserSettings, type DesktopBrowserState,
 } from "./browser-api";
+import { AiPanel } from "./ai-panel";
 import { TabStrip } from "./tab-strip";
 import { Toolbar, type BrowserPanel } from "./toolbar";
 
@@ -172,7 +173,10 @@ export function BrowserClient({ notebookId }: { notebookId?: string } = {}) {
 
         {panel && settings && (
           <aside className="flex w-[380px] shrink-0 flex-col border-l border-border bg-surface" aria-label="Panneau latéral" data-browser-panel={panel}>
-            <PanelContent panel={panel} notebookId={notebookId} />
+            {panel === "ai"
+              ? <AiPanel api={api} tab={activeTab} settings={settings} onSettings={setSettings} notebookId={notebookId}
+                  save={async () => ({ ok: false, message: "Enregistrement dans le Notebook indisponible." })} />
+              : <PanelContent panel={panel} notebookId={notebookId} />}
           </aside>
         )}
       </div>
