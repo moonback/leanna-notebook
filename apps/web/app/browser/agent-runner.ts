@@ -19,7 +19,7 @@ export type JournalEntry = {
 };
 
 export type RunnerDeps = {
-  api: Pick<DesktopBrowserApi, "agentStart" | "agentCall" | "agentResolve" | "agentAbort" | "extractPage" | "getSelection" | "getState">;
+  api: Pick<DesktopBrowserApi, "agentStart" | "agentCall" | "agentResolve" | "agentAbort" | "agentEnd" | "extractPage" | "getSelection" | "getState">;
   fetch: typeof fetch;
   notebookId?: string;
   signal: AbortSignal;
@@ -112,8 +112,10 @@ async function activePage(deps: RunnerDeps): Promise<{ page?: PageContext; selec
 export async function runTurn(deps: RunnerDeps, history: TranscriptMessage[], userText: string, options: { reset?: boolean } = {}): Promise<TurnResult> {
   const transcript = trim([...history]);
   let assistantText = "";
+  let missionStarted = false;
   try {
     const { mode } = await deps.api.agentStart({ text: userText, reset: options.reset === true });
+    missionStarted = true;
     transcript.push({ role: "user", text: userText, ...(await activePage(deps)) });
     let continuation: string | undefined;
 
@@ -166,6 +168,8 @@ export async function runTurn(deps: RunnerDeps, history: TranscriptMessage[], us
     // Le texte partiel d'une réponse interrompue est conservé, comme dans le chat du Notebook.
     if (assistantText) transcript.push({ role: "assistant", text: assistantText });
     return { transcript, error: aborted ? "aborted" : error instanceof Error ? error.message : "internal" };
+  } finally {
+    if (missionStarted) await deps.api.agentEnd().catch(() => false);
   }
 }
 
