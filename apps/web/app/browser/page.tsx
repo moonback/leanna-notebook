@@ -6,7 +6,7 @@ import { getUser } from "@/lib/supabase/server";
 import { BrowserClient } from "./browser-client";
 import { ProRequired } from "./pro-required";
 
-export const metadata: Metadata = { title: "Leanna Browser" };
+export const metadata: Metadata = { title: "Browser" };
 
 export default async function BrowserPage() {
   const user = await getUser();
@@ -15,7 +15,7 @@ export default async function BrowserPage() {
   return (
     <div className="flex h-dvh flex-col overflow-hidden">
       <AppHeader hideFeedback>
-        <span className="truncate text-sm font-semibold">Leanna Browser</span>
+        <span className="truncate text-sm font-semibold"> Browser</span>
       </AppHeader>
       {allowed ? <BrowserClient /> : <ProRequired />}
     </div>
