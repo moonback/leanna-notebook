@@ -1376,6 +1376,28 @@ header.glass-toolbar nav button {
 }
 
 
+
+/* Respecte aussi le thème natif des contrôles du navigateur. */
+:root { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { color-scheme: dark; }
+}
+
+/* Sur petit écran, le panneau d'authentification doit pouvoir défiler
+   lorsque le clavier virtuel réduit la hauteur disponible. */
+@media (max-width: 767px) {
+  .mobile-auth-panel {
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+  .mobile-auth-content {
+    min-height: min-content;
+  }
+}
+
 /* Authentication — a focused, brand-consistent entry experience. */
 .mobile-auth-brand {
   background:
