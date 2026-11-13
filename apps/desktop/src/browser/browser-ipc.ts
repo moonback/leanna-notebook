@@ -37,9 +37,12 @@ export function browserHandlers({ manager, store }: BrowserIpcDeps): Record<stri
   // Une seule mission Browser peut contrôler l'état mutable de BrowserAgent à la fois.
   // Le propriétaire est déterminé par le renderer de confiance, jamais par Gemini.
   let agentOwner: "panel" | "voice" | null = null;
+  let agentMission: number | null = null;
   const requestedOwner = (input: unknown): "panel" | "voice" => record(input).owner === "voice" ? "voice" : "panel";
   const assertAgentOwner = (input: unknown) => {
+    const args = record(input);
     if (agentOwner !== requestedOwner(input)) throw new Error("browser_agent_busy");
+    if (typeof args.mission !== "number" || args.mission !== agentMission) throw new Error("browser_agent_stale_mission");
   };
   // Les tool calls d'une même mission sont également sérialisés dans Main.
   let agentQueue: Promise<unknown> = Promise.resolve();
@@ -55,9 +58,12 @@ export function browserHandlers({ manager, store }: BrowserIpcDeps): Record<stri
       if (agentOwner) throw new Error("browser_agent_busy");
       agentOwner = owner;
       try {
-        return agent.startMission(record(input).text, record(input).reset === true);
+        const started = agent.startMission(record(input).text, record(input).reset === true);
+        agentMission = started.mission;
+        return started;
       } catch (error) {
         agentOwner = null;
+        agentMission = null;
         throw error;
       }
     },
@@ -65,11 +71,11 @@ export function browserHandlers({ manager, store }: BrowserIpcDeps): Record<stri
     agentResolve: (input) => { assertAgentOwner(input); return enqueueAgent(() => { assertAgentOwner(input); return agent.resolve(record(input).actionId, record(input).approve); }); },
     agentAbort: (input) => {
       assertAgentOwner(input);
-      agent.abort(); agentOwner = null; return true;
+      agent.abort(); agentOwner = null; agentMission = null; return true;
     },
     agentEnd: (input) => enqueueAgent(() => {
       assertAgentOwner(input);
-      agentOwner = null; return true;
+      agentOwner = null; agentMission = null; return true;
     }),
 
     init: async () => {
