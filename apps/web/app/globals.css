@@ -1094,3 +1094,86 @@ button, [role="button"] {
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
 }
+
+/* Finitions des composants partagés utilisés dans l'ensemble des écrans. */
+.glass-card {
+  border-color: color-mix(in srgb, var(--border) 88%, var(--text) 12%);
+  border-radius: 1rem;
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-card);
+}
+.glass-card[data-interactive="true"] {
+  cursor: pointer;
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+.glass-card[data-interactive="true"]:hover {
+  border-color: color-mix(in srgb, var(--accent) 36%, var(--border));
+}
+.glass-panel {
+  border-color: var(--border);
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--surface-raised) 96%, var(--accent-soft));
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--text) 3%, transparent);
+}
+.glass-panel__header {
+  min-height: 3.25rem;
+  border-bottom-color: var(--border);
+}
+.glass-list-row {
+  min-height: 2.9rem;
+  border-radius: 0.7rem;
+}
+.glass-list-row:hover {
+  background: color-mix(in srgb, var(--accent-soft) 55%, var(--surface-raised));
+}
+.glass-control {
+  border-color: var(--border-strong);
+  border-radius: 0.75rem;
+  background: var(--surface-raised);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--text) 3%, transparent);
+}
+.glass-control:focus-within {
+  border-color: var(--focus);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus) 14%, transparent);
+}
+table thead th {
+  background: color-mix(in srgb, var(--surface) 72%, var(--surface-raised));
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+  font-size: 0.68rem;
+}
+table tbody tr:last-child td { border-bottom: 0; }
+table tbody tr:hover { background: color-mix(in srgb, var(--accent-soft) 35%, transparent); }
+
+/* Les barres de navigation restent sobres et lisibles, quel que soit le thème. */
+header.glass-toolbar {
+  border-bottom-color: var(--border);
+  background: color-mix(in srgb, var(--surface-raised) 90%, transparent);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--text) 2%, transparent);
+}
+header.glass-toolbar > a {
+  gap: 0.65rem;
+}
+header.glass-toolbar > a img {
+  border-radius: 0.75rem;
+}
+header.glass-toolbar nav { gap: 0.25rem; }
+header.glass-toolbar nav a,
+header.glass-toolbar nav button {
+  border-radius: 0.7rem;
+}
+.mobile-bottom-nav__item {
+  font-weight: 600;
+}
+.mobile-bottom-nav__item.is-active .mobile-bottom-nav__icon {
+  background: var(--accent-soft);
+}
+@media (min-width: 768px) {
+  .glass-panel { border-radius: 1.1rem; }
+  .glass-panel__header { padding-inline: 1.1rem; }
+}
+@media (max-width: 767px) {
+  .glass-panel, .glass-card { border-radius: 0.9rem; }
+  .glass-panel__header { padding-inline: 0.85rem; }
+  .glass-list-row { min-height: 3.15rem; }
+}
