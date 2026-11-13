@@ -20,7 +20,11 @@ function geminiSchema(schema: { type: string; properties?: Record<string, any>; 
     if (value.enum) property.enum = [...value.enum];
     if (value.minLength !== undefined) property.minLength = value.minLength;
     if (value.maxLength !== undefined) property.maxLength = value.maxLength;
-    if (value.type === "array") property.items = { type: "STRING" };
+    if (value.type === "array") {
+      property.items = { type: "STRING" };
+      if (value.minItems !== undefined) property.minItems = value.minItems;
+      if (value.maxItems !== undefined) property.maxItems = value.maxItems;
+    }
     return [key, property];
   }));
   return { type: "OBJECT", properties, ...(schema.required?.length ? { required: [...schema.required] } : {}) };
@@ -77,7 +81,7 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
           },
           required: ["type", "prompt"]
         }
-      }
+      },
       ...browserFunctionDeclarations
     ] }] } : {})
   };
