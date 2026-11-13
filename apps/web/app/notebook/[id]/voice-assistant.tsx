@@ -235,7 +235,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
               const saved = await saveBrowserRequest(outcome.save);
               result = { ...result, saved: saved.ok, message: saved.message };
             }
-            browserResponse = { status: outcome.status, tool: outcome.tool, summary: outcome.summary, result };
+            browserResponse = { status: outcome.save ? (result.saved === true ? "ok" : "error") : outcome.status, tool: outcome.tool, summary: outcome.summary, result };
           } else {
             browserResponse = outcome;
           }
