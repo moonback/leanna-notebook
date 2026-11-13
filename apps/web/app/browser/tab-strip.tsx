@@ -27,7 +27,7 @@ export function TabStrip({ api, state }: { api: DesktopBrowserApi; state: Deskto
   }
 
   return (
-    <div role="tablist" aria-label="Onglets" className="flex h-10 shrink-0 items-end gap-0.5 overflow-x-auto border-b border-border bg-surface-sunken px-2">
+    <div role="tablist" aria-label="Onglets" className="flex h-10 shrink-0 items-end gap-0.5 overflow-x-auto border-b border-border var(--bg) px-2">
       {state.tabs.map((tab, index) => {
         const active = tab.id === state.activeTabId;
         return (

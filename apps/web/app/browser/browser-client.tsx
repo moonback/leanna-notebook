@@ -297,7 +297,7 @@ export function BrowserClient({ notebookId }: { notebookId?: string } = {}) {
       </div>
 
       <div className="flex min-h-0 flex-1">
-        <div ref={viewportRef} className="relative min-w-0 flex-1 bg-surface-sunken" aria-label="Page web" data-browser-viewport>
+        <div ref={viewportRef} className="relative min-w-0 flex-1 var(--bg)" aria-label="Page web" data-browser-viewport>
           {ready && !showView && (
             <div className="absolute inset-0 grid place-items-center p-6" role="alert">
               <div className="max-w-md text-center">
