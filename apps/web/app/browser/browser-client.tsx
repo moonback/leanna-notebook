@@ -8,7 +8,9 @@ import {
   type DesktopBrowserApi, type DesktopBrowserBookmark, type DesktopBrowserCommand, type DesktopBrowserSettings, type DesktopBrowserState,
 } from "./browser-api";
 import { AiPanel } from "./ai-panel";
+import { LibraryPanel, type LibraryTab } from "./library-panel";
 import { saveToNotebook } from "./notebook-save";
+import { SettingsPanel } from "./settings-panel";
 import { NotebookSaveBar, useTargetNotebook } from "./notebook-save-bar";
 import { TabStrip } from "./tab-strip";
 import { Toolbar, type BrowserPanel } from "./toolbar";
@@ -28,6 +30,7 @@ export function BrowserClient({ notebookId }: { notebookId?: string } = {}) {
   const [failed, setFailed] = React.useState(false);
   const [panel, setPanel] = React.useState<BrowserPanel | null>(null);
   const [bookmarks, setBookmarks] = React.useState<{ bookmarks: DesktopBrowserBookmark[]; folders: string[] }>({ bookmarks: [], folders: [] });
+  const [libraryTab, setLibraryTab] = React.useState<LibraryTab>("bookmarks");
   const target = useTargetNotebook(notebookId);
   const viewportRef = React.useRef<HTMLDivElement>(null);
   const addressRef = React.useRef<HTMLInputElement>(null);
@@ -64,7 +67,10 @@ export function BrowserClient({ notebookId }: { notebookId?: string } = {}) {
     if (command === "focus-address") { addressRef.current?.focus(); addressRef.current?.select(); }
     else if (command === "toggle-ai-panel") togglePanel("ai");
     else if (command === "bookmark") toggleBookmark();
-    else if (command === "show-history" || command === "show-downloads") setPanel("library");
+    else if (command === "show-history" || command === "show-downloads") {
+      setLibraryTab(command === "show-history" ? "history" : "downloads");
+      setPanel("library");
+    }
   };
 
   React.useEffect(() => {
@@ -183,7 +189,10 @@ export function BrowserClient({ notebookId }: { notebookId?: string } = {}) {
                   <NotebookSaveBar api={api} tab={activeTab} target={target} />
                 </AiPanel>
               )
-              : <PanelContent panel={panel} notebookId={notebookId} />}
+              : panel === "library"
+                ? <LibraryPanel api={api} tab={libraryTab} onTab={setLibraryTab} bookmarks={bookmarks} onBookmarksChanged={refreshBookmarks} downloads={state.downloads}
+                    onOpen={(url) => void (activeTab ? api.navigate(activeTab.id, url) : api.createTab({ url }))} />
+                : <SettingsPanel api={api} settings={settings} onSettings={setSettings} />}
           </aside>
         )}
       </div>
@@ -191,7 +200,3 @@ export function BrowserClient({ notebookId }: { notebookId?: string } = {}) {
   );
 }
 
-function PanelContent({ panel }: { panel: BrowserPanel; notebookId?: string }) {
-  const title = panel === "ai" ? "Leanna" : panel === "library" ? "Bibliothèque" : "Réglages";
-  return <h2 className="border-b border-border px-4 py-3 text-sm font-semibold">{title}</h2>;
-}

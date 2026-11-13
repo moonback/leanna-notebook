@@ -458,3 +458,123 @@ test("interface : page d'erreur lisible et favoris depuis la barre d'adresse", a
   const saved = await win.evaluate(() => window.leannaDesktop.browser.getBookmarks());
   assert.equal(saved.bookmarks[0].title, "Les marées expliquées");
 });
+
+const openPanel = async (id) => {
+  if (await win.locator(`[data-browser-panel="${id}"]`).count() === 0) await win.locator(`[data-panel-toggle="${id}"]`).click();
+  await win.locator(`[data-browser-panel="${id}"]`).waitFor();
+};
+const bookmarksNow = () => win.evaluate(() => window.leannaDesktop.browser.getBookmarks());
+
+test("bibliothèque : favoris — dossier, déplacement, renommage, recherche, suppression", async () => {
+  await openPanel("library");
+  const panel = win.locator("[data-library-panel]");
+  await panel.getByLabel("Nom du nouveau dossier").fill("Science");
+  await panel.getByLabel("Créer le dossier").click();
+  await panel.locator('[data-folder="Science"]').waitFor();
+
+  await panel.getByLabel("Dossier de Les marées expliquées").selectOption("Science");
+  await waitFor(async () => (await bookmarksNow()).bookmarks[0].folder === "Science", "favori déplacé dans le dossier");
+  await panel.getByLabel("Renommer Les marées expliquées").click();
+  await panel.getByLabel("Nouveau titre du favori").fill("Marées (référence)");
+  await panel.getByLabel("Valider le titre").click();
+  await waitFor(async () => (await bookmarksNow()).bookmarks[0].title === "Marées (référence)", "favori renommé");
+
+  await panel.getByLabel("Renommer le dossier Science").click();
+  await panel.getByLabel("Nouveau nom du dossier").fill("Océans");
+  await panel.getByLabel("Valider le nom").click();
+  await waitFor(async () => { const b = await bookmarksNow(); return b.folders.includes("Océans") && b.bookmarks[0].folder === "Océans"; }, "dossier renommé");
+
+  await panel.getByLabel("Rechercher dans les favoris").fill("introuvable");
+  await panel.getByText("Aucun favori ne correspond.").waitFor();
+  await panel.getByLabel("Rechercher dans les favoris").fill("référence");
+  await panel.getByText("Marées (référence)").waitFor();
+  await shot("09-favoris");
+  await panel.getByLabel("Supprimer le favori Marées (référence)").click();
+  await waitFor(async () => (await bookmarksNow()).bookmarks.length === 0, "favori supprimé");
+});
+
+test("bibliothèque : historique — recherche, suppression ciblée, par période et totale", async () => {
+  const panel = win.locator("[data-library-panel]");
+  await panel.locator('[data-library-tab="history"]').click();
+  const history = () => win.evaluate(() => window.leannaDesktop.browser.getHistory());
+  const total = (await history()).length;
+  assert.ok(total >= 3, "les pages visitées pendant le parcours sont dans l'historique");
+
+  await panel.getByLabel("Rechercher dans l’historique").fill("Boréal");
+  await panel.getByText("Boréal 15 — fiche produit").first().waitFor();
+  assert.equal(await panel.getByText("Les marées expliquées").count(), 0);
+  await panel.getByLabel("Supprimer Boréal 15 — fiche produit de l’historique").click();
+  await waitFor(async () => !(await history()).some((h) => h.title.includes("Boréal")), "entrée supprimée");
+  await panel.getByLabel("Rechercher dans l’historique").fill("");
+
+  // Toutes les visites du parcours datent de moins d'une heure : « dernière heure » vide l'historique.
+  await panel.getByLabel("Période à effacer").selectOption("hour");
+  await panel.getByRole("button", { name: "Effacer" }).click();
+  await panel.getByText(/entrées? supprimées?\./).waitFor();
+  assert.equal((await history()).length, 0);
+  await go(`${site.url}/produit-a`, "/produit-a");
+  await waitFor(async () => (await history()).length >= 1, "nouvelle visite enregistrée");
+  await panel.getByLabel("Période à effacer").selectOption("all");
+  await panel.getByRole("button", { name: "Effacer" }).click();
+  await waitFor(async () => (await history()).length === 0, "historique entièrement effacé");
+});
+
+test("bibliothèque : téléchargements — liste, état, ouverture du dossier, retrait de l'entrée", async () => {
+  const dir = join(userData, "telechargements");
+  await mkdir(dir, { recursive: true });
+  await electronApp.evaluate(({ dialog, shell }, target) => {
+    globalThis.__ui = { shown: [], opened: 0 };
+    dialog.showSaveDialogSync = (_w, options) => `${target}\\${options.defaultPath.split(/[\\/]/).pop()}`;
+    shell.showItemInFolder = (path) => { globalThis.__ui.shown.push(path); };
+    shell.openPath = async () => { globalThis.__ui.opened += 1; return ""; };
+  }, dir);
+  const panel = win.locator("[data-library-panel]");
+  await panel.locator('[data-library-tab="downloads"]').click();
+  await panel.getByText(/Aucun téléchargement/).waitFor();
+
+  const tab = await activeTab();
+  await win.evaluate(([id, url]) => window.leannaDesktop.browser.navigate(id, url), [tab.id, `${site.url}/notes.txt`]);
+  await panel.locator('[data-download="completed"]').waitFor();
+  assert.match(await panel.locator('[data-download="completed"]').innerText(), /notes\.txt[\s\S]*Terminé/);
+  await shot("10-telechargements");
+  await panel.getByLabel("Afficher notes.txt dans son dossier").click();
+  await waitFor(() => electronApp.evaluate(() => globalThis.__ui.shown.length === 1), "dossier affiché");
+  assert.equal(await electronApp.evaluate(() => globalThis.__ui.opened), 0, "le fichier n'est pas ouvert");
+  await panel.getByLabel("Retirer notes.txt de la liste").click();
+  await panel.getByText(/Aucun téléchargement/).waitFor();
+  assert.ok((await require("node:fs/promises").readFile(join(dir, "notes.txt"), "utf8")).length > 0, "le fichier reste sur le disque");
+});
+
+test("réglages : modification depuis l'interface, puis persistance et restauration après redémarrage", async () => {
+  await openPanel("settings");
+  const panel = win.locator("[data-settings-panel]");
+  const settings = () => win.evaluate(() => window.leannaDesktop.browser.getSettings());
+  await panel.locator('[data-setting="searchEngine"]').selectOption("qwant");
+  await panel.locator('[data-setting="agentMode"]').selectOption("observation");
+  await panel.locator('[data-setting="popups"]').click();
+  await panel.locator('[data-setting="confirmations"]').click();
+  await waitFor(async () => { const s = await settings(); return s.searchEngine === "qwant" && s.agentMode === "observation" && s.popups === "block" && s.confirmations === "every-action"; }, "réglages appliqués");
+
+  await panel.locator('[data-setting="homepage"]').fill("javascript:alert(1)");
+  await panel.getByRole("button", { name: "OK", exact: true }).click();
+  await panel.getByText(/Adresse refusée/).waitFor();
+  assert.equal((await settings()).homepage, `${site.url}/vide`, "une page d'accueil dangereuse est refusée");
+  await shot("11-reglages");
+
+  await go(`${site.url}/article`, "/article");
+  const expected = (await state()).tabs.map((tab) => tab.url);
+  await new Promise((done) => setTimeout(done, 700));
+  await electronApp.close();
+  await launch();
+
+  const restored = await state();
+  assert.deepEqual(restored.tabs.map((tab) => tab.url), expected, "onglets restaurés à l'identique");
+  const after = await settings();
+  assert.deepEqual([after.searchEngine, after.agentMode, after.popups, after.confirmations, after.aiPanelOpen], ["qwant", "observation", "block", "every-action", false]);
+  // Le panneau Leanna était fermé à la sortie : il le reste ; le mode d'autonomie choisi est affiché à sa réouverture.
+  assert.equal(await win.locator("[data-ai-panel]").count(), 0);
+  await win.locator('[data-panel-toggle="ai"]').click();
+  assert.equal(await win.locator('[data-mode="observation"]').getAttribute("aria-checked"), "true");
+  await activeLoaded("/article");
+  assert.equal(await win.getByLabel("Adresse web ou recherche").inputValue(), `${site.url}/article`);
+});
