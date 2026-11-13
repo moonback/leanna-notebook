@@ -12,11 +12,11 @@ export const DialogTrigger = DialogPrimitive.Trigger;
 export const DialogClose = DialogPrimitive.Close;
 
 export function DialogContent({
-  title, description, children, size = "md", className,
-}: { title: string; description?: string; children: React.ReactNode; size?: "sm" | "md" | "lg"; className?: string }) {
+  title, description, children, size = "md", className, showOverlay = true,
+}: { title: string; description?: string; children: React.ReactNode; size?: "sm" | "md" | "lg"; className?: string; showOverlay?: boolean }) {
   return (
     <DialogPrimitive.Portal>
-      <DialogPrimitive.Overlay className="glass-backdrop fixed inset-0 z-[var(--z-overlay)]" />
+      {showOverlay && <DialogPrimitive.Overlay className="glass-backdrop fixed inset-0 z-[var(--z-overlay)]" />}
       <DialogPrimitive.Content
         className={cn(
           "glass-dialog glass-elevated fixed left-1/2 top-1/2 z-[var(--z-dialog)] grid max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto rounded-xl p-6 shadow-dialog",
