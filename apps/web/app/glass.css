@@ -31,6 +31,8 @@
   box-shadow: var(--glass-shadow-elevated);
   transform: translateY(-1px);
 }
+.glass-dialog[data-state="open"] { animation: glass-dialog-in var(--motion-base) var(--motion-ease) both; }
+@keyframes glass-dialog-in { from { opacity: 0; transform: translate(-50%, -49%) scale(.985); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
 .glass-elevated {
   background: var(--glass-surface-elevated);
   border: 1px solid var(--glass-stroke);
@@ -71,6 +73,7 @@
 }
 @media (prefers-reduced-transparency: reduce) {
   .glass-panel, .glass-elevated, .glass-toolbar { -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .glass-dialog[data-state="open"] { animation: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .glass-card, .glass-interactive { transition: none; }
