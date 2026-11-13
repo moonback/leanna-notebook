@@ -488,7 +488,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
       });
       await waitForSetup(ws, "Leanna");
       // Ouverture : Leanna consulte les sources puis résume le sujet en 3 lignes avant de répondre.
-      ws.send(JSON.stringify({ realtimeInput: { text: "La session vocale vient de démarrer. Consulte d'abord les sources du notebook avec search_notebook_sources, puis résume en trois phrases courtes le sujet actuel dont nous allons discuter." } }));
+      ws.send(JSON.stringify({ realtimeInput: { text: "La session vocale vient de démarrer. Consulte d'abord les sources du notebook avec search_notebook_sources, puis résume en deux phrases courtes le sujet actuel dont nous allons discuter." } }));
 
       const stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
       mediaStream.current = stream;
