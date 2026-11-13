@@ -25,7 +25,7 @@ export function detectLanguage(text: string): string {
  */
 export function ingestHandler(db: SupabaseClient, embedder: Embedder | null, opts: { summaries?: boolean; knowledge?: boolean; transcriber?: Transcriber | null } = {}): Handler {
   return async (job, ctx) => {
-    const { data: src, error } = await db.from("sources").select("id, kind, storage_path, origin_url, notebook_id, workspace_id, created_by, note_body, mime_type")
+    const { data: src, error } = await db.from("sources").select("id, kind, storage_path, origin_url, notebook_id, workspace_id, created_by, note_body, mime_type, external_ref")
       .eq("id", job.target_id!).single();
     if (error || !src) throw new PermanentError("source_not_found");
     if (src.workspace_id !== job.workspace_id || src.notebook_id !== job.notebook_id) throw new PermanentError("tenant_mismatch");
@@ -69,7 +69,8 @@ export function ingestHandler(db: SupabaseClient, embedder: Embedder | null, opt
       );
       const text = normalize(ex.text);
       const lang = detectLanguage(text);
-      const chunks = chunk(text, { pageStarts: ex.pageStarts, timeRanges: ex.timeRanges });
+      if (ex.breakAtPages && text !== ex.text) throw new Error("page_offsets_not_normalized"); // offsets de page calculés sur un texte déjà normalisé
+      const chunks = chunk(text, { pageStarts: ex.pageStarts, timeRanges: ex.timeRanges, hardCuts: ex.breakAtPages ? ex.pageStarts : [] });
       if (await ctx.cancelled()) return { cancelled: true };
 
       let vectors: number[][] | null = null;
@@ -98,6 +99,12 @@ export function ingestHandler(db: SupabaseClient, embedder: Embedder | null, opt
       });
       if (e2) throw e2;
       if (ex.title && src.kind === "web") await db.from("sources").update({ title: ex.title.slice(0, 300) }).eq("id", src.id);
+      if (ex.externalRef) {
+        const { error: refError } = await db.from("sources")
+          .update({ external_ref: { ...(src.external_ref as Record<string, unknown> | null ?? {}), ...ex.externalRef }, synced_at: new Date().toISOString() })
+          .eq("id", src.id);
+        if (refError) throw refError;
+      }
       if (opts.summaries) await enqueueSummaries(db, { workspace_id: src.workspace_id, notebook_id: src.notebook_id, source_id: src.kind === "note" ? undefined : src.id });
       // graphe de connaissances : même déclenchement pour les imports manuels et Deep Research
       if (opts.knowledge) await enqueueKnowledge(db, { workspace_id: src.workspace_id, notebook_id: src.notebook_id, source_id: src.id, text });

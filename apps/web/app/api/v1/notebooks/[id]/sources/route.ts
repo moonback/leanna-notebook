@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { ApiError, handle, parseBody, requireRole, requireUser } from "@/lib/api";
 import { log } from "@/lib/log";
 import { createServiceClient, createUserClient } from "@/lib/supabase/server";
-import { browserExternalRef, sourcesCreateSchema, uploadTypeOf, UPLOAD_TYPES } from "@/lib/validation";
+import { browserExternalRef, githubRepoName, sourcesCreateSchema, uploadTypeOf, UPLOAD_TYPES } from "@/lib/validation";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -53,6 +53,9 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
     } else if (item.type === "url") {
       // Depuis le navigateur, le titre de la page est connu ; le worker le remplacera par celui qu'il extrait.
       args = { p_kind: "web", p_title: item.browser?.title ?? new URL(item.url).hostname, p_origin_url: item.url };
+    } else if (item.type === "github") {
+      // Dépôt public : le worker télécharge l'archive et indexe les fichiers texte (un fichier = une page).
+      args = { p_kind: "github", p_title: githubRepoName(item.url), p_origin_url: item.url };
     } else {
       const path = `${prefix}${crypto.randomUUID()}/original.txt`;
       const { error } = await db.storage.from("sources").upload(path, new Blob([item.text], { type: "text/plain" }));
@@ -67,7 +70,7 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
     });
     if (error) throw error;
     // Provenance navigateur (favicon, date de consultation, date d'ajout) : colonne jsonb existante, aucune migration.
-    const origin = item.type === "upload" ? undefined : item.browser;
+    const origin = item.type === "upload" || item.type === "github" ? undefined : item.browser;
     if (origin) {
       const { error: refError } = await db.from("sources").update({ external_ref: browserExternalRef(origin, new Date()) }).eq("id", data as string);
       if (refError) log.warn("sources.browser_origin_failed", { source_id: data as string });

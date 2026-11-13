@@ -5,6 +5,7 @@ import { AiNotConfigured, AiUpstreamError, embedQuery, streamChat, type ChatMess
 import { CHAT_DEFAULT_INSTRUCTIONS, chatFixedRules, stripCitationMarkers } from "@/lib/ai/prompts/chat";
 import { formatPassages, resolveCitations, type Passage } from "@notebook/core/citations";
 import { log } from "@/lib/log";
+import { passageTitle, SOURCE_FILES_SELECT } from "@/lib/github-source";
 import { createServiceClient, createUserClient } from "@/lib/supabase/server";
 import { disabledFeatures } from "@/lib/ownership";
 
@@ -109,7 +110,7 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
 
   // Sources prêtes et sélectionnées (défaut : toutes sauf les désélections de l'utilisateur)
   const [{ data: ready }, { data: desel }, { data: nb }, { data: profile }, { data: promptOverride }] = await Promise.all([
-    db.from("sources").select("id, title, fts_config").eq("notebook_id", conv.notebook_id).eq("status", "ready"),
+    db.from("sources").select(`id, title, fts_config, ${SOURCE_FILES_SELECT}`).eq("notebook_id", conv.notebook_id).eq("status", "ready"),
     db.from("source_deselections").select("source_id").eq("notebook_id", conv.notebook_id).eq("user_id", user.id),
     db.from("notebooks").select("chat_style, chat_custom_prompt, response_length, output_language").eq("id", conv.notebook_id).single(),
     db.from("profiles").select("output_language").eq("id", user.id).single(),
@@ -199,9 +200,9 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
     p_query: text, p_fts_config: fts, p_source_ids: selected.map((s) => s.id), p_k: 12,
   });
   if (me) throw me;
-  const titles = new Map(selected.map((s) => [s.id, s.title]));
+  const byId = new Map(selected.map((s) => [s.id, s]));
   const passages: Passage[] = (hits as { chunk_id: string; source_id: string; content: string; char_start: number; char_end: number; page_start: number | null }[])
-    .map((h, i) => ({ n: i + 1, chunk_id: h.chunk_id, source_id: h.source_id, source_title: titles.get(h.source_id) ?? "source", content: h.content, char_start: h.char_start, char_end: h.char_end, page_start: h.page_start }));
+    .map((h, i) => ({ n: i + 1, chunk_id: h.chunk_id, source_id: h.source_id, source_title: passageTitle(byId.get(h.source_id), h.page_start), content: h.content, char_start: h.char_start, char_end: h.char_end, page_start: h.page_start }));
 
   const messages: ChatMessage[] = [
     { role: "system", content: systemPrompt(nb?.output_language ?? profile?.output_language ?? "fr", nb?.chat_style ?? "default", nb?.chat_custom_prompt ?? null, nb?.response_length ?? "default", promptOverride?.content) },

@@ -4,11 +4,18 @@ import { Readability } from "@mozilla/readability";
 import { parseHTML } from "linkedom";
 import { PermanentError } from "../worker.ts";
 import { FetchRefused, safeFetch } from "./ssrf.ts";
+import { fromGithub } from "./github.ts";
 import { fromEpub, fromPptx, readZip } from "./office.ts";
 import type { Transcriber } from "../ai/transcription.ts";
 import { normalize, type ChunkTimeRange } from "./chunker.ts";
 
-export type Extracted = { text: string; pageStarts: number[]; pageCount: number | null; title?: string; timeRanges?: ChunkTimeRange[] };
+export type Extracted = {
+  text: string; pageStarts: number[]; pageCount: number | null; title?: string; timeRanges?: ChunkTimeRange[];
+  /** Vrai : un chunk ne déborde jamais d'une page sur la suivante (dépôts GitHub : une page = un fichier). */
+  breakAtPages?: boolean;
+  /** Métadonnées à fusionner dans sources.external_ref. */
+  externalRef?: Record<string, unknown>;
+};
 export type PdfProgress = (page: number, total: number) => Promise<void> | void;
 export type PdfOcr = (file: Uint8Array, pageCount: number) => Promise<string>;
 
@@ -202,6 +209,12 @@ export async function extract(
       if (res.contentType.includes("pdf")) return finalize(await fromPdf(new Uint8Array(res.body), onPdfProgress, onPdfOcr));
       if (!res.contentType.includes("html") && !res.contentType.includes("text/plain")) throw new PermanentError("unsupported_type");
       return finalize(res.contentType.includes("html") ? fromHtml(res.body.toString("utf8")) : { text: res.body.toString("utf8"), pageStarts: [], pageCount: null });
+    }
+    case "github": {
+      if (!data.url) throw new PermanentError("invalid_github_url");
+      const repo = await fromGithub(data.url);
+      return finalize({ text: repo.text, pageStarts: repo.pageStarts, pageCount: repo.pageCount, title: repo.title,
+        breakAtPages: true, externalRef: { github: repo.github } });
     }
     default:
       throw new PermanentError("unsupported_type", `Type non pris en charge à ce jalon : ${kind}`);

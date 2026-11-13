@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import { createPortal } from "react-dom";
-import { AlertTriangle, ArrowUp, AudioLines, Bold, BookmarkPlus, BrainCircuit, Code, Eraser, Heading2, Italic, List, ListOrdered, Quote, Settings2, ThumbsDown, ThumbsUp, FileText, Globe, Inbox, Lock, NotebookPen, Pencil, Plus, Square, Sparkles, Trash2, Type, Upload, Search, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, FolderOpen, Telescope, Network, Scale, ExternalLink } from "lucide-react";
+import { AlertTriangle, ArrowUp, AudioLines, Bold, BookmarkPlus, BrainCircuit, Code, Eraser, Heading2, Italic, List, ListOrdered, Quote, Settings2, ThumbsDown, ThumbsUp, FileText, Globe, Inbox, Lock, NotebookPen, Pencil, Plus, Square, Sparkles, Trash2, Type, Upload, Search, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, FolderOpen, Telescope, Network, Scale, ExternalLink, GitBranch } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Textarea } from "@/components/ui/field";
 import { Alert, Badge, EmptyState, Progress, Skeleton } from "@/components/ui/feedback";
@@ -44,8 +44,11 @@ const ERRORS: Record<string, string> = {
   temporary_error: "Erreur temporaire : nouvelle tentative en cours.",
   lease_expired: "Le traitement a été interrompu. Supprimez puis réimportez la source.",
   archive_too_large: "Fichier compressé trop volumineux une fois décompressé.",
+  invalid_github_url: "Adresse de dépôt GitHub invalide.",
+  github_not_found: "Dépôt GitHub introuvable ou privé : seuls les dépôts publics sont pris en charge.",
+  too_large: "Source trop volumineuse.",
 };
-const KIND_ICON: Record<string, React.ReactNode> = { web: <Globe />, text: <Type />, note: <NotebookPen />, audio: <AudioLines /> };
+const KIND_ICON: Record<string, React.ReactNode> = { github: <GitBranch />, web: <Globe />, text: <Type />, note: <NotebookPen />, audio: <AudioLines /> };
 const busyStatus = (s: string) => s === "pending" || s === "processing";
 
 /** Vrai si la requête média correspond (suit le redimensionnement). Rendu serveur : vue bureau. */
@@ -822,6 +825,7 @@ function AddSourcesDialog({ open, onOpenChange, notebookId, onAdded, onWebSearch
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string>();
   const [url, setUrl] = React.useState("");
+  const [repoUrl, setRepoUrl] = React.useState("");
   const [paste, setPaste] = React.useState({ title: "", text: "" });
   const [selectedFiles, setSelectedFiles] = React.useState<File[]>([]);
   const [progress, setProgress] = React.useState<{ done: number; total: number } | null>(null);
@@ -894,12 +898,17 @@ function AddSourcesDialog({ open, onOpenChange, notebookId, onAdded, onWebSearch
         if (!urls.length) throw new Error("Collez au moins une adresse.");
         await post(urls.map((u) => ({ type: "url", url: u })));
         toast({ title: "Sources ajoutées", description: "Le traitement continue en arrière-plan.", tone: "success" });
+      } else if (tab === "github") {
+        const repos = repoUrl.split(/\s+/).filter(Boolean);
+        if (!repos.length) throw new Error("Collez l’adresse d’un dépôt GitHub public.");
+        await post(repos.map((u) => ({ type: "github", url: u })));
+        toast({ title: repos.length > 1 ? "Dépôts ajoutés" : "Dépôt ajouté", description: "Le code est indexé en arrière-plan ; Leanna pourra ensuite en parler.", tone: "success" });
       } else {
         if (!paste.title.trim() || !paste.text.trim()) throw new Error("Titre et texte sont requis.");
         await post([{ type: "text", title: paste.title, text: paste.text }]);
         toast({ title: "Source ajoutée", description: "Le traitement continue en arrière-plan.", tone: "success" });
       }
-      setUrl(""); setPaste({ title: "", text: "" }); setSelectedFiles([]); if (fileRef.current) fileRef.current.value = ""; if (folderRef.current) folderRef.current.value = "";
+      setUrl(""); setRepoUrl(""); setPaste({ title: "", text: "" }); setSelectedFiles([]); if (fileRef.current) fileRef.current.value = ""; if (folderRef.current) folderRef.current.value = "";
       onAdded();
       if (!keepDialogOpen) onOpenChange(false);
     } catch (err) { setError(err instanceof Error ? err.message : "Ajout impossible."); }
@@ -925,6 +934,7 @@ function AddSourcesDialog({ open, onOpenChange, notebookId, onAdded, onWebSearch
             <TabsList aria-label="Type de source" className="mobile-source-tabs">
               <TabsTrigger value="file"><Upload className="mr-1.5 inline size-3.5" aria-hidden />Fichier / dossier</TabsTrigger>
               <TabsTrigger value="url"><Globe className="mr-1.5 inline size-3.5" aria-hidden />Page web</TabsTrigger>
+              <TabsTrigger value="github"><GitBranch className="mr-1.5 inline size-3.5" aria-hidden />GitHub</TabsTrigger>
               <TabsTrigger value="text"><Type className="mr-1.5 inline size-3.5" aria-hidden />Texte</TabsTrigger>
             </TabsList>
             <TabsContent value="file" className="grid gap-3 pt-4">
@@ -990,6 +1000,11 @@ function AddSourcesDialog({ open, onOpenChange, notebookId, onAdded, onWebSearch
             <TabsContent value="url" className="pt-4">
               <Field id="urls" label="Adresses web" hint="Une par ligne. Seul le texte principal de la page est importé.">
                 <Textarea value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://…" />
+              </Field>
+            </TabsContent>
+            <TabsContent value="github" className="pt-4">
+              <Field id="github-repos" label="Dépôts GitHub publics" hint="Un par ligne, ex. https://github.com/propriétaire/dépôt ou …/tree/branche. README, documentation et code sont indexés (dépendances, binaires et fichiers générés ignorés).">
+                <Textarea value={repoUrl} onChange={(e) => setRepoUrl(e.target.value)} placeholder="https://github.com/…" />
               </Field>
             </TabsContent>
             <TabsContent value="text" className="grid gap-3 pt-4">
