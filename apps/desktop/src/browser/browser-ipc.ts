@@ -34,12 +34,31 @@ export function browserHandlers({ manager, store }: BrowserIpcDeps): Record<stri
     actInPage: (id, fn, arg) => manager.runInPage(id, fn, arg, [], 10_000, true),
     extract: (id, options) => extractPage(manager, id, options), selection: (id) => getSelection(manager, id),
   });
+  // Une seule mission Browser peut contrôler l'état mutable de BrowserAgent à la fois.
+  // Le propriétaire est déterminé par le renderer de confiance, jamais par Gemini.
+  let agentOwner: "panel" | "voice" | null = null;
+  const requestedOwner = (input: unknown): "panel" | "voice" => record(input).owner === "voice" ? "voice" : "panel";
+  const assertAgentOwner = (input: unknown) => {
+    if (agentOwner !== requestedOwner(input)) throw new Error("browser_agent_busy");
+  };
   return {
     // Agent : le mode d'autonomie est lu dans les réglages à chaque appel, jamais fourni par l'appelant.
-    agentStart: (input) => agent.startMission(record(input).text, record(input).reset === true),
-    agentCall: (input) => agent.call(record(input).name, record(input).args),
-    agentResolve: (input) => agent.resolve(record(input).actionId, record(input).approve),
-    agentAbort: () => { agent.abort(); return true; },
+    agentStart: (input) => {
+      const owner = requestedOwner(input);
+      if (agentOwner && agentOwner !== owner) throw new Error("browser_agent_busy");
+      agentOwner = owner;
+      return agent.startMission(record(input).text, record(input).reset === true);
+    },
+    agentCall: (input) => { assertAgentOwner(input); return agent.call(record(input).name, record(input).args); },
+    agentResolve: (input) => { assertAgentOwner(input); return agent.resolve(record(input).actionId, record(input).approve); },
+    agentAbort: (input) => {
+      assertAgentOwner(input);
+      agent.abort(); agentOwner = null; return true;
+    },
+    agentEnd: (input) => {
+      assertAgentOwner(input);
+      agentOwner = null; return true;
+    },
 
     init: async () => {
       await manager.init();
