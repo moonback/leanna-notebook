@@ -9,7 +9,7 @@ import { MobileBottomNav } from "./mobile-bottom-nav";
 export function AppHeader({ children, notebookId, hideFeedback = false }: { children?: React.ReactNode; notebookId?: string; hideFeedback?: boolean }) {
   return (
     <>
-      <header className="glass-toolbar sticky top-0 z-[var(--z-sticky)] flex h-[var(--header-h)] items-center gap-3 border-b border-glass-stroke px-3 sm:px-5">
+      <header className="glass-toolbar sticky top-0 z-[var(--z-sticky)] flex h-[var(--header-h)] items-center gap-3 border-b border-[var(--glass-stroke-soft)] px-3 sm:px-5">
         <Link href="/" className="flex shrink-0 items-center gap-2 rounded-md" aria-label="Notebook, accueil">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.png" alt="" aria-hidden width={32} height={32} className="size-12 shrink-0 object-contain" />
