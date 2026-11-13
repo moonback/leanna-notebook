@@ -32,6 +32,7 @@ export function BrowserClient({ notebookId }: { notebookId?: string } = {}) {
   const [state, setState] = React.useState<DesktopBrowserState>(EMPTY);
   const [settings, setSettings] = React.useState<DesktopBrowserSettings | null>(null);
   const [failed, setFailed] = React.useState(false);
+  const [voiceOpenRequest, setVoiceOpenRequest] = React.useState(0);
   const [panel, setPanel] = React.useState<BrowserPanel | null>(null);
   const [bookmarks, setBookmarks] = React.useState<{ bookmarks: DesktopBrowserBookmark[]; folders: string[] }>({ bookmarks: [], folders: [] });
   const [libraryTab, setLibraryTab] = React.useState<LibraryTab>("bookmarks");
@@ -82,6 +83,7 @@ export function BrowserClient({ notebookId }: { notebookId?: string } = {}) {
     let alive = true;
     const offState = api.onState((next) => { if (alive) setState(next); });
     const offCommand = api.onCommand((command) => onCommand.current(command));
+    const offOpenVoice = api.onOpenVoice(() => { if (alive) setVoiceOpenRequest((value) => value + 1); });
     void api.init().then((initial) => {
       if (!alive) return;
       setState(initial.state);
@@ -92,11 +94,16 @@ export function BrowserClient({ notebookId }: { notebookId?: string } = {}) {
       alive = false;
       offState();
       offCommand();
+      offOpenVoice();
       void api.setVisible(false).catch(() => undefined);
     };
   }, [api]);
 
   React.useEffect(() => { refreshBookmarks(); }, [refreshBookmarks]);
+
+  React.useEffect(() => {
+    if (api && ready) void api.setLauncherEnabled(Boolean(target.selected)).catch(() => undefined);
+  }, [api, ready, target.selected]);
 
   React.useEffect(() => {
     if (api && ready) void api.setVisible(showView).catch(() => undefined);
@@ -294,7 +301,7 @@ export function BrowserClient({ notebookId }: { notebookId?: string } = {}) {
           <Toolbar api={api} tab={activeTab} fullscreen={state.fullscreen} bookmarked={Boolean(bookmark)} onToggleBookmark={toggleBookmark}
             panel={panel} onPanel={togglePanel} addressRef={addressRef} />
         </div>
-        {target.selected && <div className={voiceStyles.voiceScope} data-browser-voice-scope><VoiceAssistant key={target.selected} notebookId={target.selected} conversationId="" browserApi={api} onOpenCitation={() => undefined}
+        {target.selected && <div className={voiceStyles.voiceScope} data-browser-voice-scope><VoiceAssistant key={target.selected} notebookId={target.selected} conversationId="" browserApi={api} onOpenCitation={() => undefined} openRequest={voiceOpenRequest} hideTrigger
           saveBrowserRequest={(request) => saveToNotebook(window.fetch.bind(window), target.selected, request)} /></div>}
       </div>
 
