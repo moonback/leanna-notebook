@@ -19,11 +19,13 @@
   box-shadow: var(--glass-shadow);
 }
 .glass-panel {
+  border-color: var(--glass-stroke-soft);
   background: var(--glass-surface);
   -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(118%);
   backdrop-filter: blur(var(--glass-blur)) saturate(118%);
 }
 .glass-card {
+  border-color: var(--glass-stroke-soft);
   transition: border-color var(--motion-base) var(--motion-ease), box-shadow var(--motion-base) var(--motion-ease), transform var(--motion-base) var(--motion-ease);
 }
 .glass-card[data-interactive="true"]:hover {
@@ -53,11 +55,16 @@
   border-color: var(--focus);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus) 16%, transparent);
 }
+.workspace-canvas {
+  background: radial-gradient(ellipse at 50% -38%, color-mix(in srgb, var(--accent-soft) 34%, transparent), transparent 62%), var(--bg);
+}
 .glass-message-user {
   background: color-mix(in srgb, var(--accent-soft) 78%, var(--surface-raised));
   border: 1px solid color-mix(in srgb, var(--accent) 18%, var(--border));
 }
 .glass-popover { background: var(--glass-surface-elevated); }
+.mobile-chat-assistant-message { min-width: 0; }
+.mobile-chat-composer { -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
 .glass-backdrop {
   background: color-mix(in srgb, var(--overlay) 42%, transparent);
   -webkit-backdrop-filter: blur(5px);
