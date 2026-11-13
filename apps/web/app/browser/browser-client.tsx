@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Globe, Plus, RotateCw, TriangleAlert } from "lucide-react";
+import { Download, Globe, Plus, RotateCw, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   getBrowserApi, shouldForwardKey,
@@ -15,6 +15,8 @@ import { SettingsPanel } from "./settings-panel";
 import { NotebookSaveBar, useTargetNotebook } from "./notebook-save-bar";
 import { TabStrip } from "./tab-strip";
 import { Toolbar, type BrowserPanel } from "./toolbar";
+
+const DESKTOP_DOWNLOAD_URL = "https://github.com/moonback/leanna-notebook/releases/latest";
 
 const EMPTY: DesktopBrowserState = { activeTabId: null, tabs: [], fullscreen: false, downloads: [] };
 
@@ -139,6 +141,11 @@ export function BrowserClient({ notebookId }: { notebookId?: string } = {}) {
               ? "Le navigateur n’a pas pu démarrer. Relancez Leanna Notebook Desktop."
               : "Le navigateur intégré s’appuie sur le moteur Chromium de l’application desktop. Ouvrez cette page depuis Leanna Notebook Desktop (version à jour) pour naviguer sans quitter Leanna."}
           </p>
+          <Button asChild className="mt-4">
+            <a href={DESKTOP_DOWNLOAD_URL} target="_blank" rel="noopener noreferrer">
+              <Download aria-hidden />Télécharger la dernière version de Leanna Desktop
+            </a>
+          </Button>
         </div>
       </main>
     );
