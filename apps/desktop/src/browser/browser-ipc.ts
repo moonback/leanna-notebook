@@ -125,11 +125,6 @@ export function browserHandlers({ manager, store }: BrowserIpcDeps): Record<stri
       manager.setVisible(visible);
       return true;
     },
-    setLauncherEnabled: (enabled) => {
-      if (typeof enabled !== "boolean") throw new Error("invalid_arguments");
-      manager.setLauncherEnabled(enabled);
-      return true;
-    },
 
     getSettings: () => manager.getSettings(),
     updateSettings: (patch) => manager.updateSettings(patch),

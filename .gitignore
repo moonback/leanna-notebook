@@ -11,4 +11,3 @@ apps/desktop/release
 .Leanna-audit.log
 .project-knowledge.json
 apps/desktop/e2e-artifacts
-apps\desktop\dist\preload.js
