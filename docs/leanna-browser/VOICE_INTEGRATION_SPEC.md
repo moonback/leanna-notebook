@@ -421,3 +421,18 @@ Les évaluations avec modèle réel sont séparées des tests unitaires et peuve
 6. Sécurité : fail-closed, validation Main, aucune approbation par modèle.
 7. Portée initiale : lecture, recherche, navigation, interaction web limitée et sauvegarde Notebook confirmée.
 8. Livraison : branche dédiée, tests, puis PR vers main après revue.
+
+## 16. État d'implémentation — branche `feat/browser-voice-duo-integration`
+
+Première tranche fonctionnelle intégrée :
+
+- Le endpoint de jeton Gemini Live déclare les 16 outils Browser V1 à la session **Leanna uniquement**, en convertissant les schémas existants de `apps/web/lib/browser/tools.ts` vers le format Gemini.
+- Le bouton **Mode vocal** est disponible dans la barre d'outils Browser lorsqu'un Notebook de destination est associé.
+- Les appels `browser_*` de Gemini sont transmis au processus Main via le pont Electron existant et exécutés par `BrowserAgent`.
+- Les actions retournant `confirmation_required` déclenchent une confirmation native explicite avant l'appel à `agentResolve`.
+- Les demandes `save_to_notebook` réutilisent le pipeline d'ingestion existant et le Notebook sélectionné ; l'échec de sauvegarde est renvoyé comme échec au modèle.
+- Un verrou Main distingue les missions `panel` et `voice`. Le verrou est libéré à la fin du tour ou à l'interruption. Les appels du mauvais propriétaire sont refusés.
+- Les appels Browser sont limités à huit par tour vocal et les identifiants d'appels déjà vus sont rejetés pour éviter une seconde exécution.
+- Roxane conserve son endpoint et sa session sans déclaration d'outil Browser.
+
+**Validation restante avant livraison :** typecheck, lint, tests Web/Desktop, E2E Electron, simulation des tool calls Gemini Live et essai réel sur Windows avec micro. Ces vérifications ne sont pas déclarées comme passées dans cette branche.
