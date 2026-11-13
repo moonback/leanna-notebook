@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { Compass, Globe, Settings, UserRound } from "lucide-react";
+import { Compass, Settings, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { BrowserNavLink } from "./browser-nav-link";
 import { FeedbackButton } from "./feedback-button";
 import { MobileBottomNav } from "./mobile-bottom-nav";
 
@@ -21,9 +22,7 @@ export function AppHeader({ children, notebookId, hideFeedback = false }: { chil
           <Button asChild variant="ghost" size="sm" className="gap-1.5">
             <Link href="/discover" aria-label="Découvrir des notebooks"><Compass aria-hidden /><span className="hidden md:inline">Découvrir</span></Link>
           </Button>
-          <Button asChild variant="ghost" size="sm" className="gap-1.5">
-            <Link href="/browser" aria-label="Ouvrir Leanna Browser"><Globe aria-hidden /><span className="hidden md:inline">Browser</span></Link>
-          </Button>
+          <BrowserNavLink />
           <div id="app-header-notebook-actions" className="flex items-center empty:hidden" />
           {!notebookId && !hideFeedback && <FeedbackButton />}
           <Button asChild variant="ghost" size="icon" aria-label="Mon profil" title="Mon profil">

@@ -57,7 +57,7 @@ function useMediaQuery(query: string): boolean {
   );
 }
 
-export function Workspace({ notebookId, initialTitle, role, allowCopies, disabledFeatures = [] }: { notebookId: string; initialTitle: string; role: Role; allowCopies: boolean; disabledFeatures?: string[] }) {
+export function Workspace({ notebookId, initialTitle, role, allowCopies, disabledFeatures = [], browserEnabled = false }: { notebookId: string; initialTitle: string; role: Role; allowCopies: boolean; disabledFeatures?: string[]; browserEnabled?: boolean }) {
   const canEdit = role === "editor" || role === "owner";
   const [title, setTitle] = React.useState(initialTitle);
   const [titleSlot, setTitleSlot] = React.useState<HTMLElement | null>(null);
@@ -341,7 +341,7 @@ export function Workspace({ notebookId, initialTitle, role, allowCopies, disable
       {actionsSlot && createPortal(
         <>
           <NotebookActionsMenu notebookId={notebookId} allowCopies={allowCopies} canCopy={role === "owner" || (role !== "chat" && allowCopies)} canShare={role === "owner"} />
-          {canEdit && <a href={"/notebook/" + encodeURIComponent(notebookId) + "/browser"} aria-label="Ouvrir le navigateur web" title="Ouvrir le navigateur web"><Button type="button" size="icon-sm" variant="ghost"><Globe aria-hidden /></Button></a>}
+          {canEdit && browserEnabled && <a href={"/notebook/" + encodeURIComponent(notebookId) + "/browser"} aria-label="Ouvrir le navigateur web" title="Ouvrir le navigateur web"><Button type="button" size="icon-sm" variant="ghost"><Globe aria-hidden /></Button></a>}
         </>,
         actionsSlot,
       )}

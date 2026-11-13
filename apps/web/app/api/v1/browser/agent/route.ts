@@ -1,6 +1,7 @@
 import { type NextRequest } from "next/server";
 import { ApiError, handle, parseBody, requireRole, requireUser } from "@/lib/api";
 import { AiNotConfigured, AiUpstreamError, streamChat, type ToolCall } from "@/lib/ai/openrouter";
+import { canUseBrowser } from "@/lib/browser/access";
 import { MAX_STEPS, agentRequestSchema, buildBrowserMessages } from "@/lib/browser/context";
 import { signContinuation, verifyContinuation } from "@/lib/browser/continuation";
 import { toolDefinitions } from "@/lib/browser/tools";
@@ -20,6 +21,7 @@ const LANG_NAMES: Record<string, string> = { fr: "français", en: "anglais", es:
  */
 export const POST = handle(async (req: NextRequest) => {
   const user = await requireUser();
+  if (!(await canUseBrowser(user.id))) throw new ApiError(403, "pro_required");
   const body = await parseBody(req, agentRequestSchema);
   const secret = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!secret) throw new ApiError(503, "ai_not_configured");
