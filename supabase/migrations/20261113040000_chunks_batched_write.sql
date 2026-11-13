@@ -51,3 +51,6 @@ revoke execute on function public.begin_chunks(uuid, text, regconfig), public.ap
                          public.finish_chunks(uuid, text, int, int) from public, anon, authenticated;
 grant execute on function public.begin_chunks(uuid, text, regconfig), public.append_chunks(uuid, jsonb),
                         public.finish_chunks(uuid, text, int, int) to service_role;
+
+-- PostgREST : rendre les nouvelles fonctions visibles sans redémarrage (sinon PGRST202).
+notify pgrst, 'reload schema';

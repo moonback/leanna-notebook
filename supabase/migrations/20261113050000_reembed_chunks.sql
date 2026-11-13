@@ -14,3 +14,6 @@ end $$;
 
 revoke execute on function public.set_chunk_embeddings(jsonb, text) from public, anon, authenticated;
 grant execute on function public.set_chunk_embeddings(jsonb, text) to service_role;
+
+-- PostgREST : rendre les nouvelles fonctions visibles sans redémarrage (sinon PGRST202).
+notify pgrst, 'reload schema';
