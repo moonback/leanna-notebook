@@ -137,13 +137,19 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
   const mounted = React.useRef(true);
   const intentionalClose = React.useRef(false);
   const browserMissionStarted = React.useRef(false);
+  const browserMissionId = React.useRef<number | null>(null);
   const browserToolCallIds = React.useRef(new Set<string>());
   const browserToolCallsThisTurn = React.useRef(0);
 
   const stop = React.useCallback(() => {
     rlog("stop() appelé", { nodes: playbackNodes.current.size, roxaneSpeaking: roxaneSpeaking.current, stack: new Error().stack?.split("\n").slice(2, 5).join(" | ") });
     intentionalClose.current = true;
-    if (browserApi && browserMissionStarted.current) { void browserApi.agentAbort({ owner: "voice" }).catch(() => undefined); browserMissionStarted.current = false; }
+    if (browserApi && browserMissionId.current !== null) {
+      const mission = browserMissionId.current;
+      void browserApi.agentAbort({ owner: "voice", mission }).catch(() => undefined);
+      browserMissionId.current = null;
+      browserMissionStarted.current = false;
+    }
     socket.current?.close();
     socket.current = null;
     roxaneSocket.current?.close();
@@ -219,13 +225,16 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
         try {
           if (!browserApi) throw new Error("Le navigateur intégré n'est pas disponible dans cette session.");
           if (!browserMissionStarted.current) {
-            await browserApi.agentStart({ text: userTurn.current.slice(0, 8000), reset: false, owner: "voice" });
+            const started = await browserApi.agentStart({ text: userTurn.current.slice(0, 8000), reset: false, owner: "voice" });
+            browserMissionId.current = started.mission;
             browserMissionStarted.current = true;
           }
-          let outcome = await browserApi.agentCall({ name: call.name.slice("browser_".length), args: call.args ?? {}, owner: "voice" });
+          const mission = browserMissionId.current;
+          if (mission === null) throw new Error("Mission Browser vocale invalide.");
+          let outcome = await browserApi.agentCall({ name: call.name.slice("browser_".length), args: call.args ?? {}, owner: "voice", mission });
           if (outcome.status === "confirmation_required") {
             const approved = window.confirm(`Leanna souhaite effectuer cette action :\n\n${outcome.summary}\n\nMotif : ${outcome.reason}\n\nAutoriser cette action ?`);
-            outcome = await browserApi.agentResolve({ actionId: outcome.actionId, approve: approved, owner: "voice" });
+            outcome = await browserApi.agentResolve({ actionId: outcome.actionId, approve: approved, owner: "voice", mission });
           }
           let browserResponse: Record<string, unknown>;
           if (outcome.status === "ok") {
@@ -409,6 +418,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
     try {
       if (!conversationId && !browserApi) throw new Error("Conversation du notebook en cours de chargement.");
       browserMissionStarted.current = false;
+      browserMissionId.current = null;
       browserToolCallIds.current.clear();
       browserToolCallsThisTurn.current = 0;
       userTurn.current = "";
@@ -531,8 +541,9 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
           } else {
             setStatus(roxaneEnabledRef.current ? `Échange ${completedTurnNumber}/2 · Roxane reste en écoute.` : "Leanna a répondu · Roxane est désactivée.");
           }
-          if (browserApi && browserMissionStarted.current) {
-            await browserApi.agentEnd({ owner: "voice" }).catch(() => false);
+          if (browserApi && browserMissionId.current !== null) {
+            await browserApi.agentEnd({ owner: "voice", mission: browserMissionId.current }).catch(() => false);
+            browserMissionId.current = null;
             browserMissionStarted.current = false;
           }
           const completedTurn = { user: userTurn.current.trim(), assistant: leannaAnswer, roxane: roxaneTurnText.current.trim(), sources: turnPassages.current.snapshot() };
