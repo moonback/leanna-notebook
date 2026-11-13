@@ -137,6 +137,8 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
   const mounted = React.useRef(true);
   const intentionalClose = React.useRef(false);
   const browserMissionStarted = React.useRef(false);
+  const browserToolCallIds = React.useRef(new Set<string>());
+  const browserToolCallsThisTurn = React.useRef(0);
 
   const stop = React.useCallback(() => {
     rlog("stop() appelé", { nodes: playbackNodes.current.size, roxaneSpeaking: roxaneSpeaking.current, stack: new Error().stack?.split("\n").slice(2, 5).join(" | ") });
@@ -204,6 +206,16 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
     const calls = message?.toolCall?.functionCalls ?? [];
     for (const call of calls) {
       if (call.name.startsWith("browser_")) {
+        if (browserToolCallIds.current.has(call.id)) {
+          socket.current?.send(JSON.stringify({ toolResponse: { functionResponses: [{ id: call.id, name: call.name, response: { error: "Appel dupliqué ignoré : aucune action supplémentaire n’a été exécutée." } }] } }));
+          continue;
+        }
+        browserToolCallIds.current.add(call.id);
+        if (browserToolCallsThisTurn.current >= 8) {
+          socket.current?.send(JSON.stringify({ toolResponse: { functionResponses: [{ id: call.id, name: call.name, response: { error: "Limite de 8 actions Browser par tour vocal atteinte. Demande à l’utilisateur de préciser la suite." } }] } }));
+          continue;
+        }
+        browserToolCallsThisTurn.current += 1;
         try {
           if (!browserApi) throw new Error("Le navigateur intégré n'est pas disponible dans cette session.");
           if (!browserMissionStarted.current) {
@@ -397,6 +409,8 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
     try {
       if (!conversationId && !browserApi) throw new Error("Conversation du notebook en cours de chargement.");
       browserMissionStarted.current = false;
+      browserToolCallIds.current.clear();
+      browserToolCallsThisTurn.current = 0;
       userTurn.current = "";
       assistantTurn.current = "";
       turnSourceIds.current.clear();
@@ -536,6 +550,8 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
           assistantTurn.current = "";
           turnCompletePending.current = false;
           browserMissionStarted.current = false;
+          browserToolCallIds.current.clear();
+          browserToolCallsThisTurn.current = 0;
           setState("listening");
           setStatus("À vous de parler. Posez votre prochaine question.");
         } catch (error) {
