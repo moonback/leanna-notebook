@@ -14,6 +14,7 @@ import { knowledgeExtractHandler } from "./knowledge/extract.ts";
 import { contradictionsHandler } from "./knowledge/contradictions.ts";
 import { transcriberFromEnv } from "./ai/transcription.ts";
 import { speechFromEnv } from "./ai/speech.ts";
+import { SOURCE_KINDS } from "./ingest/extract.ts";
 
 const url = process.env.SUPABASE_URL;
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -68,6 +69,7 @@ process.on("SIGTERM", () => (stopping = true));
 process.on("SIGINT", () => (stopping = true));
 
 console.log(`worker ${workerId} démarré, types gérés : ${Object.keys(handlers).join(", ") || "aucun"}`);
+console.log(`types de source pris en charge : ${SOURCE_KINDS.join(", ")}${process.env.GITHUB_TOKEN ? " (GITHUB_TOKEN configuré)" : " (GITHUB_TOKEN absent : 60 requêtes GitHub/heure)"}`);
 // Jobs d'un worker mort (bail expiré) : remis en file, ou échec + crédit rendu. Sûr à plusieurs workers.
 let lastSweep = 0;
 while (!stopping) {

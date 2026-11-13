@@ -30,6 +30,8 @@ export function ingestHandler(db: SupabaseClient, embedder: Embedder | null, opt
       .eq("id", job.target_id!).single();
     if (error || !src) throw new PermanentError("source_not_found");
     if (src.workspace_id !== job.workspace_id || src.notebook_id !== job.notebook_id) throw new PermanentError("tenant_mismatch");
+    const startedAt = Date.now();
+    console.log(`[ingest] début source=${src.id} kind=${src.kind}${src.origin_url ? ` url=${src.origin_url}` : ""}${src.storage_path ? ` fichier=${src.storage_path}` : ""}`);
 
     // Mise à jour d'un dépôt GitHub déjà indexé : rien à refaire si le dernier commit n'a pas changé.
     const knownCommit = (src.external_ref as { github?: { commit?: string | null } } | null)?.github?.commit;
@@ -37,6 +39,7 @@ export function ingestHandler(db: SupabaseClient, embedder: Embedder | null, opt
       const { count } = await db.from("chunks").select("id", { count: "exact", head: true }).eq("source_id", src.id);
       if (count && sameCommit(knownCommit, await (opts.latestCommit ?? latestGithubCommit)(src.origin_url))) {
         await db.from("sources").update({ status: "ready", error_code: null, synced_at: new Date().toISOString() }).eq("id", src.id);
+        console.log(`[ingest] source=${src.id} dépôt inchangé (commit ${knownCommit}), rien à réindexer`);
         return { unchanged: true, commit: knownCommit };
       }
     }
@@ -119,9 +122,11 @@ export function ingestHandler(db: SupabaseClient, embedder: Embedder | null, opt
       if (opts.summaries) await enqueueSummaries(db, { workspace_id: src.workspace_id, notebook_id: src.notebook_id, source_id: src.kind === "note" ? undefined : src.id });
       // graphe de connaissances : même déclenchement pour les imports manuels et Deep Research
       if (opts.knowledge) await enqueueKnowledge(db, { workspace_id: src.workspace_id, notebook_id: src.notebook_id, source_id: src.id, text });
+      console.log(`[ingest] ok source=${src.id} kind=${src.kind} chunks=${chunks.length} pages=${ex.pageCount ?? "-"} mots=${text.split(/\s+/).filter(Boolean).length} en ${Date.now() - startedAt}ms`);
       return { chunks: chunks.length, embedded: Boolean(vectors), language: lang, pages: ex.pageCount };
     } catch (e) {
       const code = e instanceof PermanentError ? e.code : "temporary_error";
+      console.error(`[ingest] échec source=${src.id} kind=${src.kind} code=${code} ${e instanceof PermanentError ? "(définitif)" : "(nouvelle tentative)"} :`, e instanceof Error ? e.message : e);
       await db.from("sources").update({ status: e instanceof PermanentError ? "failed" : "pending", error_code: code }).eq("id", src.id);
       throw e;
     }

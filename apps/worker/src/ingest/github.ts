@@ -169,6 +169,7 @@ function notebookText(json: string): string {
 }
 
 const GITHUB_HOSTS = ["api.github.com", "codeload.github.com"];
+const log = (msg: string, data?: Record<string, unknown>) => console.log(`[github] ${msg}`, data ? JSON.stringify(data) : "");
 
 function authHeaders(): Record<string, string> | undefined {
   const token = process.env.GITHUB_TOKEN; // optionnel : relève la limite de 60 requêtes/heure de l'API anonyme
@@ -186,8 +187,13 @@ export async function latestGithubCommit(rawUrl: string, fetcher: typeof safeFet
     const res = await fetcher(`https://api.github.com/repos/${repo.owner}/${repo.repo}/commits/${encodeURIComponent(repo.ref ?? "HEAD")}`, 0,
       { maxBytes: 4096, allowHosts: GITHUB_HOSTS, accept: "application/vnd.github.sha", headers: authHeaders() });
     const sha = res.body.toString("utf8").trim();
-    return /^[0-9a-f]{40}$/.test(sha) ? sha : null;
-  } catch { return null; }
+    const valid = /^[0-9a-f]{40}$/.test(sha);
+    log("dernier commit", { repo: `${repo.owner}/${repo.repo}`, ref: repo.ref ?? "HEAD", sha: valid ? sha : null, body: valid ? undefined : sha.slice(0, 200) });
+    return valid ? sha : null;
+  } catch (e) {
+    log("dernier commit indéterminable, réimport par prudence", { repo: `${repo.owner}/${repo.repo}`, error: e instanceof Error ? e.message : String(e) });
+    return null;
+  }
 }
 
 /** Vrai si le commit connu (court, issu de l'archive) désigne le même commit que le SHA complet. */
@@ -197,12 +203,15 @@ export const sameCommit = (known: string | null | undefined, latest: string | nu
 /** Télécharge et assemble un dépôt public. Erreurs attendues : PermanentError avec code stable. */
 export async function fromGithub(rawUrl: string, fetcher: typeof safeFetch = safeFetch) {
   const repo = parseGithubUrl(rawUrl);
-  if (!repo) throw new PermanentError("invalid_github_url", "Adresse de dépôt GitHub invalide.");
+  if (!repo) { log("URL non reconnue", { url: rawUrl }); throw new PermanentError("invalid_github_url", "Adresse de dépôt GitHub invalide."); }
   const archive = `https://api.github.com/repos/${repo.owner}/${repo.repo}/zipball${repo.ref ? `/${encodeURIComponent(repo.ref)}` : ""}`;
+  log("téléchargement de l'archive", { url: archive, token: Boolean(process.env.GITHUB_TOKEN) });
+  const startedAt = Date.now();
   let res;
   try {
     res = await fetcher(archive, 5, { maxBytes: MAX_ARCHIVE_BYTES, allowHosts: GITHUB_HOSTS, accept: "application/zip, application/vnd.github+json", headers: authHeaders() });
   } catch (e) {
+    log("échec du téléchargement", { url: archive, error: e instanceof Error ? `${e.name}: ${e.message}` : String(e), ms: Date.now() - startedAt });
     if (e instanceof FetchRefused) {
       if (e.message === "http_404") throw new PermanentError("github_not_found", "Dépôt introuvable ou privé (seuls les dépôts publics sont pris en charge).");
       if (e.message === "too_large") throw new PermanentError("too_large", "Archive du dépôt supérieure à 60 Mo.");
@@ -212,7 +221,11 @@ export async function fromGithub(rawUrl: string, fetcher: typeof safeFetch = saf
     }
     throw e;
   }
+  log("archive reçue", { url: res.url, contentType: res.contentType, bytes: res.body.length, ms: Date.now() - startedAt });
   const { files, skipped, commit } = readRepoZip(new Uint8Array(res.body));
+  log("archive lue", { commit, indexables: files.length, ignores: skipped });
   if (!files.length) throw new PermanentError("empty_content", "Aucun fichier texte exploitable dans ce dépôt.");
-  return buildRepoDocument({ ...repo, commit }, files, skipped);
+  const doc = buildRepoDocument({ ...repo, commit }, files, skipped);
+  log("document assemblé", { pages: doc.pageCount, caracteres: doc.text.length, nonInclus: doc.github.truncated });
+  return doc;
 }

@@ -47,6 +47,9 @@ export function parseOcrPages(recognized: string, pageCount: number): Pick<Extra
 }
 
 
+/** Types de source que ce worker sait extraire (affiché au démarrage pour vérifier la version déployée). */
+export const SOURCE_KINDS = ["audio", "note", "txt", "md", "csv", "text", "pdf", "pptx", "epub", "docx", "web", "github"] as const;
+
 const MAX_WORDS = 500_000;
 const PDF_PAGE_SEPARATOR = "\n\n";
 
@@ -219,6 +222,6 @@ export async function extract(
         breakAtPages: true, preformatted: true, externalRef: { github: repo.github } });
     }
     default:
-      throw new PermanentError("unsupported_type", `Type non pris en charge à ce jalon : ${kind}`);
+      throw new PermanentError("unsupported_type", `Type non pris en charge par ce worker : ${kind} (types connus : ${SOURCE_KINDS.join(", ")})`);
   }
 }
