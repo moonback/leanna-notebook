@@ -19,7 +19,7 @@ export function DialogContent({
       <DialogPrimitive.Overlay className="glass-backdrop fixed inset-0 z-[var(--z-overlay)]" />
       <DialogPrimitive.Content
         className={cn(
-          "glass-elevated fixed left-1/2 top-1/2 z-[var(--z-dialog)] grid max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto rounded-xl p-6 shadow-dialog data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-[0.98]",
+          "glass-dialog glass-elevated fixed left-1/2 top-1/2 z-[var(--z-dialog)] grid max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto rounded-xl p-6 shadow-dialog",
           { sm: "max-w-sm", md: "max-w-lg", lg: "max-w-3xl" }[size],
           className,
         )}
