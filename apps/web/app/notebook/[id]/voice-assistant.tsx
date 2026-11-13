@@ -147,6 +147,9 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
   const roxaneAskedForTurn = React.useRef(false);
   const completedTurnCount = React.useRef(0);
   const roxaneSpeaking = React.useRef(false);
+  const roxaneSilent = React.useRef(false);
+  const roxanePending = React.useRef<{ data: string; mime: string }[]>([]);
+  const roxaneAddressed = React.useRef(false);
   const audioContext = React.useRef<AudioContext | null>(null);
   const mediaStream = React.useRef<MediaStream | null>(null);
   const processor = React.useRef<AudioWorkletNode | null>(null);
@@ -362,7 +365,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
     try {
       await new Promise<void>((resolve, reject) => {
         const timeout = window.setTimeout(() => reject(new Error("Délai de connexion dépassé pour Roxane.")), 15000);
-        connection.onopen = () => connection.send(JSON.stringify({ setup: { model: `models/${payload.model}`, generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } } } }, systemInstruction: payload.config.systemInstruction, inputAudioTranscription: {}, outputAudioTranscription: {} } }));
+        connection.onopen = () => connection.send(JSON.stringify({ setup: { model: `models/${payload.model}`, generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } } } }, systemInstruction: payload.config.systemInstruction, tools: payload.config.tools, inputAudioTranscription: {}, outputAudioTranscription: {} } }));
         connection.onerror = () => { window.clearTimeout(timeout); reject(new Error("Connexion à Roxane impossible.")); };
         connection.onclose = () => { window.clearTimeout(timeout); if (roxaneSocket.current === connection) roxaneSocket.current = null; reject(new Error("La session de Roxane a été fermée avant son initialisation.")); };
         connection.onmessage = (event) => {
@@ -387,6 +390,13 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
               try {
                 const nextMessage = parseFrame(nextEvent.data);
                 if (!nextMessage) { rlog("frame illisible", { type: typeof nextEvent.data }); return; }
+                // Roxane répond à l'outil de silence : elle ne parle pas ce tour-ci. Le résultat doit être renvoyé pour que la session continue.
+                if (nextMessage.toolCall) {
+                  const calls = nextMessage.toolCall.functionCalls ?? [];
+                  if (calls.some((call) => call.name === "rester_silencieuse")) roxaneSilent.current = true;
+                  connection.send(JSON.stringify({ toolResponse: { functionResponses: calls.map((call) => ({ id: call.id, name: call.name, response: { result: "ok" } })) } }));
+                  return;
+                }
                 if (!nextMessage.serverContent) { rlog("frame hors serverContent", { keys: Object.keys(nextMessage), brut: JSON.stringify(nextMessage).slice(0, 300) }); return; }
                 const data = nextMessage.serverContent, spoken = data.outputTranscription?.text;
                 const audioParts = (data.modelTurn?.parts ?? []).filter((p) => p.inlineData?.data);
@@ -402,13 +412,17 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
                 });
                 if (data.interrupted) rlog("INTERRUPTED reçu de la session Roxane");
                 if (spoken) { roxaneTurnText.current += spoken; setRoxaneAnswer((current) => current + spoken); setStatus("Roxane intervient…"); }
+                // L'audio est mis en attente : il ne part qu'à la fin du tour, si Roxane n'a pas choisi de rester silencieuse.
                 for (const part of data.modelTurn?.parts ?? []) {
-                  if (!part.inlineData?.data) continue;
-                  await playPcm(part.inlineData.data, part.inlineData.mimeType ?? "audio/pcm;rate=24000");
-                  setState("speaking");
-                  setStatus("Roxane vous répond…");
+                  if (part.inlineData?.data) roxanePending.current.push({ data: part.inlineData.data, mime: part.inlineData.mimeType ?? "audio/pcm;rate=24000" });
                 }
-                if (data.turnComplete) { rlog("turnComplete Roxane", { nodes: playbackNodes.current.size }); roxaneTurnResolver.current?.(); roxaneTurnResolver.current = null; }
+                if (data.turnComplete) {
+                  const pending = roxanePending.current.splice(0);
+                  if (roxaneSilent.current) { roxaneTurnText.current = ""; setRoxaneAnswer(""); }
+                  else for (const chunk of pending) { await playPcm(chunk.data, chunk.mime); setState("speaking"); setStatus("Roxane vous répond…"); }
+                  rlog("turnComplete Roxane", { silencieuse: roxaneSilent.current, morceaux: pending.length, nodes: playbackNodes.current.size });
+                  roxaneTurnResolver.current?.(); roxaneTurnResolver.current = null;
+                }
               } catch (error) { rlog("erreur traitement frame", { error: String(error) }); }
             };
             resolve();
@@ -448,6 +462,9 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
       turnCompletePending.current = false;
       turnFinalizing.current = false;
       roxaneAskedForTurn.current = false;
+      roxaneAddressed.current = false;
+      roxaneSilent.current = false;
+      roxanePending.current = [];
       completedTurnCount.current = 0;
       roxaneTurnText.current = "";
       const ctx = new AudioContext();
@@ -509,16 +526,21 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
       setStatus("Connecté · je vous écoute. Parlez naturellement.");
       ws.onclose = () => { if (mounted.current && !intentionalClose.current) { stop(); setStatus("Session vocale terminée. Relancez-la pour continuer."); } };
       ws.onerror = () => { if (mounted.current) setStatus("Connexion vocale instable… vérifiez votre réseau."); };
-      const askRoxane = async (turnNumber: number) => {
-        if (!roxaneEnabledRef.current || roxaneAskedForTurn.current || !assistantTurn.current.trim() || !shouldInviteRoxane(turnNumber)) return;
+      const askRoxane = async (turnNumber: number, addressed: boolean) => {
+        if (!roxaneEnabledRef.current || roxaneAskedForTurn.current) return;
+        if (!addressed && (!assistantTurn.current.trim() || !shouldInviteRoxane(turnNumber))) return;
         roxaneAskedForTurn.current = true;
+        roxaneSilent.current = false;
+        roxanePending.current = [];
         const groundedSources = turnPassages.current.snapshot().map((passage) => `[Source ${passage.number}] ${passage.title}${passage.page ? `, page ${passage.page}` : ""}: ${passage.excerpt}`).join("\n");
         const prompt = [
-          "Voici le tour qui vient d'avoir lieu. Interviens comme Roxane uniquement si tu peux apporter une valeur ajout├®e r├®elle et pr├®cise.",
+          addressed
+            ? "L'utilisateur t'appelle directement par ton nom : réponds-lui, en deux à quatre phrases complètes, même si la question est simple."
+            : "Voici le tour qui vient d'avoir lieu. Décide d'abord : si tu n'as aucun apport réel, précis et utile, ne parle pas et appelle l'outil rester_silencieuse. Sinon, interviens comme Roxane.",
           `Question de l'utilisateur : ${userTurn.current.trim()}`,
-          `R├®ponse de Leanna : ${assistantTurn.current.trim()}`,
+          addressed ? "Leanna ne répond pas sur ce tour." : `Réponse de Leanna : ${assistantTurn.current.trim()}`,
           `Extraits v├®rifi├®s consult├®s : ${groundedSources || "Aucun extrait transmis"}`,
-          "Réponds maintenant à voix haute, en deux à quatre phrases complètes : relève un élément concret (hypothèse fragile, limite, contradiction, information manquante, conséquence pratique) ou pose une question utile pour approfondir.",
+          "Si tu parles, réponds à voix haute, en deux à quatre phrases complètes : relève un élément concret (hypothèse fragile, limite, contradiction, information manquante, conséquence pratique) ou pose une question utile pour approfondir.",
           "Ne répète pas Leanna, ne la félicite pas par réflexe et ne reformule pas sa réponse. Termine toujours ta dernière phrase.",
           "N'ajoute aucun fait absent des extraits."
         ].join("\n\n");
@@ -556,10 +578,11 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
         if (turnFinalizing.current || pendingSearches.current.count > 0) return;
         turnFinalizing.current = true;
         try {
-          const leannaAnswer = assistantTurn.current.trim();
+          const addressed = roxaneAddressed.current;
+          const leannaAnswer = addressed ? "" : assistantTurn.current.trim();
           const completedTurnNumber = ++completedTurnCount.current;
-          if (shouldInviteRoxane(completedTurnNumber)) {
-            await askRoxane(completedTurnNumber);
+          if (addressed || shouldInviteRoxane(completedTurnNumber)) {
+            await askRoxane(completedTurnNumber, addressed);
           } else {
             setStatus(roxaneEnabledRef.current ? `Échange ${completedTurnNumber}/2 · Roxane reste en écoute.` : "Leanna a répondu · Roxane est désactivée.");
           }
@@ -570,11 +593,12 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
           }
           const completedTurn = { user: userTurn.current.trim(), assistant: leannaAnswer, roxane: roxaneTurnText.current.trim(), sources: turnPassages.current.snapshot() };
           await persistVoiceTurn();
-          if (completedTurn.user && completedTurn.assistant) setTurnHistory((history) => [...history, completedTurn]);
+          if (completedTurn.user && (completedTurn.assistant || completedTurn.roxane)) setTurnHistory((history) => [...history, completedTurn]);
           setTranscript("");
           setAnswer("");
           setRoxaneAnswer("");
           roxaneAskedForTurn.current = false;
+          roxaneAddressed.current = false;
           roxaneTurnText.current = "";
           setSources([]);
           turnPassages.current.clear();
@@ -618,14 +642,16 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
           const heard = content?.inputTranscription?.text;
           const spoken = content?.outputTranscription?.text;
           if (heard) { userTurn.current += heard; setTranscript((v) => v + heard); }
-          if (spoken) {
+          // Appel direct : si l'utilisateur nomme Roxane, c'est elle qui répond et Leanna se tait pour ce tour.
+          if (roxaneEnabledRef.current && /\broxanne?\b/i.test(userTurn.current)) roxaneAddressed.current = true;
+          if (spoken && !roxaneAddressed.current) {
             assistantTurn.current += spoken;
             setAnswer((v) => v + spoken);
             setState("speaking");
             setStatus("Leanna vous répond…");
           }
           for (const part of content?.modelTurn?.parts ?? []) {
-            if (part.inlineData?.data) {
+            if (part.inlineData?.data && !roxaneAddressed.current) {
               await playPcm(part.inlineData.data, part.inlineData.mimeType ?? "audio/pcm;rate=24000");
               setState("speaking");
               setStatus("Leanna vous répond…");

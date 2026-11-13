@@ -120,7 +120,8 @@ describe("absence de contradictions entre prompts", () => {
     expect(roxane).not.toMatch(/browser_[a-z_]+|search_notebook_sources|create_studio_artifact/);
     expect(ROXANE_SYSTEM_PROMPT_V2).not.toMatch(/browser_[a-z_]+|search_notebook_sources|create_studio_artifact/);
     expect(roxane).toMatch(/Tu ne disposes d'aucun outil/);
-    expect(ROXANE_SYSTEM_PROMPT_V2).toMatch(/Tu ne disposes d'aucun outil/);
+    // Roxane n'a qu'un seul outil, celui de silence : elle ne peut ni chercher ni agir.
+    expect(ROXANE_SYSTEM_PROMPT_V2).toMatch(/Ton seul outil est rester_silencieuse/);
     // Les outils du navigateur n'existent pas à la voix, ceux de la voix n'existent pas dans le navigateur.
     expect(LEANNA_SYSTEM_PROMPT_V2).not.toMatch(/browser_[a-z_]+/);
     expect(leanna()).not.toMatch(/search_notebook_sources|create_studio_artifact/);
