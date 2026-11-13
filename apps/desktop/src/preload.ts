@@ -14,7 +14,7 @@ import type {
 const BROWSER_METHODS = [
   "init", "getState", "createTab", "activateTab", "closeTab", "duplicateTab", "moveTab", "navigate", "goBack",
   "goForward", "reload", "stop", "setZoom", "runCommand", "key", "setBounds", "setVisible", "getSettings",
-  "updateSettings", "setLauncherEnabled", "getHistory", "removeVisit", "clearHistory", "getBookmarks", "addBookmark", "updateBookmark",
+  "updateSettings", "getHistory", "removeVisit", "clearHistory", "getBookmarks", "addBookmark", "updateBookmark",
   "removeBookmark", "addFolder", "renameFolder", "removeFolder", "cancelDownload", "showDownloadInFolder",
   "removeDownload", "getPermissions", "setPermission", "clearBrowsingData", "extractPage", "getSelection",
   "agentStart", "agentCall", "agentResolve", "agentAbort", "agentEnd",
@@ -36,7 +36,6 @@ const browser = {
   ])),
   onState: (callback: (state: DesktopBrowserState) => void) => subscribe("browser:state", callback),
   onCommand: (callback: (command: DesktopBrowserCommand) => void) => subscribe("browser:command", callback),
-  onOpenVoice: (callback: () => void) => subscribe("browser:open-voice", callback),
 } as unknown as DesktopBrowserApi;
 
 const api: DesktopApi = {

@@ -45,12 +45,6 @@ Le bouton « Mode vocal » intégré au VoiceAssistant est masqué dans le conte
 - Le canal de lancement est émis par l'overlay natif et validé côté Main.
 - Aucun accès à l'agent Browser, au stockage ou aux permissions n'est ajouté à l'overlay.
 
-## État d’implémentation
-
-Le lanceur natif et son raccordement au Studio vocal sont implémentés dans cette branche : fenêtre enfant Electron transparente, événement de lancement relayé par le Main process vers le renderer de confiance, déclenchement de l’instance VoiceAssistant déjà montée, masquage du bouton React redondant et réservation d’un dock à droite pour que le WebContentsView ne recouvre pas le panneau vocal. Le lanceur est masqué lorsque le Browser ou le notebook associé n’est pas actif, ainsi que pendant le plein écran HTML.
-
-La validation runtime Electron (Windows, DPI, multi-écran, plein écran et clic réel) reste à effectuer : le dépôt distant ne fournit pas ici de session Electron locale permettant de l’exécuter.
-
 ## Critères d'acceptation
 
 - [ ] Le lanceur reste au-dessus de Google, YouTube et des pages longues avec scroll.
