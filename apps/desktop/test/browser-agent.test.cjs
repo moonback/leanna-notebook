@@ -199,11 +199,22 @@ test("mode autonome : actions courantes directes, actions sensibles et adresses 
   browser.state.element = { found: true, tag: "input", type: "password", label: "Mot de passe", fieldSensitive: true, formMethod: "post", signature: "sig-pw" };
   assert.equal((await agent.call("browser_type_text", { element: "e2", text: "hunter2" })).status, "confirmation_required");
 
+  // Saisie dans un champ ordinaire (recherche GET) : directe si le texte vient de la demande de l'utilisateur,
+  // confirmée si l'assistant l'a rédigé lui-même (il pourrait y glisser des données lues dans un autre onglet).
+  browser.state.element = { found: true, tag: "input", type: "search", label: "Recherche", formMethod: "get", signature: "sig-q" };
+  agent.startMission("Cherche « ordinateur portable » sur ce site");
+  assert.equal((await agent.call("browser_type_text", { element: "e3", text: "Ordinateur  portable", submit: true })).status, "ok");
+  const leak = await agent.call("browser_type_text", { element: "e3", text: "contenu de la messagerie : code 4921", submit: true });
+  assert.equal(leak.status, "confirmation_required");
+  assert.match(leak.reason, /absent de votre demande/);
+
   const save = await agent.call("browser_save_to_notebook", { mode: "text" });
   assert.equal(save.status, "confirmation_required");
   const saved = await agent.resolve(save.actionId, true);
   assert.deepEqual([saved.status, saved.save.mode, saved.save.url], ["ok", "text", "https://shop.test/produit"]);
-  assert.equal(actions(browser).filter((a) => a === "click" || a === "type").length, 1, "ni l'achat ni la saisie sensible n'ont été exécutés");
+  assert.equal(actions(browser).filter((a) => a === "click").length, 1, "l'achat n'a pas été exécuté");
+  assert.deepEqual(browser.log.filter((entry) => entry[0] === "type").map((entry) => entry[2]), ["Ordinateur  portable"],
+    "ni le mot de passe ni le texte rédigé par l'assistant n'ont été saisis");
 });
 
 test("injection de prompt : une adresse d'exfiltration fabriquée n'est jamais ouverte sans l'utilisateur", async () => {

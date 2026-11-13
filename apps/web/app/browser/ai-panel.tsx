@@ -201,7 +201,8 @@ export function AiPanel({ api, tab, settings, onSettings, notebookId, save, chil
                     {sources.map((url) => (
                       <button key={url} type="button" title={`Ouvrir ${url} dans un nouvel onglet`} onClick={() => void api.createTab({ url })}
                         className="inline-flex max-w-full items-center gap-1 rounded-pill border border-border px-2 py-0.5 text-2xs text-text-muted hover:bg-surface-raised hover:text-text">
-                        <ExternalLink className="size-3 shrink-0" aria-hidden /><span className="truncate">{hostOf(url)}</span>
+                        {/* Adresse affichée en entier (chemin et paramètres compris) : l'utilisateur voit où il va avant de cliquer. */}
+                        <ExternalLink className="size-3 shrink-0" aria-hidden /><span className="truncate">{url.replace(/^https?:\/\//, "").slice(0, 90)}</span>
                       </button>
                     ))}
                   </div>

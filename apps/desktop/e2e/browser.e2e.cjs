@@ -202,6 +202,60 @@ test("sécurité : schémas dangereux et redirections malveillantes bloqués", a
   await loaded("/article");
 });
 
+test("sécurité : une page ne peut pas lancer d'application externe (mailto:, protocoles personnalisés)", async () => {
+  await electronApp.evaluate(({ shell }) => {
+    globalThis.__external = 0;
+    shell.openExternal = async () => { globalThis.__external += 1; };
+  });
+  for (const target of ["mailto:quelquun@exemple.test", "ms-settings:privacy", "leanna-inconnu://ouvrir"]) {
+    await inPage("/article", `location.href = ${JSON.stringify(target)}; true`).catch(() => undefined);
+    await inPage("/article", `const a = document.createElement('a'); a.href = ${JSON.stringify(target)}; document.body.appendChild(a); a.click(); true`).catch(() => undefined);
+  }
+  await new Promise((done) => setTimeout(done, 500));
+  assert.equal(await electronApp.evaluate(() => globalThis.__external), 0, "aucun protocole externe n'a été transmis au système");
+  assert.ok(await tabByUrl("/article"));
+});
+
+test("permissions par origine : refus par défaut hors demande, question à l'utilisateur, mémorisation, jamais en privé", async () => {
+  const origin = site.url;
+  await electronApp.evaluate(({ dialog }) => {
+    globalThis.__prompts = [];
+    dialog.showMessageBox = async (_window, options) => { globalThis.__prompts.push(options.message); return { response: 1, checkboxChecked: true }; };
+  });
+  const prompts = () => electronApp.evaluate(() => globalThis.__prompts);
+  const ask = (fragment) => inPage(fragment, "Notification.requestPermission()");
+
+  // Politique « refuser » : aucune question, refus immédiat.
+  await call("updateSettings", { permissions: "deny" });
+  assert.equal(await ask("/article"), "denied");
+  assert.deepEqual(await prompts(), []);
+
+  // Politique « demander » : l'utilisateur est interrogé une fois, son choix est mémorisé pour cette origine.
+  await call("updateSettings", { permissions: "ask" });
+  assert.equal(await ask("/article"), "granted");
+  assert.equal((await prompts()).length, 1);
+  assert.match((await prompts())[0], new RegExp(`${origin.replace(/[.:/]/g, "\\$&")} souhaite utiliser les notifications`));
+  assert.deepEqual(await call("getPermissions"), { [origin]: { notifications: "allow" } });
+  assert.equal(await ask("/article"), "granted");
+  assert.equal((await prompts()).length, 1, "pas de nouvelle question pour un choix mémorisé");
+
+  // Une permission hors liste (périphériques USB, etc.) n'est jamais accordée ni même proposée.
+  const usb = await inPage("/article", "navigator.permissions.query({ name: 'midi', sysex: true }).then((s) => s.state).catch(() => 'refusée')");
+  assert.notEqual(usb, "granted");
+
+  // Navigation privée : la question est posée, mais rien n'est mémorisé.
+  const priv = await call("createTab", { url: `${site.altUrl}/vide`, isPrivate: true });
+  await waitFor(async () => { const t = (await state()).tabs.find((x) => x.id === priv.id); return t && !t.loading; }, "onglet privé chargé");
+  assert.equal(await ask("localhost"), "granted");
+  assert.equal((await prompts()).length, 2);
+  assert.deepEqual(Object.keys(await call("getPermissions")), [origin]);
+  await call("closeTab", priv.id);
+
+  // « Oublier » retire l'autorisation.
+  await call("setPermission", origin, "notifications", null);
+  assert.deepEqual(await call("getPermissions"), {});
+});
+
 test("extraction : contenu principal, métadonnées, titres, liens, tableaux, date — borné et sans le bruit de la page", async () => {
   const tab = await tabByUrl("/article");
   const page = await call("extractPage", tab.id);

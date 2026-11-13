@@ -64,8 +64,20 @@ export class UrlLedger {
     return value.toLowerCase().replace(/^www\./, "");
   }
 
+  private userText = "";
+
+  /**
+   * Vrai si ce texte figure tel quel dans une demande de l'utilisateur. Un texte que le modèle compose
+   * lui-même peut contenir des données lues ailleurs : le saisir dans une page reviendrait à les lui transmettre.
+   */
+  isUserProvided(text: string): boolean {
+    const wanted = text.replace(/\s+/g, " ").trim().toLowerCase();
+    return wanted.length > 0 && wanted.length <= 300 && this.userText.includes(wanted);
+  }
+
   /** Adresses et noms de domaine écrits par l'utilisateur. */
   addUserText(text: string): void {
+    this.userText = `${this.userText}\n${text.replace(/\s+/g, " ").toLowerCase()}`.slice(-20_000);
     for (const match of text.matchAll(/https?:\/\/[^\s<>"')\]]+/gi)) {
       const key = UrlLedger.key(match[0].replace(/[.,;:!?]+$/, ""));
       if (key) { this.urls.add(key); this.hosts.add(UrlLedger.host(new URL(key).hostname)); }
@@ -206,6 +218,9 @@ export class BrowserAgent {
         signature = report.signature;
         detail = report.label || String(args.element);
         sensitive = tool.name === "click_element" ? classifyClick(report) : classifyType(report, args.submit === true);
+        if (tool.name === "type_text" && !sensitive && !this.ledger.isUserProvided(String(args.text))) {
+          sensitive = "texte rédigé par l'assistant, absent de votre demande";
+        }
       }
     } catch (error) {
       return this.fail("error", tool.name, tool.name, "page_unavailable", this.pageError(error));
