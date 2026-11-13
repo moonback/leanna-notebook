@@ -34,7 +34,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         </header>
         <div className="mobile-auth-content mx-auto flex w-full max-w-[440px] flex-1 flex-col justify-center py-12 lg:mx-auto lg:max-w-[440px]">
           <div className="mb-8">
-            <div className="mb-5 hidden size-14 place-items-center overflow-hidden rounded-xl bg-white p-1.5 shadow-sm lg:grid"><img src="/logo.png" alt="Logo Leanna Notebook" className="size-full object-contain"/></div>
+            {/* <div className="mb-5 hidden size-14 place-items-center overflow-hidden rounded-xl bg-white p-1.5 shadow-sm lg:grid"><img src="/logo.png" alt="Logo Leanna Notebook" className="size-full object-contain"/></div> */}
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">Leanna Notebook</p>
             <div className="mt-3">{children}</div>
           </div>

@@ -12,12 +12,13 @@ export function AuthForm({ mode, next }: { mode: "login" | "signup"; next?: stri
   const [state, action, pending] = useActionState<AuthState, FormData>(mode === "login" ? signIn : signUp, {});
   const [magic, magicAction, magicPending] = useActionState<AuthState, FormData>(sendMagicLink, {});
   const [showPassword, setShowPassword] = useState(false);
+  const [showMagic, setShowMagic] = useState(false);
   const login = mode === "login";
 
   return (
     <div className="grid gap-6">
       <div className="mb-1">
-        <h1 className="font-serif text-3xl leading-tight tracking-tight sm:text-[2.15rem]">{login ? "Ravi de vous revoir." : "Créez votre espace."}</h1>
+        <h1 className="font-serif text-3xl leading-tight tracking-tight sm:text-[2.15rem]">{login ? "Connectez-vous" : "Créez votre espace."}</h1>
         <p className="mt-2 text-sm leading-6 text-text-muted">{login ? "Connectez-vous pour reprendre vos recherches exactement là où vous les avez laissées." : "Un espace pour organiser vos sources, explorer vos idées et structurer vos découvertes."}</p>
       </div>
 
@@ -39,8 +40,14 @@ export function AuthForm({ mode, next }: { mode: "login" | "signup"; next?: stri
         <Button type="submit" size="lg" loading={pending} className="mt-1 h-12 w-full rounded-lg text-sm font-semibold">{login ? "Se connecter" : "Créer mon compte"} <ArrowRight size={16}/></Button>
       </form>
 
-      {login && (
-        <div className="rounded-xl border border-border bg-surface/65 p-4 sm:p-5">
+      {login && !showMagic && !magic.message && !magic.errors && (
+        <Button type="button" variant="secondary" size="lg" onClick={() => setShowMagic(true)} aria-expanded={false} aria-controls="magic-panel" className="h-12 w-full rounded-lg text-sm font-semibold">
+          <WandSparkles size={16}/> Connexion sans mot de passe
+        </Button>
+      )}
+
+      {login && (showMagic || magic.message || magic.errors) && (
+        <div id="magic-panel" className="rounded-xl border border-border bg-surface/65 p-4 sm:p-5">
           <div className="flex items-start gap-3">
             <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-accent-soft text-on-accent-soft"><WandSparkles size={17}/></span>
             <div><p className="text-sm font-semibold">Connexion sans mot de passe</p><p className="mt-1 text-xs leading-5 text-text-muted">Recevez un lien sécurisé à usage unique directement par email.</p></div>
