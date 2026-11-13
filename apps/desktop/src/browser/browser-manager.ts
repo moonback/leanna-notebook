@@ -767,7 +767,7 @@ export class BrowserManager {
     });
     contents.on("zoom-changed", (_event, direction) => { this.setZoom(tab.id, direction); });
     contents.on("enter-html-full-screen", () => { this.htmlFullscreen = true; this.applyBounds(); });
-    contents.on("leave-html-full-screen", () => { this.htmlFullscreen = false; this.applyBounds(); });
+    contents.on("leave-html-full-screen", () => { this.htmlFullscreen = false; this.applyBounds(); this.syncLauncherVisibility(); });
   }
 
   private recordVisit(tab: BrowserTab): void {
