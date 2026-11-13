@@ -528,7 +528,55 @@
   .mobile-studio-actions button { min-width: 0; min-height: 2.8rem; justify-content: flex-start; gap: 0.45rem; padding-inline: 0.65rem; font-size: 0.78rem; line-height: 1.2; white-space: normal; text-align: left; }
   .mobile-studio-actions button svg { flex: 0 0 auto; }
   .mobile-studio-actions button.col-span-2 { grid-column: 1 / -1; }
-  .mobile-source-dialog[role="dialog"], .mobile-source-viewer-dialog[role="dialog"], .mobile-artifact-dialog[role="dialog"] { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+  .mobile-source-dialog[role="dialog"] {
+    display: flex;
+    flex-direction: column;
+    width: min(42rem, calc(100vw - 1rem));
+    max-width: calc(100vw - 1rem);
+    max-height: min(92dvh, calc(100dvh - 1rem - env(safe-area-inset-top) - env(safe-area-inset-bottom)));
+    min-height: 0;
+    box-sizing: border-box;
+    overflow: hidden;
+    padding: clamp(0.85rem, 3vw, 1.5rem);
+    overscroll-behavior: contain;
+  }
+  .mobile-source-viewer-dialog[role="dialog"], .mobile-artifact-dialog[role="dialog"] { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+  .mobile-source-tabs {
+    display: grid !important;
+    width: 100%;
+    min-width: 0;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.2rem;
+  }
+  .mobile-source-tabs [role="tab"] {
+    min-width: 0;
+    padding-inline: 0.3rem;
+    white-space: normal;
+    font-size: 0.72rem;
+    line-height: 1.2;
+  }
+  .mobile-source-import-form {
+    display: grid;
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+  }
+  .mobile-source-import-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    flex-wrap: wrap;
+    padding-top: 0.65rem;
+    padding-bottom: max(0.15rem, env(safe-area-inset-bottom));
+    background: var(--surface-raised);
+  }
+  .mobile-source-import-actions button { min-width: 0; min-height: 2.75rem; }
+
   .mobile-source-import-form, .mobile-source-viewer-content, .mobile-artifact-content { min-height: 0; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
   .mobile-source-import-form { overflow-y: auto; padding-bottom: max(0.25rem, env(safe-area-inset-bottom)); }
   .mobile-source-viewer-content, .mobile-artifact-content { max-height: min(72dvh, 48rem); padding: 0.9rem; }
