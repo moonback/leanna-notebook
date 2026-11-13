@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 import * as React from "react";
-import { Download, Globe, Plus, RotateCw, TriangleAlert } from "lucide-react";
+import { BookmarkPlus, Download, Globe, Plus, Sparkles, RotateCw, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   getBrowserApi, shouldForwardKey,
@@ -132,20 +132,42 @@ export function BrowserClient({ notebookId }: { notebookId?: string } = {}) {
 
   if (api === null || failed) {
     return (
-      <main className="grid min-h-0 flex-1 place-items-center p-6">
-        <div className="max-w-md text-center">
-          <Globe className="mx-auto size-10 text-text-muted" aria-hidden />
-          <h1 className="mt-4 text-lg font-semibold">Leanna Browser nécessite l’application desktop</h1>
-          <p className="mt-2 text-sm leading-6 text-text-muted">
+      <main className="min-h-0 flex-1 overflow-y-auto bg-bg">
+        <div className="mx-auto flex min-h-full max-w-3xl flex-col items-center justify-center px-6 py-12 text-center">
+          <div className="relative">
+            <div className="absolute inset-0 -z-10 scale-150 rounded-full bg-accent-soft blur-2xl" aria-hidden />
+            <div className="grid size-20 place-items-center rounded-2xl border border-border bg-surface shadow-sm">
+              <Globe className="size-10 text-accent" aria-hidden />
+            </div>
+          </div>
+          <span className="mt-6 rounded-full bg-accent-soft px-3 py-1 text-xs font-medium text-on-accent-soft">Application desktop</span>
+          <h1 className="mt-4 text-balance text-3xl font-semibold tracking-tight sm:text-4xl">
+            {failed ? "Le navigateur n’a pas pu démarrer" : "Leanna Browser vit dans l’application desktop"}
+          </h1>
+          <p className="mt-3 max-w-xl text-pretty text-base leading-7 text-text-muted">
             {failed
-              ? "Le navigateur n’a pas pu démarrer. Relancez Leanna Notebook Desktop."
-              : "Le navigateur intégré s’appuie sur le moteur Chromium de l’application desktop. Ouvrez cette page depuis Leanna Notebook Desktop (version à jour) pour naviguer sans quitter Leanna."}
+              ? "Relancez Leanna Notebook Desktop. Si le problème persiste, installez la dernière version."
+              : "Naviguez sur le web avec le moteur Chromium intégré, sans quitter Leanna. Installez l’application pour y accéder."}
           </p>
-          <Button asChild className="mt-4">
+          <Button asChild size="lg" className="mt-8">
             <a href={DESKTOP_DOWNLOAD_URL} target="_blank" rel="noopener noreferrer">
-              <Download aria-hidden />Télécharger la dernière version de Leanna Desktop
+              <Download aria-hidden />Télécharger Leanna Desktop
             </a>
           </Button>
+          <p className="mt-2 text-xs text-text-subtle">Dernière version · Windows</p>
+          <ul className="mt-12 grid w-full gap-3 text-left sm:grid-cols-3">
+            {([
+              [Globe, "Navigation intégrée", "Onglets, favoris, historique et téléchargements dans Leanna."],
+              [Sparkles, "Assistant IA", "Posez des questions sur la page ouverte, résumez et analysez."],
+              [BookmarkPlus, "Vers vos carnets", "Enregistrez pages et extraits comme sources de vos notebooks."],
+            ] as const).map(([Icon, title, text]) => (
+              <li key={title} className="rounded-xl border border-border bg-surface p-4">
+                <Icon className="size-5 text-accent" aria-hidden />
+                <h2 className="mt-3 text-sm font-semibold">{title}</h2>
+                <p className="mt-1 text-xs leading-5 text-text-muted">{text}</p>
+              </li>
+            ))}
+          </ul>
         </div>
       </main>
     );
