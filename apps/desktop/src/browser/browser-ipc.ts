@@ -52,9 +52,14 @@ export function browserHandlers({ manager, store }: BrowserIpcDeps): Record<stri
     // Agent : le mode d'autonomie est lu dans les réglages à chaque appel, jamais fourni par l'appelant.
     agentStart: (input) => {
       const owner = requestedOwner(input);
-      if (agentOwner && agentOwner !== owner) throw new Error("browser_agent_busy");
+      if (agentOwner) throw new Error("browser_agent_busy");
       agentOwner = owner;
-      return agent.startMission(record(input).text, record(input).reset === true);
+      try {
+        return agent.startMission(record(input).text, record(input).reset === true);
+      } catch (error) {
+        agentOwner = null;
+        throw error;
+      }
     },
     agentCall: (input) => { assertAgentOwner(input); return enqueueAgent(() => { assertAgentOwner(input); return agent.call(record(input).name, record(input).args); }); },
     agentResolve: (input) => { assertAgentOwner(input); return enqueueAgent(() => { assertAgentOwner(input); return agent.resolve(record(input).actionId, record(input).approve); }); },
