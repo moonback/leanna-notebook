@@ -34,7 +34,7 @@ export function Citation({
           <Popover.Content
             side="top"
             sideOffset={6}
-            className="z-[var(--z-tooltip)] w-80 max-w-[calc(100vw-2rem)] rounded-lg border bg-surface-raised p-3 shadow-pop"
+            className="glass-elevated z-[var(--z-tooltip)] w-80 max-w-[calc(100vw-2rem)] rounded-lg p-3 shadow-pop"
           >
             <p className="mb-1.5 truncate text-xs font-medium text-text-muted">{source}</p>
             <blockquote className="border-l-2 border-accent pl-3 font-serif text-sm leading-6 text-text">
