@@ -164,7 +164,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
     nextPlaybackTime.current = 0;
     mutedRef.current = false;
     if (mounted.current) { setMuted(false); setState("idle"); }
-  }, []);
+  }, [browserApi]);
 
   React.useEffect(() => {
     mounted.current = true;
