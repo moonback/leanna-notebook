@@ -329,7 +329,7 @@ export function BrowserClient({ notebookId }: { notebookId?: string } = {}) {
 
         {settings && (
           // Toujours monté : la session vocale (Gemini Live) doit survivre à la fermeture du panneau ou à un changement d'onglet.
-          <aside className={`${panel ? "flex" : "hidden"} w-[380px] shrink-0 flex-col border-l border-border bg-surface`} aria-label="Panneau latéral" data-browser-panel={panel ?? "closed"}>
+          <aside className={`${panel ? "flex" : "hidden"} w-[380px] shrink-0 flex-col border-l border-border var(--bg)`} aria-label="Panneau latéral" data-browser-panel={panel ?? "closed"}>
             {panel === "ai" && (
               <div role="tablist" aria-label="Mode de Leanna" className="grid shrink-0 grid-cols-2 gap-1 border-b border-border p-1.5">
                 {([["chat", "Discussion", Sparkles], ["voice", "Studio vocal", AudioLines]] as const).map(([id, label, Icon]) => (
