@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Citation } from "@/components/ui/citation";
 import { Dialog, DialogContent } from "@/components/ui/overlay";
 import { PendingVoiceSearches, shouldInviteRoxane, waitForAudioPlaybackDrain, VoiceTurnCitationStore, type NumberedVoicePassage } from "./voice-turn";
+import type { DesktopBrowserApi } from "@/app/browser/browser-api";
 
 type VoiceState = "idle" | "connecting" | "listening" | "speaking" | "error";
 type Passage = NumberedVoicePassage;
@@ -98,7 +99,7 @@ function playActivationChime(ctx: AudioContext) {
   } catch { /* le son est un confort, jamais bloquant */ }
 }
 
-export function VoiceAssistant({ notebookId, conversationId, disabled = false, onOpenCitation }: { notebookId: string; conversationId: string; disabled?: boolean; onOpenCitation: (passage: Passage) => void }) {
+export function VoiceAssistant({ notebookId, conversationId, disabled = false, onOpenCitation, browserApi }: { notebookId: string; conversationId: string; disabled?: boolean; onOpenCitation: (passage: Passage) => void; browserApi?: DesktopBrowserApi }) {
   const [open, setOpen] = React.useState(false);
   const [expanded, setExpanded] = React.useState(false);
   const [state, setState] = React.useState<VoiceState>("idle");
@@ -135,10 +136,12 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
   const mutedRef = React.useRef(false);
   const mounted = React.useRef(true);
   const intentionalClose = React.useRef(false);
+  const browserMissionStarted = React.useRef(false);
 
   const stop = React.useCallback(() => {
     rlog("stop() appelé", { nodes: playbackNodes.current.size, roxaneSpeaking: roxaneSpeaking.current, stack: new Error().stack?.split("\n").slice(2, 5).join(" | ") });
     intentionalClose.current = true;
+    if (browserApi && browserMissionStarted.current) { void browserApi.agentAbort().catch(() => undefined); browserMissionStarted.current = false; }
     socket.current?.close();
     socket.current = null;
     roxaneSocket.current?.close();
@@ -200,6 +203,25 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
   async function handleToolCall(message: LiveMessage) {
     const calls = message?.toolCall?.functionCalls ?? [];
     for (const call of calls) {
+      if (call.name.startsWith("browser_")) {
+        try {
+          if (!browserApi) throw new Error("Le navigateur intégré n'est pas disponible dans cette session.");
+          if (!browserMissionStarted.current) {
+            await browserApi.agentStart({ text: userTurn.current.slice(0, 8000), reset: false });
+            browserMissionStarted.current = true;
+          }
+          let outcome = await browserApi.agentCall({ name: call.name.slice("browser_".length), args: call.args ?? {} });
+          if (outcome.status === "confirmation_required") {
+            const approved = window.confirm(`Leanna souhaite effectuer cette action :\n\n${outcome.summary}\n\nMotif : ${outcome.reason}\n\nAutoriser cette action ?`);
+            outcome = await browserApi.agentResolve({ actionId: outcome.actionId, approve: approved });
+          }
+          socket.current?.send(JSON.stringify({ toolResponse: { functionResponses: [{ id: call.id, name: call.name, response: { result: JSON.stringify(outcome) } }] } }));
+          setStatus(outcome.status === "ok" ? "Action Browser vérifiée." : outcome.status === "confirmation_required" ? "Confirmation Browser requise." : "Action Browser non exécutée.");
+        } catch (error) {
+          socket.current?.send(JSON.stringify({ toolResponse: { functionResponses: [{ id: call.id, name: call.name, response: { error: error instanceof Error ? error.message : "Action Browser impossible." } }] } }));
+        }
+        continue;
+      }
       if (call.name === "search_notebook_sources") {
         try {
           const response = await fetch(`/api/v1/notebooks/${notebookId}/voice-search`, {
@@ -266,6 +288,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
     const assistantText = assistantTurn.current.trim();
     const sourceIds = [...turnSourceIds.current];
     if (!userText || !assistantText) return;
+    if (browserApi) { userTurn.current = ""; assistantTurn.current = ""; turnSourceIds.current.clear(); return; }
     const response = await fetch(`/api/v1/conversations/${conversationId}/voice-messages`, {
       method: "POST", headers: { "content-type": "application/json" },
       body: JSON.stringify({ userText, assistantText, sourceIds })
@@ -360,7 +383,8 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
     setSources([]);
     setTurnHistory([]);
     try {
-      if (!conversationId) throw new Error("Conversation du notebook en cours de chargement.");
+      if (!conversationId && !browserApi) throw new Error("Conversation du notebook en cours de chargement.");
+      browserMissionStarted.current = false;
       userTurn.current = "";
       assistantTurn.current = "";
       turnSourceIds.current.clear();
@@ -495,6 +519,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
           userTurn.current = "";
           assistantTurn.current = "";
           turnCompletePending.current = false;
+          browserMissionStarted.current = false;
           setState("listening");
           setStatus("À vous de parler. Posez votre prochaine question.");
         } catch (error) {
