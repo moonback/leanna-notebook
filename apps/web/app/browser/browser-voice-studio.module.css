@@ -107,7 +107,17 @@
   font-size: 12px !important;
 }
 :global(body:has([data-browser-voice-scope]) .mobile-voice-sheet-header > div:nth-child(3)) {
-  display: none !important;
+  display: flex !important;
+  height: 22px !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 4px !important;
+  margin-top: -3px;
+  color: #8bdcff !important;
+  filter: drop-shadow(0 0 8px rgba(83, 185, 255, .62));
+}
+:global(body:has([data-browser-voice-scope]) .mobile-voice-sheet-header > div:first-child:has(span.bg-emerald-500)) {
+  box-shadow: 0 0 30px rgba(132, 100, 255, .72), 0 0 86px rgba(72, 112, 255, .36), inset 0 0 28px rgba(255,255,255,.18) !important;
 }
 :global(body:has([data-browser-voice-scope]) .mobile-voice-controls) {
   position: relative;
