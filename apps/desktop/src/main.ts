@@ -1,6 +1,9 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from "electron";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { BrowserDataStore } from "./browser/browser-data-store";
+import { registerBrowserIpc } from "./browser/browser-ipc";
+import { BrowserManager } from "./browser/browser-manager";
 import { isAllowedWebUrl, isSafeExternalUrl, normalizeFilters } from "./shared/validation";
 import { checkForUpdates, initializeAutoUpdater } from "./updater";
 
@@ -32,6 +35,64 @@ function resolveWebUrl(): string {
 const WEB_URL = resolveWebUrl();
 const allowedOrigin = new URL(WEB_URL).origin;
 let mainWindow: BrowserWindow | null = null;
+const browserDataStore = new BrowserDataStore(app.getPath("userData"));
+
+function sendToRenderer(channel: string, payload: unknown): void {
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(channel, payload);
+}
+
+const PERMISSION_LABELS: Record<string, string> = {
+  media: "la caméra et le microphone",
+  geolocation: "votre position",
+  notifications: "les notifications",
+  "clipboard-read": "le contenu du presse-papiers",
+};
+
+// `dialog.*` est résolu à l'appel : les tests de bout en bout peuvent remplacer ces dialogues natifs.
+const browserManager = new BrowserManager({
+  store: browserDataStore,
+  onState: (state) => sendToRenderer("browser:state", state),
+  onCommand: (command) => sendToRenderer("browser:command", command),
+  chooseSavePath: (window, filename) => dialog.showSaveDialogSync(window, {
+    title: "Enregistrer le téléchargement",
+    defaultPath: join(app.getPath("downloads"), filename),
+  }) || null,
+  confirmRiskyDownload: (window, filename) => dialog.showMessageBoxSync(window, {
+    type: "warning",
+    title: "Fichier potentiellement dangereux",
+    message: `« ${filename} » peut exécuter du code sur votre ordinateur.`,
+    detail: "Ne le conservez que si vous faites confiance à sa provenance. Leanna ne l'ouvrira jamais automatiquement.",
+    buttons: ["Annuler", "Télécharger quand même"],
+    defaultId: 0,
+    cancelId: 0,
+  }) === 1,
+  askPermission: async (window, origin, permission) => {
+    const result = await dialog.showMessageBox(window, {
+      type: "question",
+      title: "Demande d'autorisation",
+      message: `${origin} souhaite utiliser ${PERMISSION_LABELS[permission] ?? permission}.`,
+      buttons: ["Refuser", "Autoriser"],
+      defaultId: 0,
+      cancelId: 0,
+      checkboxLabel: "Mémoriser mon choix pour ce site",
+    });
+    return { allow: result.response === 1, remember: result.checkboxChecked };
+  },
+});
+
+/**
+ * Seul le cadre principal de la fenêtre de l'application, sur son origine, peut appeler l'IPC.
+ * Les onglets du navigateur n'ont pas de preload et échouent de toute façon à ce contrôle.
+ */
+function isTrustedRenderer(event: Electron.IpcMainInvokeEvent): boolean {
+  if (!mainWindow || mainWindow.isDestroyed() || event.sender !== mainWindow.webContents) return false;
+  try {
+    const frame = event.senderFrame;
+    return Boolean(frame && frame === mainWindow.webContents.mainFrame && new URL(frame.url).origin === allowedOrigin);
+  } catch {
+    return false;
+  }
+}
 
 function registerApplicationMenu(): void {
   const viewItems: Electron.MenuItemConstructorOptions[] = [
@@ -82,6 +143,7 @@ function registerApplicationMenu(): void {
 /**
  * Les exports déclenchés par le renderer passent par la boîte de dialogue
  * native « Enregistrer sous ». Aucun chemin local n'est choisi silencieusement.
+ * (Les téléchargements des onglets du navigateur sont gérés par BrowserManager, sur leurs propres sessions.)
  */
 function registerNativeDownloadHandler(): void {
   const downloadSession = mainWindow?.webContents.session;
@@ -95,9 +157,7 @@ function registerNativeDownloadHandler(): void {
     }
 
     // Suspendre immédiatement le téléchargement : le dialogue natif est asynchrone.
-    // Sans pause, Electron peut commencer à écrire dans son emplacement par défaut.
     item.pause();
-
     void dialog.showSaveDialog(parent, {
       title: "Enregistrer le fichier",
       defaultPath: item.getFilename(),
@@ -124,13 +184,13 @@ function registerNativeDownloadHandler(): void {
 function registerIpcHandlers(): void {
   ipcMain.handle("desktop:app-version", () => app.getVersion());
   ipcMain.handle("desktop:check-for-updates", async (event) => {
-    if (!mainWindow || event.sender !== mainWindow.webContents) return { started: false };
+    if (!isTrustedRenderer(event)) return { started: false };
     await checkForUpdates(mainWindow, true);
     return { started: true };
   });
 
   ipcMain.handle("desktop:open-files", async (event, filters: unknown) => {
-    if (!mainWindow || event.sender !== mainWindow.webContents) {
+    if (!isTrustedRenderer(event) || !mainWindow) {
       return { canceled: true, filePaths: [] };
     }
     const result = await dialog.showOpenDialog(mainWindow, {
@@ -141,9 +201,7 @@ function registerIpcHandlers(): void {
   });
 
   ipcMain.handle("desktop:save-file", async (event, options: unknown) => {
-    if (!mainWindow || event.sender !== mainWindow.webContents) {
-      return { canceled: true };
-    }
+    if (!isTrustedRenderer(event) || !mainWindow) return { canceled: true };
     const input = options && typeof options === "object"
       ? options as { defaultPath?: unknown; filters?: unknown }
       : {};
@@ -156,12 +214,12 @@ function registerIpcHandlers(): void {
   });
 
   ipcMain.handle("desktop:open-external", async (event, value: unknown) => {
-    if (!mainWindow || event.sender !== mainWindow.webContents || !isSafeExternalUrl(value)) {
-      return { opened: false };
-    }
+    if (!isTrustedRenderer(event) || !isSafeExternalUrl(value)) return { opened: false };
     await shell.openExternal(value);
     return { opened: true };
   });
+
+  registerBrowserIpc({ manager: browserManager, store: browserDataStore, isTrusted: isTrustedRenderer });
 }
 
 function createMainWindow(): void {
@@ -182,6 +240,7 @@ function createMainWindow(): void {
       webSecurity: true,
     },
   });
+  browserManager.attach(mainWindow);
 
   mainWindow.once("ready-to-show", () => mainWindow?.show());
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
@@ -195,7 +254,13 @@ function createMainWindow(): void {
       event.preventDefault();
     }
   });
+  // Quitter la page du navigateur (ou recharger l'application) masque la vue native,
+  // sinon elle resterait affichée par-dessus une autre page de l'application.
+  mainWindow.webContents.on("did-start-navigation", (details) => {
+    if (details.isMainFrame && !details.isSameDocument) browserManager.setVisible(false);
+  });
   mainWindow.on("closed", () => {
+    browserManager.dispose();
     mainWindow = null;
   });
 

@@ -139,8 +139,29 @@ La configuration doit rester cohérente entre le web et le worker. Ne versionnez
 | `pnpm db:test` | Tests pgTAP |
 | `pnpm desktop:dev` | Client Electron en développement |
 | `pnpm desktop:build` / `pnpm desktop:dist:win` | Build desktop / Windows |
+| `pnpm desktop:test` | Tests unitaires du client desktop (dont Leanna Browser) |
+| `pnpm --dir apps/desktop test:e2e` | Parcours de bout en bout de Leanna Browser dans Electron (Playwright) |
 
 Ces commandes proviennent des manifestes du dépôt ; elles n'ont pas été exécutées pendant cette passe distante.
+
+## Leanna Browser
+
+L'application desktop embarque un navigateur Chromium (onglets `WebContentsView` d'Electron) accessible depuis l'en-tête
+(« Browser ») ou depuis un notebook. Il n'est pas disponible dans la version web seule.
+
+- **Navigation** : URL ou recherche (moteur au choix), onglets réordonnables et restaurés au démarrage, onglets privés,
+  indicateur HTTPS, zoom, plein écran, favoris à dossiers, historique, téléchargements, permissions par site.
+- **Leanna dans le panneau latéral** : résumer, expliquer, extraire, répondre et comparer à partir des pages ouvertes, en
+  citant leurs adresses ; « le regard de Roxane » pour une relecture critique.
+- **Agent de navigation** en trois modes — observation, assistance (chaque action est validée), autonome — avec journal des
+  actions, confirmation obligatoire des actions sensibles et bouton d'interruption.
+- **Ajouter au Notebook** : lien, contenu, contenu + synthèse, ou sélection ; l'adresse d'origine est conservée.
+
+Le contenu des pages est toujours traité comme une donnée non fiable ; les garde-fous sont appliqués dans le code de
+l'application, pas seulement dans les prompts. Documentation : [docs/leanna-browser/](docs/leanna-browser/PLAN.md) —
+[architecture](docs/leanna-browser/ARCHITECTURE.md), [sécurité](docs/leanna-browser/SECURITY.md),
+[IPC](docs/leanna-browser/IPC.md), [outils de l'agent](docs/leanna-browser/AGENT_TOOLS.md),
+[prompts](docs/leanna-browser/PROMPTS.md), [limitations](docs/leanna-browser/LIMITATIONS.md).
 
 ## Documentation
 

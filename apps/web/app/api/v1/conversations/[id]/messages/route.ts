@@ -245,7 +245,7 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
         for await (const evt of streamChat(messages, { signal: req.signal, model: chatPreference?.model_id ?? undefined, reasoning: true })) {
           if (evt.type === "delta") { raw += evt.text; send("delta", { text: evt.text }); }
           else if (evt.type === "thought") { thoughts += evt.text; send("thought", { text: evt.text }); }
-          else { usage = evt.usage; model = evt.model; }
+          else if (evt.type === "usage") { usage = evt.usage; model = evt.model; }
         }
         const resolved = resolveCitations(raw, passages);
         const final = resolved.text;

@@ -10,3 +10,4 @@ apps/desktop/dist
 apps/desktop/release
 .Leanna-audit.log
 .project-knowledge.json
+apps/desktop/e2e-artifacts
