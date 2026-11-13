@@ -152,7 +152,8 @@ export function BrowserClient({ notebookId }: { notebookId?: string } = {}) {
           <Toolbar api={api} tab={activeTab} fullscreen={state.fullscreen} bookmarked={Boolean(bookmark)} onToggleBookmark={toggleBookmark}
             panel={panel} onPanel={togglePanel} addressRef={addressRef} />
         </div>
-        {notebookId && <VoiceAssistant notebookId={notebookId} conversationId="" browserApi={api} onOpenCitation={() => undefined} />}
+        {notebookId && <VoiceAssistant notebookId={notebookId} conversationId="" browserApi={api} onOpenCitation={() => undefined}
+          saveBrowserRequest={(request) => saveToNotebook(window.fetch.bind(window), target.selected, request)} />}
       </div>
 
       <div className="flex min-h-0 flex-1">
