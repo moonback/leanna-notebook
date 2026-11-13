@@ -4,7 +4,7 @@ import { ArrowLeft, Check, FileSearch, LockKeyhole, Network, Sparkles } from "lu
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <main className="mobile-auth-layout h-dvh overflow-hidden bg-bg text-text lg:grid lg:grid-cols-[minmax(0,1.05fr)_minmax(460px,0.95fr)]">
-      <section className="relative hidden h-dvh overflow-hidden bg-[#172b3b] px-10 py-8 text-white lg:flex lg:flex-col xl:px-16">
+      <section className="mobile-auth-brand relative hidden h-dvh overflow-hidden px-10 py-8 text-white lg:flex lg:flex-col xl:px-16">
         <div aria-hidden className="pointer-events-none absolute inset-0">
           <div className="absolute -left-40 top-1/4 size-[34rem] rounded-full bg-[#5c9eb0]/20 blur-[110px]" />
           <div className="absolute -right-36 bottom-0 size-[30rem] rounded-full bg-[#d9c6a4]/15 blur-[100px]" />
