@@ -133,184 +133,152 @@ export function BrowserClient({ notebookId }: { notebookId?: string } = {}) {
   if (api === null || failed) {
     return (
       <main className="relative min-h-0 flex-1 overflow-y-auto bg-bg">
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-[560px] overflow-hidden" aria-hidden>
-          <div className="absolute -left-40 -top-48 size-[520px] rounded-full bg-accent/15 blur-[110px]" />
-          <div className="absolute -right-32 top-8 size-[440px] rounded-full bg-violet-500/10 blur-[110px]" />
-          <div className="absolute inset-x-0 top-0 h-full bg-gradient-to-b from-accent/5 via-transparent to-bg" />
-        </div>
-
-        <div className="relative mx-auto w-full max-w-6xl px-5 py-10 sm:px-8 sm:py-16 lg:py-20">
-          <header className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="grid size-10 place-items-center rounded-xl border border-border bg-surface shadow-sm">
-                <Globe className="size-5 text-accent" aria-hidden />
-              </div>
-              <div>
-                <p className="text-sm font-semibold tracking-tight">Leanna Notebook</p>
-                <p className="text-xs text-text-muted">Votre espace de connaissance augmenté</p>
-              </div>
+        <div className="mx-auto w-full max-w-7xl px-5 py-7 sm:px-8 lg:px-10">
+          <header className="flex items-center justify-between border-b border-border pb-5">
+            <div>
+              <p className="text-sm font-semibold tracking-tight text-text">Leanna Notebook</p>
+              <p className="mt-0.5 text-xs text-text-subtle">Votre espace de connaissance</p>
             </div>
-            <span className="hidden rounded-full border border-border bg-surface/80 px-3 py-1.5 text-xs font-medium text-text-muted sm:inline-flex">
-              Disponible sur Windows
-            </span>
+            <a href="https://github.com/moonback/leanna-notebook/releases" target="_blank" rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-medium text-text-muted transition-colors hover:bg-surface hover:text-text">
+              Notes de version <ArrowUpRight className="size-3.5" aria-hidden />
+            </a>
           </header>
 
-          <section className="grid items-center gap-12 pb-14 pt-14 lg:grid-cols-[1.02fr_0.98fr] lg:gap-16 lg:pb-20 lg:pt-20">
-            <div className="max-w-2xl">
-              <div className="inline-flex items-center gap-2 rounded-full border border-accent/20 bg-accent-soft/70 px-3 py-1.5 text-xs font-medium text-on-accent-soft">
-                <Sparkles className="size-3.5" aria-hidden />
-                Leanna prend une nouvelle dimension sur desktop
-              </div>
-              <h1 className="mt-6 text-balance text-4xl font-semibold leading-[1.08] tracking-[-0.04em] sm:text-5xl lg:text-6xl">
-                Vos idées méritent
-                <span className="block text-accent">un espace sans limites.</span>
+          <section className="grid items-center gap-10 border-b border-border py-12 sm:py-16 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16 lg:py-20">
+            <div className="max-w-xl">
+              <p className="inline-flex items-center gap-2 text-xs font-medium text-accent">
+                <span className="size-1.5 rounded-full bg-accent" aria-hidden />
+                L’expérience complète sur ordinateur
+              </p>
+              <h1 className="mt-5 text-balance text-3xl font-semibold leading-[1.12] tracking-[-0.035em] text-text sm:text-4xl lg:text-[3.35rem]">
+                Vos sources. Vos idées.
+                <span className="block text-accent">Tout au même endroit.</span>
               </h1>
-              <p className="mt-6 max-w-xl text-pretty text-base leading-7 text-text-muted sm:text-lg sm:leading-8">
-                Réunissez vos documents, vos recherches et vos conversations IA dans une seule application.
-                Avec Leanna Desktop, passez de l’information à des connaissances claires et des contenus prêts à partager.
+              <p className="mt-5 max-w-lg text-sm leading-7 text-text-muted sm:text-base">
+                Retrouvez vos documents, vos recherches et vos échanges avec l’IA dans un espace de travail unique.
+                Leanna vous aide à comprendre vos sources et à transformer vos connaissances en réalisations concrètes.
               </p>
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
-                <Button asChild size="lg" className="h-12 px-6 text-sm font-semibold shadow-lg shadow-accent/15">
+                <Button asChild size="lg" className="h-11 px-5 text-sm font-semibold">
                   <a href={DESKTOP_DOWNLOAD_URL} target="_blank" rel="noopener noreferrer">
                     <Download className="mr-2 size-4" aria-hidden />
-                    Télécharger Leanna pour Windows
+                    Télécharger pour Windows
                   </a>
                 </Button>
-                <a href="https://github.com/moonback/leanna-notebook/releases" target="_blank" rel="noopener noreferrer"
-                  className="inline-flex h-11 items-center justify-center gap-2 rounded-lg px-4 text-sm font-medium text-text-muted transition-colors hover:bg-surface hover:text-text">
-                  Voir les versions
-                  <ArrowUpRight className="size-4" aria-hidden />
-                </a>
+                <span className="text-xs text-text-subtle">Windows · 64 bits</span>
               </div>
-
-              <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-text-subtle">
-                <span className="inline-flex items-center gap-1.5"><Check className="size-3.5 text-accent" aria-hidden /> Installateur Windows 64 bits</span>
-                <span className="inline-flex items-center gap-1.5"><Check className="size-3.5 text-accent" aria-hidden /> Application Electron</span>
-                <span className="inline-flex items-center gap-1.5"><Check className="size-3.5 text-accent" aria-hidden /> Installation personnalisable</span>
+              <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-xs text-text-subtle">
+                <span className="inline-flex items-center gap-1.5"><Check className="size-3.5 text-accent" aria-hidden /> Installation simple</span>
+                <span className="inline-flex items-center gap-1.5"><Check className="size-3.5 text-accent" aria-hidden /> Application desktop</span>
               </div>
             </div>
 
-            <div className="relative mx-auto w-full max-w-xl">
-              <div className="absolute -inset-5 rounded-[2rem] bg-accent/10 blur-3xl" aria-hidden />
-              <div className="relative overflow-hidden rounded-2xl border border-border/80 bg-surface shadow-2xl shadow-black/10">
-                <div className="flex items-center gap-2 border-b border-border bg-surface/90 px-4 py-3">
-                  <span className="size-2.5 rounded-full bg-red-400/80" />
-                  <span className="size-2.5 rounded-full bg-amber-400/80" />
-                  <span className="size-2.5 rounded-full bg-emerald-400/80" />
-                  <div className="ml-3 flex h-7 min-w-0 flex-1 items-center rounded-md border border-border bg-bg px-3 text-[10px] text-text-subtle">
-                    <Globe className="mr-2 size-3 shrink-0" aria-hidden />
-                    Leanna Notebook · votre espace de travail
+            <div className="relative min-w-0">
+              <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-[0_18px_55px_rgba(0,0,0,0.12)]">
+                <div className="flex h-11 items-center justify-between border-b border-border px-4">
+                  <div className="flex items-center gap-2">
+                    <span className="size-2 rounded-full bg-text-subtle/40" />
+                    <span className="size-2 rounded-full bg-text-subtle/40" />
+                    <span className="size-2 rounded-full bg-text-subtle/40" />
+                    <span className="ml-3 text-[11px] font-medium text-text-muted">Espace de travail</span>
                   </div>
+                  <span className="rounded-md border border-border bg-bg px-2 py-1 text-[10px] text-text-subtle">Leanna Desktop</span>
                 </div>
-                <div className="grid min-h-[300px] grid-cols-[112px_1fr] sm:min-h-[340px] sm:grid-cols-[145px_1fr]">
-                  <aside className="border-r border-border bg-bg/70 p-3">
-                    <div className="mb-5 flex items-center gap-2 text-[10px] font-semibold">
-                      <div className="grid size-5 place-items-center rounded-md bg-accent text-white"><Sparkles className="size-3" /></div>
-                      Leanna
+                <div className="grid min-h-[270px] grid-cols-[116px_minmax(0,1fr)] sm:min-h-[330px] sm:grid-cols-[158px_minmax(0,1fr)]">
+                  <aside className="border-r border-border bg-bg/70 p-3 sm:p-4">
+                    <p className="mb-4 text-[10px] font-semibold text-text">Bibliothèque</p>
+                    <div className="space-y-1.5 text-[10px] text-text-muted">
+                      <div className="rounded-md bg-accent-soft px-2.5 py-2 font-medium text-on-accent-soft">Vue d’ensemble</div>
+                      <div className="rounded-md px-2.5 py-2">Mes notebooks</div>
+                      <div className="rounded-md px-2.5 py-2">Toutes les sources</div>
+                      <div className="rounded-md px-2.5 py-2">Studio</div>
                     </div>
-                    <div className="space-y-2 text-[10px] text-text-muted">
-                      <div className="rounded-md bg-accent-soft px-2 py-2 font-medium text-on-accent-soft">Vue d’ensemble</div>
-                      <div className="px-2 py-1.5">Mes notebooks</div>
-                      <div className="px-2 py-1.5">Sources</div>
-                      <div className="px-2 py-1.5">Studio</div>
-                    </div>
-                    <div className="mt-8 rounded-lg border border-border bg-surface p-2">
-                      <div className="mb-2 flex items-center gap-1.5 text-[9px] font-medium"><Sparkles className="size-3 text-accent" /> Assistant IA</div>
-                      <div className="h-1.5 w-full rounded-full bg-border" />
-                      <div className="mt-1.5 h-1.5 w-3/4 rounded-full bg-border" />
+                    <div className="mt-7 border-t border-border pt-3">
+                      <p className="text-[9px] uppercase tracking-wider text-text-subtle">Récemment consulté</p>
+                      <div className="mt-3 flex items-center gap-2 text-[10px] text-text-muted"><FileText className="size-3.5 text-accent" /> Projet recherche</div>
+                      <div className="mt-2 flex items-center gap-2 text-[10px] text-text-muted"><FileText className="size-3.5 text-accent" /> Notes de réunion</div>
                     </div>
                   </aside>
-                  <div className="p-4 sm:p-5">
-                    <div className="flex items-center justify-between gap-2">
-                      <div>
-                        <p className="text-[9px] uppercase tracking-[0.16em] text-text-subtle">Votre espace</p>
-                        <p className="mt-1 text-sm font-semibold sm:text-base">Bienvenue dans Leanna</p>
-                      </div>
-                      <div className="grid size-8 place-items-center rounded-full bg-accent-soft text-accent"><Sparkles className="size-4" /></div>
+                  <div className="min-w-0 p-4 sm:p-6">
+                    <p className="text-[9px] font-medium uppercase tracking-[0.16em] text-text-subtle">Votre espace</p>
+                    <div className="mt-1 flex items-center justify-between gap-2">
+                      <h2 className="text-sm font-semibold tracking-tight text-text sm:text-base">Bienvenue dans votre Notebook</h2>
+                      <span className="rounded-md bg-accent-soft px-2 py-1 text-[9px] font-medium text-on-accent-soft">Personnel</span>
                     </div>
-                    <div className="mt-5 grid grid-cols-2 gap-2">
-                      <div className="rounded-lg border border-border bg-bg/60 p-3">
+                    <div className="mt-4 flex items-center gap-2 rounded-lg border border-border bg-bg px-3 py-2.5 text-[10px] text-text-subtle">
+                      <Search className="size-3.5 shrink-0" />
+                      Rechercher dans vos sources…
+                    </div>
+                    <div className="mt-4 grid grid-cols-2 gap-2.5">
+                      <div className="rounded-lg border border-border bg-bg p-3">
                         <FileText className="size-4 text-accent" />
-                        <p className="mt-3 text-[10px] font-semibold">Vos documents</p>
-                        <p className="mt-1 text-[9px] text-text-subtle">Sources centralisées</p>
+                        <p className="mt-3 text-[10px] font-semibold text-text">Documents</p>
+                        <p className="mt-1 text-[9px] text-text-subtle">PDF, pages et notes</p>
                       </div>
-                      <div className="rounded-lg border border-border bg-bg/60 p-3">
+                      <div className="rounded-lg border border-border bg-bg p-3">
                         <Search className="size-4 text-accent" />
-                        <p className="mt-3 text-[10px] font-semibold">Recherche IA</p>
-                        <p className="mt-1 text-[9px] text-text-subtle">Réponses avec sources</p>
+                        <p className="mt-3 text-[10px] font-semibold text-text">Recherche IA</p>
+                        <p className="mt-1 text-[9px] text-text-subtle">Réponses sourcées</p>
                       </div>
                     </div>
-                    <div className="mt-3 rounded-lg border border-border p-3">
-                      <div className="flex items-center gap-2">
-                        <div className="grid size-6 place-items-center rounded-md bg-accent-soft text-accent"><Sparkles className="size-3.5" /></div>
-                        <p className="text-[10px] font-semibold">Leanna & Roxane</p>
-                        <span className="ml-auto rounded-full bg-emerald-500/10 px-2 py-0.5 text-[8px] font-medium text-emerald-600">Prêtes à aider</span>
+                    <div className="mt-3 flex items-center gap-2 rounded-lg border border-border bg-bg p-3">
+                      <div className="grid size-7 shrink-0 place-items-center rounded-md bg-accent-soft text-accent"><Mic className="size-3.5" /></div>
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-semibold text-text">Leanna & Roxane</p>
+                        <p className="mt-0.5 text-[9px] text-text-subtle">Un échange naturel, aussi à la voix</p>
                       </div>
-                      <div className="mt-3 space-y-1.5">
-                        <div className="h-1.5 w-full rounded-full bg-border" />
-                        <div className="h-1.5 w-5/6 rounded-full bg-border" />
-                        <div className="h-1.5 w-2/3 rounded-full bg-border" />
-                      </div>
-                    </div>
-                    <div className="mt-3 flex items-center gap-2 rounded-lg bg-accent px-3 py-2.5 text-[10px] font-medium text-white">
-                      <Sparkles className="size-3.5" /> Transformez vos sources en idées concrètes
+                      <span className="ml-auto size-1.5 rounded-full bg-success" />
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center justify-between border-t border-border bg-bg/70 px-4 py-2 text-[9px] text-text-subtle">
-                  <span>Un seul espace. Toutes vos connaissances.</span>
-                  <span>Leanna Desktop</span>
+                <div className="flex items-center justify-between gap-2 border-t border-border bg-bg/70 px-4 py-2.5 text-[9px] text-text-subtle">
+                  <span>Vos connaissances, réunies dans un seul espace.</span>
+                  <span className="hidden sm:inline">Prêt à explorer</span>
                 </div>
-              </div>
-              <div className="absolute -bottom-5 -left-3 hidden items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2.5 shadow-lg sm:flex">
-                <div className="grid size-8 place-items-center rounded-lg bg-accent-soft text-accent"><Mic className="size-4" /></div>
-                <div><p className="text-[10px] font-semibold">Travaillez à la voix</p><p className="text-[9px] text-text-subtle">Leanna et Roxane</p></div>
               </div>
             </div>
           </section>
 
-          <section className="border-t border-border py-12 sm:py-16">
-            <div className="mx-auto max-w-2xl text-center">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">Tout se rejoint</p>
-              <h2 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">Un espace de travail pensé pour aller plus loin.</h2>
-              <p className="mt-3 text-sm leading-6 text-text-muted">Moins d’outils dispersés. Plus de continuité entre vos sources, vos idées et vos réalisations.</p>
+          <section className="py-10 sm:py-14">
+            <div className="max-w-2xl">
+              <p className="text-xs font-medium text-accent">Un espace, plusieurs façons d’avancer</p>
+              <h2 className="mt-2 text-xl font-semibold tracking-tight text-text sm:text-2xl">De l’information à la connaissance.</h2>
+              <p className="mt-2 text-sm leading-6 text-text-muted">Tout ce dont vous avez besoin pour collecter, comprendre et donner forme à vos idées.</p>
             </div>
-            <div className="mt-9 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-7 grid gap-0 divide-y divide-border border-y border-border sm:grid-cols-2 sm:divide-y-0 lg:grid-cols-4 lg:divide-x">
               {([
-                [FileText, "Centralisez", "Rassemblez PDF, pages web et notes dans des notebooks organisés."],
-                [Search, "Comprenez", "Interrogez vos sources et retrouvez les passages qui étayent les réponses."],
-                [Mic, "Échangez", "Discutez naturellement avec Leanna et faites intervenir Roxane à la voix."],
-                [PanelsTopLeft, "Créez", "Transformez vos recherches en rapports, fiches, quiz et autres livrables Studio."],
+                [FileText, "Centraliser", "Rassemblez PDF, pages web et notes dans des notebooks organisés."],
+                [Search, "Comprendre", "Interrogez vos sources et retrouvez les passages qui justifient les réponses."],
+                [Mic, "Échanger", "Discutez naturellement avec Leanna et faites intervenir Roxane à la voix."],
+                [PanelsTopLeft, "Créer", "Transformez vos recherches en rapports, fiches et livrables Studio."],
               ] as const).map(([Icon, title, description]) => (
-                <article key={title} className="rounded-xl border border-border bg-surface/80 p-5 transition-colors hover:border-accent/40">
-                  <div className="grid size-10 place-items-center rounded-xl bg-accent-soft text-accent"><Icon className="size-5" aria-hidden /></div>
-                  <h3 className="mt-4 text-sm font-semibold">{title}</h3>
-                  <p className="mt-2 text-xs leading-5 text-text-muted">{description}</p>
+                <article key={title} className="py-5 sm:px-4 lg:px-5">
+                  <Icon className="size-4 text-accent" aria-hidden />
+                  <h3 className="mt-3 text-sm font-semibold text-text">{title}</h3>
+                  <p className="mt-1.5 text-xs leading-5 text-text-muted">{description}</p>
                 </article>
               ))}
             </div>
           </section>
 
-          <section className="relative overflow-hidden rounded-2xl border border-accent/20 bg-accent-soft/40 px-6 py-9 text-center sm:px-10 sm:py-12">
-            <div className="pointer-events-none absolute -right-16 -top-24 size-64 rounded-full bg-accent/10 blur-3xl" aria-hidden />
-            <div className="relative mx-auto max-w-2xl">
-              <div className="mx-auto grid size-12 place-items-center rounded-2xl border border-accent/20 bg-surface text-accent shadow-sm"><Download className="size-5" /></div>
-              <h2 className="mt-5 text-2xl font-semibold tracking-tight sm:text-3xl">Prêt à travailler avec Leanna ?</h2>
-              <p className="mt-3 text-sm leading-6 text-text-muted">Installez l’application Windows et retrouvez votre espace de connaissance dans une expérience desktop dédiée.</p>
-              <Button asChild size="lg" className="mt-6 h-12 px-6">
-                <a href={DESKTOP_DOWNLOAD_URL} target="_blank" rel="noopener noreferrer">
-                  <Download className="mr-2 size-4" aria-hidden />
-                  Télécharger Leanna Desktop
-                </a>
-              </Button>
-              <p className="mt-3 text-[11px] text-text-subtle">Le téléchargement ouvre la page officielle des dernières versions GitHub.</p>
+          <section className="flex flex-col gap-5 rounded-xl border border-border bg-surface p-5 sm:flex-row sm:items-center sm:justify-between sm:p-7">
+            <div className="max-w-xl">
+              <h2 className="text-base font-semibold tracking-tight text-text sm:text-lg">Passez à l’expérience desktop.</h2>
+              <p className="mt-1.5 text-sm leading-6 text-text-muted">Installez Leanna Notebook sur Windows et retrouvez votre espace de travail dans une application dédiée.</p>
             </div>
+            <Button asChild size="lg" className="h-11 shrink-0 px-5">
+              <a href={DESKTOP_DOWNLOAD_URL} target="_blank" rel="noopener noreferrer">
+                <Download className="mr-2 size-4" aria-hidden />
+                Télécharger Leanna
+              </a>
+            </Button>
           </section>
 
-          <footer className="flex flex-col items-center justify-between gap-3 py-8 text-xs text-text-subtle sm:flex-row">
+          <footer className="flex flex-col items-start justify-between gap-3 py-7 text-xs text-text-subtle sm:flex-row sm:items-center">
             <span>© {new Date().getFullYear()} Leanna Notebook</span>
-            <a href="https://github.com/moonback/leanna-notebook/releases" target="_blank" rel="noopener noreferrer" className="transition-colors hover:text-text">Versions et notes de mise à jour</a>
+            <span>Application Windows · 64 bits</span>
           </footer>
         </div>
       </main>
