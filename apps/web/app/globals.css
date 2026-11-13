@@ -896,3 +896,201 @@
   .mobile-chat-user-message, .mobile-chat-assistant-message { animation: none !important; }
   .mobile-chat-composer__form, .mobile-chat-composer__form button { transition: none !important; }
 }
+
+/* --------------------------------------------------------------------------
+   Leanna visual refresh — design layer only (no component or business logic).
+   -------------------------------------------------------------------------- */
+:root {
+  --bg: #f7f8f7;
+  --surface: #eff3f1;
+  --surface-raised: #ffffff;
+  --surface-sunken: #e8eeeb;
+  --border: #dce5e0;
+  --border-strong: #c6d4cc;
+  --border-input: #82968b;
+  --text: #17251f;
+  --text-muted: #52645a;
+  --text-subtle: #718078;
+  --accent: #176b62;
+  --accent-hover: #10564f;
+  --accent-soft: #e0f0eb;
+  --on-accent: #ffffff;
+  --on-accent-soft: #14574f;
+  --focus: #168477;
+  --success: #23734e;
+  --success-soft: #e4f4eb;
+  --warning: #946018;
+  --warning-soft: #fbf1df;
+  --danger: #b43b35;
+  --danger-soft: #fbe9e7;
+  --header-h: 4rem;
+  --page-max-w: 86rem;
+  --chat-max-w: 52rem;
+  --reading-max-w: 48rem;
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.35rem;
+  --shadow-card: 0 1px 2px rgba(23,37,31,.035), 0 8px 24px rgba(23,37,31,.045);
+  --shadow-pop: 0 8px 24px rgba(23,37,31,.08), 0 22px 56px rgba(23,37,31,.12);
+}
+
+:root[data-theme="dark"] {
+  --bg: #101a17;
+  --surface: #17231e;
+  --surface-raised: #1d2b25;
+  --surface-sunken: #0c1411;
+  --border: #2d4037;
+  --border-strong: #40584c;
+  --border-input: #789084;
+  --text: #edf5f0;
+  --text-muted: #b0c2b8;
+  --text-subtle: #8fa398;
+  --accent: #72c6b4;
+  --accent-hover: #8bd7c7;
+  --accent-soft: #1b3932;
+  --on-accent: #0c2922;
+  --on-accent-soft: #b9e7dc;
+  --focus: #72c6b4;
+  --success: #75d6a1;
+  --success-soft: #173b2a;
+  --warning: #e8bd70;
+  --warning-soft: #3b2d17;
+  --danger: #ff9388;
+  --danger-soft: #432320;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #101a17;
+    --surface: #17231e;
+    --surface-raised: #1d2b25;
+    --surface-sunken: #0c1411;
+    --border: #2d4037;
+    --border-strong: #40584c;
+    --border-input: #789084;
+    --text: #edf5f0;
+    --text-muted: #b0c2b8;
+    --text-subtle: #8fa398;
+    --accent: #72c6b4;
+    --accent-hover: #8bd7c7;
+    --accent-soft: #1b3932;
+    --on-accent: #0c2922;
+    --on-accent-soft: #b9e7dc;
+    --focus: #72c6b4;
+    --success: #75d6a1;
+    --success-soft: #173b2a;
+    --warning: #e8bd70;
+    --warning-soft: #3b2d17;
+    --danger: #ff9388;
+    --danger-soft: #432320;
+  }
+}
+
+/* Échelle typographique plus lisible et cohérente sur toutes les pages. */
+@theme inline {
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 0.95rem;
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1rem;
+  --text-sm: 0.8125rem;
+  --text-sm--line-height: 1.2rem;
+  --text-base: 0.875rem;
+  --text-base--line-height: 1.45rem;
+  --text-reading: 0.9375rem;
+  --text-reading--line-height: 1.65rem;
+  --text-lg: 1rem;
+  --text-lg--line-height: 1.5rem;
+  --text-xl: 1.125rem;
+  --text-xl--line-height: 1.65rem;
+  --text-2xl: 1.5rem;
+  --text-2xl--line-height: 1.9rem;
+  --text-display: 2.25rem;
+  --text-display--line-height: 1.12;
+}
+
+@layer base {
+  html { scroll-behavior: smooth; }
+  body {
+    letter-spacing: -0.008em;
+    text-rendering: optimizeLegibility;
+  }
+  h1, h2, h3, h4 {
+    text-wrap: balance;
+    letter-spacing: -0.025em;
+  }
+  p { text-wrap: pretty; }
+  button, input, select, textarea { font: inherit; }
+  a { text-underline-offset: 0.2em; }
+}
+
+/* Surface, formulaires et actions : langage visuel unifié. */
+.glass-card, .glass-panel, [data-slot="card"] {
+  border-radius: var(--radius-lg);
+}
+.glass-card[data-interactive="true"]:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-pop);
+}
+input:not([type="checkbox"]):not([type="radio"]),
+select, textarea {
+  border-radius: 0.7rem;
+}
+button, [role="button"] {
+  -webkit-tap-highlight-color: transparent;
+}
+:where(button, a, input, select, textarea, [role="button"]):focus-visible {
+  outline-color: var(--focus);
+}
+
+/* Desktop : plus d'espace utile, navigation et contenus mieux respirés. */
+@media (min-width: 768px) {
+  #app-header-title { gap: 0.75rem; }
+  header.glass-toolbar {
+    padding-inline: clamp(1.25rem, 2.5vw, 2.75rem);
+    gap: 1rem;
+  }
+  main.mobile-dashboard-main {
+    padding-top: clamp(2rem, 3.2vw, 3.25rem);
+    padding-bottom: clamp(2.5rem, 4vw, 4rem);
+    gap: 1.75rem;
+  }
+  .mobile-dashboard-grid { gap: 1rem; }
+  .mobile-dashboard-card {
+    min-height: 11rem;
+    padding: 1.25rem;
+    border-radius: 1.1rem;
+  }
+}
+
+/* Mobile : densité réduite, commandes tactiles et respect des encoches. */
+@media (max-width: 767px) {
+  :root { --header-h: 3.6rem; }
+  header.glass-toolbar {
+    gap: 0.5rem;
+    padding-inline: 0.75rem;
+  }
+  header.glass-toolbar > a img { width: 2.35rem; height: 2.35rem; }
+  main.mobile-dashboard-main {
+    padding: 1.25rem 1rem 1.75rem;
+    gap: 1.25rem;
+  }
+  .mobile-dashboard-grid { gap: 0.8rem; }
+  .mobile-dashboard-card {
+    min-height: 8.5rem;
+    padding: 1rem;
+    border-radius: 1rem;
+  }
+  .mobile-bottom-nav {
+    border-top-color: var(--border);
+    box-shadow: 0 -8px 28px color-mix(in srgb, var(--text) 6%, transparent);
+  }
+  .mobile-chat-composer, .mobile-chat-toolbar {
+    border-color: var(--border);
+  }
+  [role="dialog"] { border-radius: 1.15rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}
