@@ -53,6 +53,7 @@ const browserManager = new BrowserManager({
   store: browserDataStore,
   onState: (state) => sendToRenderer("browser:state", state),
   onCommand: (command) => sendToRenderer("browser:command", command),
+  onOpenVoice: () => sendToRenderer("browser:open-voice", true),
   chooseSavePath: (window, filename) => dialog.showSaveDialogSync(window, {
     title: "Enregistrer le téléchargement",
     defaultPath: join(app.getPath("downloads"), filename),

@@ -60,6 +60,7 @@ export type ManagerDeps = {
   chooseSavePath: (window: BrowserWindow, filename: string) => string | null;
   confirmRiskyDownload: (window: BrowserWindow, filename: string) => boolean;
   askPermission: (window: BrowserWindow, origin: string, permission: string) => Promise<{ allow: boolean; remember: boolean }>;
+  onOpenVoice: () => void;
 };
 
 const DEFAULT_BOUNDS: BrowserBounds = { x: 0, y: 150, width: 1000, height: 600 };
@@ -85,6 +86,8 @@ function originOf(url: string): string | null {
 export class BrowserManager {
   private tabs: BrowserTab[] = [];
   private window: BrowserWindow | null = null;
+  private launcherWindow: BrowserWindow | null = null;
+  private launcherEnabled = true;
   private activeTabId: string | null = null;
   private bounds: BrowserBounds = DEFAULT_BOUNDS;
   private visible = false;
@@ -102,8 +105,16 @@ export class BrowserManager {
 
   attach(window: BrowserWindow): void {
     this.window = window;
-    window.on("enter-full-screen", () => this.publish());
-    window.on("leave-full-screen", () => this.publish());
+    this.createLauncherWindow(window);
+    const reposition = () => this.positionLauncher();
+    window.on("move", reposition);
+    window.on("resize", reposition);
+    window.on("maximize", reposition);
+    window.on("unmaximize", reposition);
+    window.on("enter-full-screen", () => { this.syncLauncherVisibility(); this.publish(); });
+    window.on("leave-full-screen", () => { this.syncLauncherVisibility(); this.publish(); });
+    window.on("minimize", () => this.syncLauncherVisibility());
+    window.on("restore", () => { this.positionLauncher(); this.syncLauncherVisibility(); });
   }
 
   /** Charge réglages, téléchargements et permissions, puis restaure la session. Idempotent. */
@@ -237,6 +248,7 @@ export class BrowserManager {
       next.pendingUrl = null;
       this.load(next, url);
     }
+    this.syncLauncherVisibility();
     this.publish();
     return true;
   }
@@ -258,6 +270,7 @@ export class BrowserManager {
       const fallback = this.tabs[Math.min(index, this.tabs.length - 1)];
       if (fallback) this.activateTab(fallback.id);
     }
+    this.syncLauncherVisibility();
     this.publish();
     return true;
   }
@@ -366,15 +379,23 @@ export class BrowserManager {
     if (!bounds) return false;
     this.bounds = bounds;
     this.applyBounds();
+    this.positionLauncher();
     return true;
   }
 
   setVisible(visible: boolean): void {
     this.visible = visible;
     const active = this.activeTabId ? this.find(this.activeTabId) : undefined;
-    if (!active) return;
-    if (visible) this.attachView(active);
-    else this.detach(active);
+    if (active) {
+      if (visible) this.attachView(active);
+      else this.detach(active);
+    }
+    this.syncLauncherVisibility();
+  }
+
+  setLauncherEnabled(enabled: boolean): void {
+    this.launcherEnabled = enabled;
+    this.syncLauncherVisibility();
   }
 
   // ── Accès contrôlé au contenu (extraction, agent) ───────────────────────
@@ -477,12 +498,83 @@ export class BrowserManager {
       if (!tab.view.webContents.isDestroyed()) tab.view.webContents.close();
     }
     this.tabs = [];
+    if (this.launcherWindow && !this.launcherWindow.isDestroyed()) this.launcherWindow.close();
+    this.launcherWindow = null;
     this.window = null;
     this.activeTabId = null;
     this.initialized = null;
   }
 
   // ── Interne ─────────────────────────────────────────────────────────────
+  /**
+   * Couche native indépendante du DOM React : les WebContentsView distantes sont compositées
+   * au-dessus du renderer, donc un bouton HTML ne pourrait jamais rester au premier plan.
+   */
+  private createLauncherWindow(parent: BrowserWindow): void {
+    if (this.launcherWindow && !this.launcherWindow.isDestroyed()) return;
+    const launcher = new BrowserWindow({
+      parent, width: 76, height: 76, show: false, frame: false, transparent: true,
+      backgroundColor: "#00000000", hasShadow: false, resizable: false, movable: false,
+      minimizable: false, maximizable: false, closable: false, focusable: true, skipTaskbar: true,
+      webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true },
+    });
+    this.launcherWindow = launcher;
+    launcher.setMenu(null);
+    launcher.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+    launcher.webContents.on("will-navigate", (event, url) => {
+      if (url !== "leanna-launcher://open-voice") { event.preventDefault(); return; }
+      event.preventDefault();
+      if (this.visible && this.launcherEnabled && this.activeTabId) {
+        this.deps.onOpenVoice();
+        if (this.window && !this.window.isDestroyed()) this.window.focus();
+      }
+    });
+    launcher.on("closed", () => { if (this.launcherWindow === launcher) this.launcherWindow = null; });
+    const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
+      *{box-sizing:border-box}html,body{width:100%;height:100%;margin:0;background:transparent;overflow:hidden}
+      body{display:grid;place-items:center;font-family:Inter,Segoe UI,Arial,sans-serif}
+      a{width:64px;height:64px;display:grid;place-items:center;border-radius:50%;text-decoration:none;outline:none;position:relative;isolation:isolate}
+      a:focus-visible{outline:2px solid #c4b5fd;outline-offset:3px}
+      .halo{position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle,rgba(135,92,255,.42),rgba(106,74,255,.12) 58%,transparent 74%);filter:blur(7px);animation:pulse 3.4s ease-in-out infinite}
+      .orb{position:relative;width:54px;height:54px;border:1px solid rgba(205,190,255,.7);border-radius:50%;display:grid;place-items:center;color:white;font-size:23px;font-weight:600;background:radial-gradient(circle at 34% 25%,rgba(255,255,255,.85),rgba(194,177,255,.42) 9%,transparent 30%),radial-gradient(circle at 50% 55%,#7652ed 0%,#29265f 52%,#10142d 100%);box-shadow:0 0 16px rgba(143,111,255,.65),0 0 36px rgba(104,82,255,.32),inset 0 0 14px rgba(255,255,255,.16);transition:transform .2s ease,box-shadow .2s ease}
+      a:hover .orb{transform:scale(1.08);box-shadow:0 0 22px rgba(166,139,255,.85),0 0 46px rgba(104,82,255,.48),inset 0 0 14px rgba(255,255,255,.2)}
+      .orb:before,.orb:after{content:"";position:absolute;inset:-5px;border:1px solid rgba(177,153,255,.34);border-radius:50%;pointer-events:none}
+      .orb:after{inset:-10px;border-color:rgba(177,153,255,.18)}
+      @keyframes pulse{0%,100%{opacity:.62;transform:scale(.9)}50%{opacity:1;transform:scale(1.12)}}
+      @media(prefers-reduced-motion:reduce){.halo{animation:none}}
+    </style></head><body><a href="leanna-launcher://open-voice" aria-label="Ouvrir Leanna, assistant vocal" title="Ouvrir Leanna"><span class="halo"></span><span class="orb" aria-hidden="true">L</span></a></body></html>`;
+    void launcher.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`).then(() => {
+      this.positionLauncher();
+      this.syncLauncherVisibility();
+    }).catch(() => undefined);
+  }
+
+  private positionLauncher(): void {
+    const parent = this.window;
+    const launcher = this.launcherWindow;
+    if (!parent || parent.isDestroyed() || !launcher || launcher.isDestroyed() || this.htmlFullscreen) return;
+    const scale = parent.webContents.getZoomFactor() || 1;
+    const content = parent.getContentBounds();
+    const width = 76;
+    const height = 76;
+    const margin = 14;
+    const x = Math.round(content.x + (this.bounds.x + this.bounds.width) * scale - width - margin);
+    const y = Math.round(content.y + (this.bounds.y + this.bounds.height) * scale - height - margin);
+    launcher.setBounds({ x, y, width, height });
+  }
+
+  private syncLauncherVisibility(): void {
+    const launcher = this.launcherWindow;
+    const parent = this.window;
+    if (!launcher || launcher.isDestroyed()) return;
+    const shouldShow = Boolean(this.visible && this.launcherEnabled && this.activeTabId && parent
+      && !parent.isDestroyed() && !parent.isMinimized() && !this.htmlFullscreen);
+    if (shouldShow) {
+      this.positionLauncher();
+      if (!launcher.isVisible()) launcher.showInactive();
+    } else if (launcher.isVisible()) launcher.hide();
+  }
+
   private find(id: string): BrowserTab | undefined {
     return this.tabs.find((tab) => tab.id === id);
   }
@@ -517,6 +609,7 @@ export class BrowserManager {
     const active = this.activeTabId ? this.find(this.activeTabId) : undefined;
     if (!active || !this.window || this.window.isDestroyed()) return;
     if (this.htmlFullscreen) {
+      this.syncLauncherVisibility();
       const [width, height] = this.window.getContentSize();
       active.view.setBounds({ x: 0, y: 0, width, height });
       return;
@@ -527,6 +620,7 @@ export class BrowserManager {
       x: Math.round(this.bounds.x * scale), y: Math.round(this.bounds.y * scale),
       width: Math.round(this.bounds.width * scale), height: Math.round(this.bounds.height * scale),
     });
+    this.positionLauncher();
   }
 
   private configureSession(browserSession: Session): void {
@@ -673,7 +767,7 @@ export class BrowserManager {
     });
     contents.on("zoom-changed", (_event, direction) => { this.setZoom(tab.id, direction); });
     contents.on("enter-html-full-screen", () => { this.htmlFullscreen = true; this.applyBounds(); });
-    contents.on("leave-html-full-screen", () => { this.htmlFullscreen = false; this.applyBounds(); });
+    contents.on("leave-html-full-screen", () => { this.htmlFullscreen = false; this.applyBounds(); this.syncLauncherVisibility(); });
   }
 
   private recordVisit(tab: BrowserTab): void {

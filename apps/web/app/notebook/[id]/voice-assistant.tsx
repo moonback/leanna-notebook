@@ -99,7 +99,7 @@ function playActivationChime(ctx: AudioContext) {
   } catch { /* le son est un confort, jamais bloquant */ }
 }
 
-export function VoiceAssistant({ notebookId, conversationId, disabled = false, onOpenCitation, browserApi, saveBrowserRequest }: { notebookId: string; conversationId: string; disabled?: boolean; onOpenCitation: (passage: Passage) => void; browserApi?: DesktopBrowserApi; saveBrowserRequest?: (request: DesktopSaveRequest) => Promise<{ ok: boolean; message: string }> }) {
+export function VoiceAssistant({ notebookId, conversationId, disabled = false, onOpenCitation, browserApi, saveBrowserRequest, openRequest = 0, hideTrigger = false, onOpenChange }: { notebookId: string; conversationId: string; disabled?: boolean; onOpenCitation: (passage: Passage) => void; browserApi?: DesktopBrowserApi; saveBrowserRequest?: (request: DesktopSaveRequest) => Promise<{ ok: boolean; message: string }>; openRequest?: number; hideTrigger?: boolean; onOpenChange?: (open: boolean) => void }) {
   const [open, setOpen] = React.useState(false);
   const [expanded, setExpanded] = React.useState(false);
   const [state, setState] = React.useState<VoiceState>("idle");
@@ -171,6 +171,10 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
     mutedRef.current = false;
     if (mounted.current) { setMuted(false); setState("idle"); }
   }, [browserApi]);
+
+  React.useEffect(() => {
+    if (openRequest > 0) { setExpanded(false); setOpen(true); }
+  }, [openRequest]);
 
   React.useEffect(() => {
     mounted.current = true;
@@ -657,11 +661,11 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
 
   return (
     <>
-      <Button size="sm" variant="soft" disabled={disabled} onClick={() => { setExpanded(false); setOpen(true); }}>
+      {!hideTrigger && <Button size="sm" variant="soft" disabled={disabled} onClick={() => { setExpanded(false); setOpen(true); }}>
         <AudioLines aria-hidden /> {state === "idle" || state === "error" ? "Mode vocal" : "Studio vocal actif"}
-      </Button>
+      </Button>}
 
-      <Dialog open={open} onOpenChange={(value) => { setOpen(value); if (!value) setExpanded(false); }}>
+      <Dialog open={open} onOpenChange={(value) => { setOpen(value); onOpenChange?.(value); if (!value) setExpanded(false); }}>
         <DialogContent
           title="Studio vocal"
           description="Une conversation naturelle avec vos sources."
