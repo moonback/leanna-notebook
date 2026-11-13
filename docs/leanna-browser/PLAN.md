@@ -125,18 +125,32 @@ local, UI minimale, route `/browser`. Constats vérifiés :
 - [x] Phase 1 — audit et plan
 - [x] Phase 2 — moteur, onglets, navigation (29 tests unitaires, 12 E2E Electron)
 - [x] Phase 3 — interface : onglets, barre d'adresse, états d'erreur, raccourcis (4 E2E sur l'UI réelle)
-- [ ] Phase 4 — extraction et services IA — **EN COURS, interrompue (limite d'usage)**.
-  Écrit : `page-scripts.ts`, `browser-extract.ts`, IPC `extractPage` / `getSelection`, 7 tests unitaires (passent).
-  **Bug ouvert** : dans Electron réel, `extractPage` renvoie `status: "unavailable"` (2 tests E2E en échec dans
-  `e2e/browser.e2e.cjs`). Première chose à faire : afficher `page.reason` ; pistes = prélude Readability dans
-  `executeJavaScriptInIsolatedWorld`, ou `fn.toString()` du script compilé qui référence un symbole hors fonction.
-  Reste : `streamChat` avec outils, `lib/browser/context.ts` (bloc `<untrusted_web_content>`), route
-  `api/v1/browser/agent`, panneau IA.
-- [ ] Phase 5 — agent, outils, prompts
-- [ ] Phase 6 — Notebook
-- [ ] Phase 7 — persistance, réglages, téléchargements
-- [ ] Phase 8 — revue sécurité
-- [ ] Phase 9 — tests, corrections, documentation
+- [x] Phase 4 — extraction de contenu (Readability en monde isolé, nettoyage, segmentation, bornage)
+- [x] Phase 5 — agent (19 outils, modes, confirmations), services IA, panneau Leanna, prompts v2 + évaluation réelle
+- [x] Phase 6 — Notebook : lien, contenu, contenu + synthèse, sélection (routes existantes, aucune migration)
+- [x] Phase 7 — bibliothèque (favoris, historique, téléchargements) et réglages
+- [x] Phase 8 — revue sécurité (`SECURITY.md`)
+- [x] Phase 9 — vérification complète et documentation
+
+### État de vérification final (13 novembre 2026, Windows 10)
+
+| Commande | Résultat |
+|---|---|
+| `pnpm typecheck` | OK |
+| `pnpm lint` | 0 erreur, 15 avertissements (les 15 de la base, aucun nouveau) |
+| `pnpm --dir apps/web build` | OK (`/browser`, `/notebook/[id]/browser`, `/api/v1/browser/agent`) |
+| `pnpm --dir apps/desktop test` | 49/49 |
+| `pnpm --dir apps/web test` | 73/73 (+ 1 ignoré : l'évaluation réelle, lancée à part) |
+| `pnpm --dir packages/core test` | 5/5 |
+| `pnpm --dir apps/desktop test:e2e` | 35/35 (16 moteur, 19 interface) |
+| `pnpm --dir apps/worker test` | **6 échecs**, dans un paquet non modifié par cette branche (`git diff main -- apps/worker` vide) |
+| Évaluation des prompts (vrai modèle) | avant 13/22 · après 21/22 (`eval/results.md`) |
+
+**Attention** : la suite existante du worker contient des tests d'intégration qui se connectent au projet Supabase configuré
+dans `apps/worker/.env` (ici un projet hébergé) et y créent puis suppriment des comptes `…@test.local`. `pnpm test` à la
+racine les exécute. Ne pas relancer cette suite sans base de test dédiée.
+
+Non vérifié et fonctionnalités non réalisées : voir `LIMITATIONS.md`.
 
 ## 6. Journal des décisions prises en cours de route
 
@@ -150,5 +164,14 @@ local, UI minimale, route `/browser`. Constats vérifiés :
 - **Banc E2E de l'UI** : la vraie UI React est compilée (esbuild + Tailwind) et servie par un serveur local
   de confiance ; l'API serveur est simulée. `BrowserWindow.capturePage()` n'inclut pas la vue native :
   les captures sont prises en deux images (interface, page).
+- **Ordre des commits** : les services IA (route, assemblage, panneau) ont été livrés avec la phase 5 plutôt qu'avec la
+  phase 4, car la route dépend des prompts et des outils de l'agent.
+- **`executeJavaScriptInIsolatedWorld`** : avec plusieurs sources, la valeur du dernier script n'est pas renvoyée ; le prélude
+  (Readability) et l'appel sont donc concaténés en une seule source.
+- **Activation utilisateur** : les clics de l'agent sont exécutés avec `userGesture`, sinon Chromium saute au retour arrière
+  l'entrée d'historique qu'ils créent.
+- **Texte saisi par l'agent** (revue sécurité) : confirmé s'il ne figure pas dans la demande de l'utilisateur.
+- **Roxane dans le navigateur** : second regard à la demande, sans outil (cohérent avec son rôle vocal).
+- **Synthèse IA d'une page** : enregistrée comme note (`kind='note'`), à côté de la source texte.
 - **Types partagés** : l'UI web importe *les types* de `apps/desktop/src/shared/desktop-api.ts`
   (aucun code desktop dans le bundle web).
