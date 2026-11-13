@@ -26,7 +26,8 @@ function geminiSchema(schema: { type: string; properties?: Record<string, any>; 
   return { type: "OBJECT", properties, ...(schema.required?.length ? { required: [...schema.required] } : {}) };
 }
 
-const browserFunctionDeclarations = BROWSER_TOOLS.map((tool) => ({
+const VOICE_BROWSER_TOOL_NAMES = new Set(["open_url", "new_tab", "go_back", "go_forward", "get_page_content", "get_page_metadata", "extract_links", "extract_tables", "find_text", "click_element", "type_text", "scroll_page", "get_active_tab", "search_web", "compare_pages", "save_to_notebook"]);
+const browserFunctionDeclarations = BROWSER_TOOLS.filter((tool) => VOICE_BROWSER_TOOL_NAMES.has(tool.name)).map((tool) => ({
   name: `browser_${tool.name}`,
   description: tool.description,
   parameters: geminiSchema(tool.parameters),
