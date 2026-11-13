@@ -431,7 +431,7 @@ Première tranche fonctionnelle intégrée :
 - Les appels `browser_*` de Gemini sont transmis au processus Main via le pont Electron existant et exécutés par `BrowserAgent`.
 - Les actions retournant `confirmation_required` déclenchent une confirmation native explicite avant l'appel à `agentResolve`.
 - Les demandes `save_to_notebook` réutilisent le pipeline d'ingestion existant et le Notebook sélectionné ; l'échec de sauvegarde est renvoyé comme échec au modèle.
-- Un verrou Main distingue les missions `panel` et `voice`. Le verrou est libéré à la fin du tour ou à l'interruption. Les appels du mauvais propriétaire sont refusés.
+- Un verrou Main distingue les missions `panel` et `voice`. Chaque appel porte l'identifiant de mission retourné par Main ; un appel tardif d'une ancienne mission est refusé, même après une reprise par le même propriétaire. Les appels sont sérialisés dans Main. Le verrou est libéré à la fin du tour ou à l'interruption.
 - Les appels Browser sont limités à huit par tour vocal et les identifiants d'appels déjà vus sont rejetés pour éviter une seconde exécution.
 - Roxane conserve son endpoint et sa session sans déclaration d'outil Browser.
 
