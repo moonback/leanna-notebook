@@ -92,7 +92,7 @@ export function Dashboard({ initial, loadError, initialView, name }: { initial: 
       <Button size="sm" className="shrink-0" onClick={create} loading={creating}><Plus aria-hidden /> <span className="hidden sm:inline">Nouveau notebook</span><span className="sr-only sm:hidden">Nouveau notebook</span></Button>
     </AppHeader>
     <main className="mobile-dashboard-main mx-auto grid max-w-[var(--page-max-w)] gap-6 px-4 py-8 sm:px-6">
-      {/* <section className="flex flex-col gap-4 rounded-2xl border border-border bg-gradient-to-br from-surface-raised to-surface p-5 sm:flex-row sm:items-end sm:justify-between sm:p-7">
+      <section className="dashboard-welcome flex flex-col gap-4 rounded-2xl border border-border bg-gradient-to-br from-surface-raised to-surface p-5 sm:flex-row sm:items-end sm:justify-between sm:p-7">
         <div className="max-w-2xl">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-accent">Votre espace de recherche</p>
           <h1 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">{name?.trim() ? `Bonjour ${name.trim().split(/\s+/)[0]}` : "Bienvenue dans Leanna Notebook"}</h1>
@@ -102,7 +102,7 @@ export function Dashboard({ initial, loadError, initialView, name }: { initial: 
           <span className="grid size-9 place-items-center rounded-lg bg-accent-soft text-on-accent-soft"><BookOpen className="size-4" /></span>
           <span><strong className="block text-lg leading-5 tabular-nums">{items.length}</strong><span className="text-xs text-text-subtle">notebook{items.length > 1 ? "s" : ""}</span></span>
         </div>
-      </section> */}
+      </section>
       {loadError && <Alert tone="danger" title="Impossible de charger vos notebooks" action={<Button size="sm" variant="secondary" onClick={() => router.refresh()}>Réessayer</Button>} />}
 
       <div className="mobile-dashboard-toolbar flex flex-wrap items-center justify-between gap-3">
