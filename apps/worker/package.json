@@ -5,7 +5,8 @@
   "scripts": {
     "start": "node --env-file-if-exists=.env src/main.ts",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "reembed": "node --env-file-if-exists=.env src/reembed.ts"
   },
   "dependencies": {
     "@mozilla/readability": "~0.6.0",

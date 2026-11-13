@@ -4,11 +4,20 @@ import { Readability } from "@mozilla/readability";
 import { parseHTML } from "linkedom";
 import { PermanentError } from "../worker.ts";
 import { FetchRefused, safeFetch } from "./ssrf.ts";
+import { fromGithub } from "./github.ts";
 import { fromEpub, fromPptx, readZip } from "./office.ts";
 import type { Transcriber } from "../ai/transcription.ts";
 import { normalize, type ChunkTimeRange } from "./chunker.ts";
 
-export type Extracted = { text: string; pageStarts: number[]; pageCount: number | null; title?: string; timeRanges?: ChunkTimeRange[] };
+export type Extracted = {
+  text: string; pageStarts: number[]; pageCount: number | null; title?: string; timeRanges?: ChunkTimeRange[];
+  /** Vrai : un chunk ne déborde jamais d'une page sur la suivante (dépôts GitHub : une page = un fichier). */
+  breakAtPages?: boolean;
+  /** Vrai : texte déjà normalisé (code : indentation conservée), le handler ne le renormalise pas. */
+  preformatted?: boolean;
+  /** Métadonnées à fusionner dans sources.external_ref. */
+  externalRef?: Record<string, unknown>;
+};
 export type PdfProgress = (page: number, total: number) => Promise<void> | void;
 export type PdfOcr = (file: Uint8Array, pageCount: number) => Promise<string>;
 
@@ -37,6 +46,9 @@ export function parseOcrPages(recognized: string, pageCount: number): Pick<Extra
   return { text, pageStarts, pageCount };
 }
 
+
+/** Types de source que ce worker sait extraire (affiché au démarrage pour vérifier la version déployée). */
+export const SOURCE_KINDS = ["audio", "note", "txt", "md", "csv", "text", "pdf", "pptx", "epub", "docx", "web", "github"] as const;
 
 const MAX_WORDS = 500_000;
 const PDF_PAGE_SEPARATOR = "\n\n";
@@ -203,7 +215,13 @@ export async function extract(
       if (!res.contentType.includes("html") && !res.contentType.includes("text/plain")) throw new PermanentError("unsupported_type");
       return finalize(res.contentType.includes("html") ? fromHtml(res.body.toString("utf8")) : { text: res.body.toString("utf8"), pageStarts: [], pageCount: null });
     }
+    case "github": {
+      if (!data.url) throw new PermanentError("invalid_github_url");
+      const repo = await fromGithub(data.url);
+      return finalize({ text: repo.text, pageStarts: repo.pageStarts, pageCount: repo.pageCount, title: repo.title,
+        breakAtPages: true, preformatted: true, externalRef: { github: repo.github } });
+    }
     default:
-      throw new PermanentError("unsupported_type", `Type non pris en charge à ce jalon : ${kind}`);
+      throw new PermanentError("unsupported_type", `Type non pris en charge par ce worker : ${kind} (types connus : ${SOURCE_KINDS.join(", ")})`);
   }
 }

@@ -26,12 +26,24 @@ const TIMEOUT_MS = 15_000;
  * GET protégé contre le SSRF : DNS résolu UNE fois, connexion à l'IP vérifiée (pas de rebinding),
  * ports 80/443, 5 redirections max revérifiées, taille et durée plafonnées.
  */
-export async function safeFetch(rawUrl: string, redirects = 5): Promise<{ url: string; contentType: string; body: Buffer }> {
+export type SafeFetchOptions = {
+  /** Plafond de taille du corps (10 Mo par défaut). */
+  maxBytes?: number;
+  /** Si présent : seuls ces hôtes sont autorisés, redirections comprises. */
+  allowHosts?: string[];
+  accept?: string;
+  /** En-têtes supplémentaires, retirés si une redirection change d'hôte. */
+  headers?: Record<string, string>;
+};
+
+export async function safeFetch(rawUrl: string, redirects = 5, opts: SafeFetchOptions = {}): Promise<{ url: string; contentType: string; body: Buffer }> {
   const url = new URL(rawUrl);
+  const maxBytes = opts.maxBytes ?? MAX_BYTES;
   if (url.protocol !== "https:" && url.protocol !== "http:") throw new FetchRefused("scheme");
   if (url.port && url.port !== "80" && url.port !== "443") throw new FetchRefused("port");
   if (url.username || url.password) throw new FetchRefused("credentials");
   const host = url.hostname.replace(/^\[|\]$/g, "");
+  if (opts.allowHosts && !opts.allowHosts.includes(host.toLowerCase())) throw new FetchRefused("host_not_allowed");
   const ip = isIP(host) ? host : (await lookup(host)).address;
   if (isForbiddenIp(ip)) throw new FetchRefused("private_address");
 
@@ -39,10 +51,10 @@ export async function safeFetch(rawUrl: string, redirects = 5): Promise<{ url: s
     const req = (url.protocol === "https:" ? request : httpRequest)({
       host: ip, servername: isIP(host) ? undefined : host, port: url.port || (url.protocol === "https:" ? 443 : 80),
       path: url.pathname + url.search, method: "GET", timeout: TIMEOUT_MS,
-      headers: { host: url.host, "user-agent": "NotebookBot/0.1 (+import de source)", accept: "text/html,application/pdf,text/plain;q=0.9" },
+      headers: { ...opts.headers, host: url.host, "user-agent": "NotebookBot/0.1 (+import de source)", accept: opts.accept ?? "text/html,application/pdf,text/plain;q=0.9" },
     }, (r) => {
       const parts: Buffer[] = []; let size = 0;
-      r.on("data", (d: Buffer) => { size += d.length; if (size > MAX_BYTES) { req.destroy(new FetchRefused("too_large")); } else parts.push(d); });
+      r.on("data", (d: Buffer) => { size += d.length; if (size > maxBytes) { req.destroy(new FetchRefused("too_large")); } else parts.push(d); });
       r.on("end", () => resolve({ status: r.statusCode ?? 0, headers: r.headers, body: Buffer.concat(parts) }));
       r.on("error", reject);
     });
@@ -53,7 +65,8 @@ export async function safeFetch(rawUrl: string, redirects = 5): Promise<{ url: s
 
   if (res.status >= 300 && res.status < 400 && res.headers.location) {
     if (redirects <= 0) throw new FetchRefused("too_many_redirects");
-    return safeFetch(new URL(String(res.headers.location), url).toString(), redirects - 1);
+    const next = new URL(String(res.headers.location), url);
+    return safeFetch(next.toString(), redirects - 1, next.host === url.host ? opts : { ...opts, headers: undefined });
   }
   if (res.status === 401 || res.status === 402 || res.status === 403) throw new FetchRefused("paywall");
   if (res.status >= 400) throw new FetchRefused(`http_${res.status}`);

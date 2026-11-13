@@ -5,6 +5,7 @@ import { AiNotConfigured, AiUpstreamError, embedQuery, streamChat, type ChatMess
 import { CHAT_DEFAULT_INSTRUCTIONS, chatFixedRules, stripCitationMarkers } from "@/lib/ai/prompts/chat";
 import { formatPassages, resolveCitations, type Passage } from "@notebook/core/citations";
 import { log } from "@/lib/log";
+import { githubFilePath, passageTitle, SOURCE_FILES_SELECT } from "@/lib/github-source";
 import { createServiceClient, createUserClient } from "@/lib/supabase/server";
 import { disabledFeatures } from "@/lib/ownership";
 
@@ -68,14 +69,34 @@ async function ownConversation(id: string, userId: string) {
 export const GET = handle(async (_req: NextRequest, { params }: Params) => {
   const user = await requireUser();
   const { id } = await params;
-  await ownConversation(id, user.id);
+  const conv = await ownConversation(id, user.id);
   const supabase = await createUserClient();
   const { data, error } = await supabase.from("chat_messages")
-    .select("id, role, content, status, feedback, thoughts, created_at, citations(marker, source_id, quote_text, char_start, char_end, verified)")
+    .select("id, role, content, status, feedback, thoughts, created_at, citations(marker, chunk_id, source_id, quote_text, char_start, char_end, verified)")
     .eq("conversation_id", id).order("created_at");
   if (error) throw error;
-  return NextResponse.json({ messages: data });
+  return NextResponse.json({ messages: await withCitationFiles(conv.notebook_id, data ?? []) });
 });
+
+type StoredCitation = { chunk_id: string | null; source_id: string | null };
+
+/** Sources GitHub : ajoute à chaque citation le chemin du fichier cité (`file`), déduit de la page du chunk. */
+async function withCitationFiles<M extends { citations?: StoredCitation[] | null }>(notebookId: string, messages: M[]) {
+  const cited = messages.flatMap((m) => m.citations ?? []).filter((c) => c.chunk_id && c.source_id);
+  if (!cited.length) return messages;
+  const db = createServiceClient();
+  const { data: repos } = await db.from("sources").select(`id, ${SOURCE_FILES_SELECT}`)
+    .eq("notebook_id", notebookId).eq("kind", "github").in("id", [...new Set(cited.map((c) => c.source_id!))]);
+  if (!repos?.length) return messages;
+  const repoById = new Map(repos.map((r) => [r.id as string, r as { github_files?: unknown }]));
+  const chunkIds = [...new Set(cited.filter((c) => repoById.has(c.source_id!)).map((c) => c.chunk_id!))];
+  const { data: chunks } = await db.from("chunks").select("id, page_start").in("id", chunkIds);
+  const pageOf = new Map((chunks ?? []).map((c) => [c.id as string, c.page_start as number | null]));
+  return messages.map((m) => ({ ...m, citations: (m.citations ?? []).map((c) => {
+    const file = c.chunk_id && c.source_id ? githubFilePath(repoById.get(c.source_id), pageOf.get(c.chunk_id)) : null;
+    return file ? { ...c, file } : c;
+  }) }));
+}
 
 const LENGTH_EN: Record<string, string> = {
   short: "Tone and style instruction: keep the response short, a few sentences with only the essentials.",
@@ -109,7 +130,7 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
 
   // Sources prêtes et sélectionnées (défaut : toutes sauf les désélections de l'utilisateur)
   const [{ data: ready }, { data: desel }, { data: nb }, { data: profile }, { data: promptOverride }] = await Promise.all([
-    db.from("sources").select("id, title, fts_config").eq("notebook_id", conv.notebook_id).eq("status", "ready"),
+    db.from("sources").select(`id, title, fts_config, ${SOURCE_FILES_SELECT}`).eq("notebook_id", conv.notebook_id).eq("status", "ready"),
     db.from("source_deselections").select("source_id").eq("notebook_id", conv.notebook_id).eq("user_id", user.id),
     db.from("notebooks").select("chat_style, chat_custom_prompt, response_length, output_language").eq("id", conv.notebook_id).single(),
     db.from("profiles").select("output_language").eq("id", user.id).single(),
@@ -199,9 +220,9 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
     p_query: text, p_fts_config: fts, p_source_ids: selected.map((s) => s.id), p_k: 12,
   });
   if (me) throw me;
-  const titles = new Map(selected.map((s) => [s.id, s.title]));
+  const byId = new Map(selected.map((s) => [s.id, s]));
   const passages: Passage[] = (hits as { chunk_id: string; source_id: string; content: string; char_start: number; char_end: number; page_start: number | null }[])
-    .map((h, i) => ({ n: i + 1, chunk_id: h.chunk_id, source_id: h.source_id, source_title: titles.get(h.source_id) ?? "source", content: h.content, char_start: h.char_start, char_end: h.char_end, page_start: h.page_start }));
+    .map((h, i) => ({ n: i + 1, chunk_id: h.chunk_id, source_id: h.source_id, source_title: passageTitle(byId.get(h.source_id), h.page_start), content: h.content, char_start: h.char_start, char_end: h.char_end, page_start: h.page_start }));
 
   const messages: ChatMessage[] = [
     { role: "system", content: systemPrompt(nb?.output_language ?? profile?.output_language ?? "fr", nb?.chat_style ?? "default", nb?.chat_custom_prompt ?? null, nb?.response_length ?? "default", promptOverride?.content) },
@@ -261,7 +282,8 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
         await db.rpc("settle_usage", { p_id: usageId, p_status: "committed" });
         await db.from("notebooks").update({ last_activity_at: new Date().toISOString() }).eq("id", conv.notebook_id);
         log.info("chat.answered", { notebook_id: conv.notebook_id, message_id: answerId, passages: passages.length, citations: citations.length, dropped_markers: dropped, model });
-        send("done", { messageId: answerId, text: final, thoughts: thoughts || null, citations, usage });
+        send("done", { messageId: answerId, text: final, thoughts: thoughts || null, usage,
+          citations: citations.map((c) => { const file = githubFilePath(byId.get(c.source_id), c.page_start); return file ? { ...c, file } : c; }) });
       } catch (e) {
         const aborted = req.signal.aborted;
         // texte partiel conservé ; ses citations sont vérifiées comme pour une réponse complète

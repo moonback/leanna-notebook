@@ -77,9 +77,19 @@ export function browserExternalRef(origin: BrowserOrigin, addedAt: Date): { brow
   } };
 }
 
+/** Dépôt GitHub public : https://github.com/owner/repo[.git][/tree/<branche ou tag>] */
+export const GITHUB_REPO_RE = /^https:\/\/(?:www\.)?github\.com\/([A-Za-z0-9_.-]{1,100})\/([A-Za-z0-9_.-]{1,100}?)(?:\.git)?(?:\/tree\/([A-Za-z0-9_.\/-]{1,200}))?\/?$/;
+export const githubUrl = z.string().trim().max(2048).regex(GITHUB_REPO_RE, "Adresse de dépôt GitHub invalide (https://github.com/propriétaire/dépôt).");
+/** « owner/repo » pour le titre initial (le worker le confirme). */
+export function githubRepoName(url: string): string {
+  const m = GITHUB_REPO_RE.exec(url.trim());
+  return m ? `${m[1]}/${m[2]}` : url;
+}
+
 export const sourceItemSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("upload"), storagePath: z.string().min(1).max(500), title: z.string().trim().min(1).max(300) }).strict(),
   z.object({ type: z.literal("url"), url: httpUrl, browser: browserOriginSchema.optional() }).strict(),
+  z.object({ type: z.literal("github"), url: githubUrl }).strict(),
   z.object({ type: z.literal("text"), title: z.string().trim().min(1, "Titre requis.").max(300), text: z.string().min(1, "Texte vide.").max(3_500_000, "Texte trop long (500 000 mots maximum)."), browser: browserOriginSchema.optional() }).strict(),
 ]);
 export const sourcesCreateSchema = z.object({ items: z.array(sourceItemSchema).min(1).max(50) }).strict();

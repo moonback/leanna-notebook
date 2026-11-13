@@ -3,6 +3,7 @@ import { z } from "zod";
 import { ApiError, handle, parseBody, requireRole, requireUser } from "@/lib/api";
 import { embedQuery } from "@/lib/ai/openrouter";
 import { createServiceClient } from "@/lib/supabase/server";
+import { githubFilePath, passageTitle, SOURCE_FILES_SELECT } from "@/lib/github-source";
 
 export const runtime = "nodejs";
 type Params = { params: Promise<{ id: string }> };
@@ -16,7 +17,7 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
   const { query } = await parseBody(req, schema);
   const db = createServiceClient();
   const [{ data: ready }, { data: deselected }, { data: notebook }] = await Promise.all([
-    db.from("sources").select("id,title,fts_config").eq("notebook_id", id).eq("status", "ready"),
+    db.from("sources").select(`id,title,fts_config,${SOURCE_FILES_SELECT}`).eq("notebook_id", id).eq("status", "ready"),
     db.from("source_deselections").select("source_id").eq("notebook_id", id).eq("user_id", user.id),
     db.from("notebooks").select("workspace_id").eq("id", id).single()
   ]);
@@ -45,15 +46,15 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
       p_k: 8
     });
     if (error) throw error;
-    const titles = new Map(selected.map((s) => [s.id, s.title]));
+    const byId = new Map(selected.map((s) => [s.id, s]));
     await db.rpc("settle_usage", { p_id: usageId, p_status: "committed" });
     return NextResponse.json({
       passages: (hits ?? []).map((h: { source_id: string; content: string; page_start: number | null; time_start_ms: number | null; char_start: number; char_end: number }, i: number) => ({
         number: i + 1,
         sourceId: h.source_id,
-        title: titles.get(h.source_id) ?? "Source",
+        title: passageTitle(byId.get(h.source_id), h.page_start),
         excerpt: h.content,
-        page: h.page_start,
+        page: githubFilePath(byId.get(h.source_id), h.page_start) ? null : h.page_start,
         timeStartMs: h.time_start_ms,
         charStart: h.char_start,
         charEnd: h.char_end

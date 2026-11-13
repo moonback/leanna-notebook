@@ -14,6 +14,8 @@ import { knowledgeExtractHandler } from "./knowledge/extract.ts";
 import { contradictionsHandler } from "./knowledge/contradictions.ts";
 import { transcriberFromEnv } from "./ai/transcription.ts";
 import { speechFromEnv } from "./ai/speech.ts";
+import { SOURCE_KINDS } from "./ingest/extract.ts";
+import { countStale } from "./reembed.ts";
 
 const url = process.env.SUPABASE_URL;
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -26,6 +28,13 @@ const workerId = process.env.WORKER_ID || `${hostname()}-${process.pid}`;
 
 const embedder = embedderFromEnv();
 if (!embedder) console.warn("EMBEDDINGS_* non configuré : indexation en plein texte uniquement (pas de recherche vectorielle).");
+else {
+  console.log(`modèle d'embeddings : ${embedder.model}`);
+  // Vecteurs d'un ancien modèle : incomparables avec les questions encodées par le nouveau → résultats faussés.
+  countStale(db, embedder.model).then((n) => {
+    if (n) console.warn(`⚠ ${n} chunk(s) n'ont pas de vecteur ${embedder.model} : lancez « pnpm --dir apps/worker reembed » (la recherche par le sens est faussée d'ici là).`);
+  }).catch(() => { /* diagnostic seulement */ });
+}
 
 // Un handler par type de job réellement implémenté ; les autres types ne sont pas réclamés.
 const llm = llmFromEnv();
@@ -68,6 +77,7 @@ process.on("SIGTERM", () => (stopping = true));
 process.on("SIGINT", () => (stopping = true));
 
 console.log(`worker ${workerId} démarré, types gérés : ${Object.keys(handlers).join(", ") || "aucun"}`);
+console.log(`types de source pris en charge : ${SOURCE_KINDS.join(", ")}${process.env.GITHUB_TOKEN ? " (GITHUB_TOKEN configuré)" : " (GITHUB_TOKEN absent : 60 requêtes GitHub/heure)"}`);
 // Jobs d'un worker mort (bail expiré) : remis en file, ou échec + crédit rendu. Sûr à plusieurs workers.
 let lastSweep = 0;
 while (!stopping) {
