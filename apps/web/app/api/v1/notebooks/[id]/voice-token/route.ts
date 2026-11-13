@@ -11,7 +11,8 @@ type Params = { params: Promise<{ id: string }> };
 const MODEL = "gemini-3.8-live";
 const voiceSchema = z.object({ voice: z.enum(["Aoede", "Charon", "Fenrir", "Kore", "Puck", "Leda", "Orus", "Zephyr"]).default("Aoede"), persona: z.enum(["leanna", "roxane"]).default("leanna") }).strict();
 
-function geminiSchema(schema: { type: string; properties?: Record<string, any>; required?: readonly string[] }): Record<string, unknown> {
+type GeminiToolProperty = { type: string; description: string; enum?: readonly string[]; minLength?: number; maxLength?: number; minItems?: number; maxItems?: number };
+function geminiSchema(schema: { type: string; properties?: Record<string, GeminiToolProperty>; required?: readonly string[] }): Record<string, unknown> {
   const properties = Object.fromEntries(Object.entries(schema.properties ?? {}).map(([key, value]) => {
     const property: Record<string, unknown> = {
       type: value.type === "string" ? "STRING" : value.type === "boolean" ? "BOOLEAN" : "ARRAY",
