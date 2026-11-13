@@ -675,7 +675,9 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
               : "!inset-x-0 !bottom-0 !left-0 !top-auto !h-auto !max-h-none !w-full !max-w-none !translate-x-0 !translate-y-0 !rounded-t-2xl !rounded-b-none !gap-0 !p-0 [&>div:first-child]:!sr-only"}`}
         >
           {!expanded ? (
-            <div className={`${browserApi ? "browser-voice-minimized" : "mobile-voice-sheet-header"} flex min-h-[76px] items-center gap-3 border-t border-white/10 bg-surface-raised/95 px-4 py-3 sm:px-5`}>
+            <div className={browserApi
+              ? "browser-voice-minimized flex min-h-[76px] items-center gap-3 border-t border-white/10 bg-surface-raised/95 py-3 pl-4 pr-14 sm:pl-5 sm:pr-16"
+              : "mobile-voice-sheet-header flex min-h-[76px] items-center gap-3 border-t bg-surface-raised py-2.5 pl-3 pr-14 sm:pl-5 sm:pr-16"}>
               <div className={`relative grid size-10 shrink-0 place-items-center rounded-full border text-sm font-semibold transition-colors ${state === "speaking" ? "border-accent/50 bg-accent/10 text-accent" : "border-border bg-surface text-text"}`}>
                 L
                 {state !== "idle" && state !== "error" && <span className="absolute -bottom-0.5 -right-0.5 size-3 rounded-full border-2 border-surface-raised bg-emerald-500" />}
