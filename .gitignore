@@ -13,3 +13,5 @@ apps/desktop/release
 apps/desktop/e2e-artifacts
 apps/desktop/dist/preload.js
 graphify-out
+.project-memory.json
+project-memory.json
