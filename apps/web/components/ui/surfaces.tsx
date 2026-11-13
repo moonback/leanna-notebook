@@ -7,10 +7,11 @@ export function Card({ className, interactive, ...props }: React.HTMLAttributes<
   return (
     <div
       className={cn(
-        "relative rounded-lg border bg-surface-raised shadow-xs",
-        interactive && "transition-[box-shadow,border-color] duration-150 hover:border-border-strong hover:shadow-card focus-within:border-focus",
+        "glass-card relative rounded-lg border shadow-xs",
+        interactive && "glass-interactive focus-within:border-focus",
         className,
       )}
+      data-interactive={interactive ? "true" : undefined}
       {...props}
     />
   );
@@ -29,7 +30,7 @@ export function Panel({
   return (
     <section
       aria-labelledby={`${id}-title`}
-      className={cn("flex min-h-0 flex-col rounded-xl border bg-surface-raised", collapsed && "w-[var(--panel-collapsed-w)]", className)}
+      className={cn("glass-panel flex min-h-0 flex-col rounded-xl", collapsed && "w-[var(--panel-collapsed-w)]", className)}
     >
       <header className="flex min-h-12 shrink-0 flex-wrap items-center gap-x-2 gap-y-1 border-b px-4 py-2">
         <h2 id={`${id}-title`} className={cn("shrink-0 text-sm font-semibold", !collapsed && "mr-auto", collapsed && "sr-only")}>{title}</h2>
