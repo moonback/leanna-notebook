@@ -7,10 +7,11 @@ export function Card({ className, interactive, ...props }: React.HTMLAttributes<
   return (
     <div
       className={cn(
-        "relative rounded-lg border bg-surface-raised shadow-xs",
-        interactive && "transition-[box-shadow,border-color] duration-150 hover:border-border-strong hover:shadow-card focus-within:border-focus",
+        "glass-card relative rounded-lg border shadow-xs",
+        interactive && "glass-interactive focus-within:border-focus",
         className,
       )}
+      data-interactive={interactive ? "true" : undefined}
       {...props}
     />
   );
@@ -29,9 +30,9 @@ export function Panel({
   return (
     <section
       aria-labelledby={`${id}-title`}
-      className={cn("flex min-h-0 flex-col rounded-xl border bg-surface-raised", collapsed && "w-[var(--panel-collapsed-w)]", className)}
+      className={cn("glass-panel flex min-h-0 flex-col rounded-xl", collapsed && "w-[var(--panel-collapsed-w)]", className)}
     >
-      <header className="flex min-h-12 shrink-0 flex-wrap items-center gap-x-2 gap-y-1 border-b px-4 py-2">
+      <header className="glass-panel__header flex min-h-12 shrink-0 flex-wrap items-center gap-x-2 gap-y-1 border-b px-4 py-2">
         <h2 id={`${id}-title`} className={cn("shrink-0 text-sm font-semibold", !collapsed && "mr-auto", collapsed && "sr-only")}>{title}</h2>
         {!collapsed && actions && <div className="flex min-w-0 flex-wrap items-center justify-end gap-1">{actions}</div>}
         {onToggle && (
@@ -76,7 +77,7 @@ export function ListRow({
 }: Omit<React.HTMLAttributes<HTMLDivElement>, "title"> & { iconClassName?: string; icon?: React.ReactNode; title: React.ReactNode; meta?: React.ReactNode; trailing?: React.ReactNode; selected?: boolean; /** Autorise le titre (2 lignes) et la méta à passer à la ligne au lieu d'être tronqués. */ wrap?: boolean }) {
   return (
     <div
-      className={cn("group flex min-h-11 min-w-0 items-center gap-3 rounded-md px-3 py-1.5 hover:bg-surface", wrap && "items-start", selected && "bg-accent-soft/60", className)}
+      className={cn("glass-list-row group flex min-h-11 min-w-0 items-center gap-3 rounded-md px-3 py-1.5 hover:bg-surface", wrap && "items-start", selected && "bg-accent-soft/60", className)}
       {...props}
     >
       {icon && <span aria-hidden className={cn("grid size-7 shrink-0 place-items-center overflow-hidden rounded-md bg-surface text-text-muted [&_svg]:size-4", iconClassName)}>{icon}</span>}

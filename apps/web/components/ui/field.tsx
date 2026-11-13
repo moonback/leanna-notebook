@@ -3,7 +3,7 @@ import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const control =
-  "w-full rounded-md border border-border-input bg-surface-raised px-3 text-sm text-text placeholder:text-text-subtle transition-colors duration-150 focus-visible:border-focus focus-visible:outline-2 focus-visible:outline-offset-0 disabled:cursor-not-allowed disabled:bg-surface-sunken disabled:opacity-60 aria-invalid:border-danger";
+  "glass-control w-full rounded-md border border-border-input bg-surface-raised/90 px-3 text-sm text-text placeholder:text-text-subtle transition-[border-color,box-shadow,background-color] duration-150 focus-visible:border-focus focus-visible:outline-2 focus-visible:outline-offset-0 disabled:cursor-not-allowed disabled:bg-surface-sunken disabled:opacity-60 aria-invalid:border-danger";
 
 export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
   ({ className, ...props }, ref) => <input ref={ref} className={cn(control, "h-9", className)} {...props} />,

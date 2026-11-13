@@ -35,7 +35,7 @@ export function Toaster() {
             key={t.id}
             type={t.tone === "error" ? "foreground" : "background"}
             onOpenChange={(open) => !open && setItems((xs) => xs.filter((x) => x.id !== t.id))}
-            className="flex w-full items-start gap-3 rounded-lg border bg-surface-raised p-4 shadow-pop"
+            className="glass-elevated flex w-full items-start gap-3 rounded-lg p-4 shadow-pop"
           >
             <Icon className={cn("mt-0.5 size-5 shrink-0", tones[t.tone])} aria-hidden />
             <div className="grid min-w-0 flex-1 gap-0.5">

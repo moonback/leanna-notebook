@@ -57,7 +57,7 @@ function useMediaQuery(query: string): boolean {
   );
 }
 
-export function Workspace({ notebookId, initialTitle, role, allowCopies, disabledFeatures = [] }: { notebookId: string; initialTitle: string; role: Role; allowCopies: boolean; disabledFeatures?: string[] }) {
+export function Workspace({ notebookId, initialTitle, role, allowCopies, disabledFeatures = [], browserEnabled = false }: { notebookId: string; initialTitle: string; role: Role; allowCopies: boolean; disabledFeatures?: string[]; browserEnabled?: boolean }) {
   const canEdit = role === "editor" || role === "owner";
   const [title, setTitle] = React.useState(initialTitle);
   const [titleSlot, setTitleSlot] = React.useState<HTMLElement | null>(null);
@@ -308,7 +308,7 @@ export function Workspace({ notebookId, initialTitle, role, allowCopies, disable
   ] as const).filter((t) => !("feature" in t) || !disabledFeatures.includes(t.feature));
   const centerPanel = CENTER.length === 1 ? chatPanel : (
     <div className="flex h-full min-h-0 min-w-0 flex-col gap-2">
-      <div role="tablist" aria-label="Espaces du notebook" className="flex shrink-0 gap-1 overflow-x-auto rounded-lg border bg-surface-raised p-1">
+      <div role="tablist" aria-label="Espaces du notebook" className="glass-panel flex shrink-0 gap-1 overflow-x-auto rounded-lg p-1">
         {CENTER.map((t) => (
           <button key={t.id} type="button" role="tab" id={`center-tab-${t.id}`} aria-selected={center === t.id} aria-controls={`center-panel-${t.id}`} onClick={() => setCenter(t.id)}
             className={cn("inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md px-3 text-sm transition-colors [&_svg]:size-4", center === t.id ? "bg-accent-soft font-medium text-on-accent-soft" : "text-text-muted hover:bg-surface hover:text-text")}>
@@ -318,7 +318,7 @@ export function Workspace({ notebookId, initialTitle, role, allowCopies, disable
       </div>
       <div id="center-panel-chat" role="tabpanel" aria-labelledby="center-tab-chat" hidden={center !== "chat"} className="min-h-0 flex-1">{chatPanel}</div>
       {center !== "chat" && (
-        <div id={`center-panel-${center}`} role="tabpanel" aria-labelledby={`center-tab-${center}`} className={cn("min-h-0 flex-1 rounded-xl border bg-surface-raised", center === "graph" ? "overflow-hidden" : "overflow-y-auto")}>
+        <div id={`center-panel-${center}`} role="tabpanel" aria-labelledby={`center-tab-${center}`} className={cn("glass-panel min-h-0 flex-1 rounded-xl", center === "graph" ? "overflow-hidden" : "overflow-y-auto")}>
           {center === "research" && <DeepResearch notebookId={notebookId} canEdit={canEdit} onOpenSource={(id) => setViewer({ sourceId: id })} onOpenReport={openReport} onSourcesChanged={() => void load()} openRunId={researchRun} />}
           {center === "graph" && <KnowledgeGraph notebookId={notebookId} canEdit={canEdit} sources={sourceList} onOpenPassage={openPassage} onShowContradictions={disabledFeatures.includes("contradictions") ? undefined : () => setCenter("contradictions")} />}
           {center === "contradictions" && <Contradictions notebookId={notebookId} canEdit={canEdit} sources={sourceList} onOpenPassage={openPassage} />}
@@ -341,15 +341,15 @@ export function Workspace({ notebookId, initialTitle, role, allowCopies, disable
       {actionsSlot && createPortal(
         <>
           <NotebookActionsMenu notebookId={notebookId} allowCopies={allowCopies} canCopy={role === "owner" || (role !== "chat" && allowCopies)} canShare={role === "owner"} />
-          {canEdit && <a href={"/notebook/" + encodeURIComponent(notebookId) + "/browser"} aria-label="Ouvrir le navigateur web" title="Ouvrir le navigateur web"><Button type="button" size="icon-sm" variant="ghost"><Globe aria-hidden /></Button></a>}
+          {canEdit && browserEnabled && <a href={"/notebook/" + encodeURIComponent(notebookId) + "/browser"} aria-label="Ouvrir le navigateur web" title="Ouvrir le navigateur web"><Button type="button" size="icon-sm" variant="ghost"><Globe aria-hidden /></Button></a>}
         </>,
         actionsSlot,
       )}
 
       {/* Bureau : Sources et Studio se replient indépendamment. Mobile : navigation par onglets. */}
-      {role === "chat" ? <div className="min-h-0 flex-1 p-2 sm:p-3">{chatPanel}</div> : desktop ? (
+      {role === "chat" ? <div className="workspace-canvas min-h-0 flex-1 p-2 sm:p-3">{chatPanel}</div> : desktop ? (
         <div
-          className="grid min-h-0 min-w-0 flex-1 gap-2 p-3"
+          className="workspace-canvas grid min-h-0 min-w-0 flex-1 gap-2 p-3"
           style={{
             gridTemplateColumns: [
               sourcesCollapsed ? "2.75rem" : `${sourcesWidth}px 8px`,
@@ -480,7 +480,7 @@ export function Workspace({ notebookId, initialTitle, role, allowCopies, disable
         </div>
       ) : (
         <Tabs value={mobileTab} onValueChange={setMobileTab} className="flex min-h-0 flex-1 flex-col" onTouchStart={handleMobileSwipeStart} onTouchEnd={handleMobileSwipeEnd}>
-          <div className="min-h-0 flex-1 p-2">
+          <div className="workspace-canvas min-h-0 flex-1 p-2">
             <TabsContent value="sources" className="h-full">{sourcesPanel}</TabsContent>
             <TabsContent value="chat" className="h-full">{centerPanel}</TabsContent>
             <TabsContent value="studio" className="h-full">{studioPanel}</TabsContent>
@@ -596,12 +596,12 @@ function Chat({ notebookId, readyCount, onOpenCitation, onOpenPassage, canViewSo
   React.useEffect(() => { setHeaderSlot(document.getElementById("app-header-actions")); }, []);
 
   return (
-    <section aria-label="Conversation" className="mobile-chat-panel flex h-full min-h-0 flex-col rounded-xl border bg-surface-raised">
+    <section aria-label="Conversation" className="mobile-chat-panel glass-panel flex h-full min-h-0 flex-col rounded-xl">
       {headerSlot && createPortal(
         <VoiceAssistant notebookId={notebookId} conversationId={conversationId ?? ""} disabled={!canViewSources || readyCount === 0 || !conversationId} onOpenCitation={onOpenPassage} />,
         headerSlot,
       )}
-      <div className="mobile-chat-toolbar flex h-11 shrink-0 items-center justify-end gap-1 border-b px-2">
+      <div className="mobile-chat-toolbar glass-toolbar flex h-11 shrink-0 items-center justify-end gap-1 border-b px-2">
         {canConfigure && <Button size="sm" variant="ghost" onClick={() => setConfiguring(true)}><Settings2 aria-hidden /> Configurer</Button>}
         <Button size="sm" variant="ghost" disabled={!messages?.length || streaming} onClick={() => void clearHistory()}><Eraser aria-hidden /> Effacer l’historique</Button>
         {confirmDialog}
@@ -633,7 +633,7 @@ function Chat({ notebookId, readyCount, onOpenCitation, onOpenPassage, canViewSo
               </EmptyState>
             )
           ) : messages.map((m) => m.role === "user" ? (
-            <div key={m.id} className="mobile-chat-user-message max-w-[85%] justify-self-end whitespace-pre-wrap rounded-xl rounded-br-xs bg-surface px-4 py-2.5 text-sm">{m.content}</div>
+            <div key={m.id} className="mobile-chat-user-message glass-message-user max-w-[85%] justify-self-end whitespace-pre-wrap rounded-xl rounded-br-xs px-4 py-2.5 text-sm">{m.content}</div>
           ) : (
             <div key={m.id} className="mobile-chat-assistant-message grid gap-2">
               {m.thoughts && <Thoughts text={m.thoughts} streaming={m.status === "streaming" && !m.content} />}
@@ -649,9 +649,9 @@ function Chat({ notebookId, readyCount, onOpenCitation, onOpenPassage, canViewSo
           <div ref={bottom} />
         </div>
       </div>
-      <div className="mobile-chat-composer border-t p-3">
+      <div className="mobile-chat-composer border-t border-[var(--glass-stroke-soft)] bg-surface-raised/55 p-3">
         {error && <div className="mx-auto mb-2 max-w-[var(--chat-max-w)]"><Alert tone="warning" title={error.title}>{error.body}</Alert></div>}
-        <form onSubmit={send} className="mobile-chat-composer__form mx-auto flex max-w-[var(--chat-max-w)] items-end gap-2 rounded-xl border border-border-input bg-surface-raised p-2 focus-within:border-focus">
+        <form onSubmit={send} className="mobile-chat-composer__form glass-control mx-auto flex max-w-[var(--chat-max-w)] items-end gap-2 rounded-xl border border-border-input p-2">
           <textarea rows={1} value={text} maxLength={4000} onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); } }}
             aria-label="Votre question" placeholder={readyCount ? "Posez une question sur vos sources…" : "Ajoutez d’abord une source"}

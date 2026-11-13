@@ -85,6 +85,26 @@ export default function DesignPage() {
         </div>
       </Section>
 
+      <Section title="Surfaces vitrées">
+        <div className="grid gap-3 md:grid-cols-3">
+          <div className="glass-panel rounded-xl p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-text-subtle">Niveau 1 · Panel</p>
+            <h3 className="mt-2 text-sm font-semibold">Surface de travail</h3>
+            <p className="mt-1 text-xs leading-5 text-text-muted">Transparence discrète et séparation douce pour les panneaux persistants.</p>
+          </div>
+          <div className="glass-card rounded-xl p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-text-subtle">Niveau 2 · Card</p>
+            <h3 className="mt-2 text-sm font-semibold">Contenu structuré</h3>
+            <p className="mt-1 text-xs leading-5 text-text-muted">Une surface lisible, sans blur systématique sur les listes et cartes.</p>
+          </div>
+          <div className="glass-elevated rounded-xl p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-text-subtle">Niveau 3 · Elevated</p>
+            <h3 className="mt-2 text-sm font-semibold">Menu et dialogue</h3>
+            <p className="mt-1 text-xs leading-5 text-text-muted">Élévation plus marquée pour les éléments flottants.</p>
+          </div>
+        </div>
+      </Section>
+
       <Section title="Champs">
         <div className="grid gap-6 md:grid-cols-2">
           <Field id="title" label="Titre du notebook" hint="Visible par les personnes avec qui vous partagez."><Input placeholder="Sans titre" /></Field>
