@@ -8,6 +8,8 @@ import {
   type DesktopBrowserApi, type DesktopBrowserBookmark, type DesktopBrowserCommand, type DesktopBrowserSettings, type DesktopBrowserState,
 } from "./browser-api";
 import { AiPanel } from "./ai-panel";
+import { saveToNotebook } from "./notebook-save";
+import { NotebookSaveBar, useTargetNotebook } from "./notebook-save-bar";
 import { TabStrip } from "./tab-strip";
 import { Toolbar, type BrowserPanel } from "./toolbar";
 
@@ -26,6 +28,7 @@ export function BrowserClient({ notebookId }: { notebookId?: string } = {}) {
   const [failed, setFailed] = React.useState(false);
   const [panel, setPanel] = React.useState<BrowserPanel | null>(null);
   const [bookmarks, setBookmarks] = React.useState<{ bookmarks: DesktopBrowserBookmark[]; folders: string[] }>({ bookmarks: [], folders: [] });
+  const target = useTargetNotebook(notebookId);
   const viewportRef = React.useRef<HTMLDivElement>(null);
   const addressRef = React.useRef<HTMLInputElement>(null);
 
@@ -174,8 +177,12 @@ export function BrowserClient({ notebookId }: { notebookId?: string } = {}) {
         {panel && settings && (
           <aside className="flex w-[380px] shrink-0 flex-col border-l border-border bg-surface" aria-label="Panneau latéral" data-browser-panel={panel}>
             {panel === "ai"
-              ? <AiPanel api={api} tab={activeTab} settings={settings} onSettings={setSettings} notebookId={notebookId}
-                  save={async () => ({ ok: false, message: "Enregistrement dans le Notebook indisponible." })} />
+              ? (
+                <AiPanel api={api} tab={activeTab} settings={settings} onSettings={setSettings} notebookId={notebookId}
+                  save={(request) => saveToNotebook(window.fetch.bind(window), target.selected, request)}>
+                  <NotebookSaveBar api={api} tab={activeTab} target={target} />
+                </AiPanel>
+              )
               : <PanelContent panel={panel} notebookId={notebookId} />}
           </aside>
         )}

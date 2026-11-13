@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { ApiError, handle, parseBody, requireRole, requireUser } from "@/lib/api";
 import { log } from "@/lib/log";
 import { createServiceClient, createUserClient } from "@/lib/supabase/server";
-import { sourcesCreateSchema, uploadTypeOf, UPLOAD_TYPES } from "@/lib/validation";
+import { browserExternalRef, sourcesCreateSchema, uploadTypeOf, UPLOAD_TYPES } from "@/lib/validation";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -13,7 +13,7 @@ export const GET = handle(async (_req: NextRequest, { params }: Params) => {
   await requireRole(id, "viewer");
   const supabase = await createUserClient();
   const [sources, deselected] = await Promise.all([
-    supabase.from("sources").select("id, kind, title, status, error_code, word_count, page_count, created_at, updated_at")
+    supabase.from("sources").select("id, kind, title, status, error_code, word_count, page_count, origin_url, external_ref, created_at, updated_at")
       .eq("notebook_id", id).order("created_at"),
     supabase.from("source_deselections").select("source_id").eq("notebook_id", id).eq("user_id", user.id),
   ]);
@@ -51,18 +51,27 @@ export const POST = handle(async (req: NextRequest, { params }: Params) => {
       args = { p_kind: UPLOAD_TYPES[ext][1], p_title: item.title, p_storage_path: item.storagePath,
                p_mime_type: UPLOAD_TYPES[ext][0], p_size_bytes: file.metadata?.size ?? null };
     } else if (item.type === "url") {
-      args = { p_kind: "web", p_title: new URL(item.url).hostname, p_origin_url: item.url };
+      // Depuis le navigateur, le titre de la page est connu ; le worker le remplacera par celui qu'il extrait.
+      args = { p_kind: "web", p_title: item.browser?.title ?? new URL(item.url).hostname, p_origin_url: item.url };
     } else {
       const path = `${prefix}${crypto.randomUUID()}/original.txt`;
       const { error } = await db.storage.from("sources").upload(path, new Blob([item.text], { type: "text/plain" }));
       if (error) throw error;
-      args = { p_kind: "text", p_title: item.title, p_storage_path: path, p_mime_type: "text/plain", p_size_bytes: new Blob([item.text]).size };
+      args = { p_kind: "text", p_title: item.title, p_storage_path: path, p_mime_type: "text/plain", p_size_bytes: new Blob([item.text]).size,
+               // Contenu capturé dans Leanna Browser : on garde l'adresse de la page (le worker ne la re-télécharge pas pour un texte).
+               ...(item.browser?.originUrl ? { p_origin_url: item.browser.originUrl } : {}) };
     }
     const { data, error } = await db.rpc("add_source", {
       p_notebook: id, p_user: user.id, ...args,
       p_idempotency_key: idem ? `${user.id}:${id}:${idem}:${i}` : null,
     });
     if (error) throw error;
+    // Provenance navigateur (favicon, date de consultation, date d'ajout) : colonne jsonb existante, aucune migration.
+    const origin = item.type === "upload" ? undefined : item.browser;
+    if (origin) {
+      const { error: refError } = await db.from("sources").update({ external_ref: browserExternalRef(origin, new Date()) }).eq("id", data as string);
+      if (refError) log.warn("sources.browser_origin_failed", { source_id: data as string });
+    }
     created.push({ id: data as string, title: String(args.p_title) });
   }
   log.info("sources.added", { notebook_id: id, user_id: user.id, count: created.length });

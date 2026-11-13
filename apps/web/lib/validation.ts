@@ -52,10 +52,35 @@ export const uploadRequestSchema = z.object({
   size: z.number().int().positive().max(MAX_UPLOAD_BYTES, "Fichier trop volumineux (200 Mo maximum)."),
 }).strict();
 
+const httpUrl = z.string().trim().url("Adresse invalide.").max(2048).refine((u) => /^https?:\/\//i.test(u), "Seuls http et https sont acceptés.");
+
+/** Provenance d'une source ajoutée depuis Leanna Browser (conservée dans `sources.external_ref.browser`). */
+export const browserOriginSchema = z.object({
+  /** Adresse de la page d'où vient un contenu texte (pour un lien, c'est l'URL de la source elle-même). */
+  originUrl: httpUrl.optional(),
+  title: z.string().trim().min(1).max(300).optional(),
+  faviconUrl: httpUrl.optional(),
+  /** Date de consultation de la page (ISO 8601). */
+  consultedAt: z.string().datetime().optional(),
+  mode: z.enum(["link", "text", "summary", "selection"]).optional(),
+}).strict();
+export type BrowserOrigin = z.infer<typeof browserOriginSchema>;
+
+/** Métadonnées enregistrées avec la source : date d'ajout, date de consultation, favicon, titre, mode d'ajout. */
+export function browserExternalRef(origin: BrowserOrigin, addedAt: Date): { browser: Record<string, string> } {
+  return { browser: {
+    added_at: addedAt.toISOString(),
+    ...(origin.consultedAt ? { consulted_at: origin.consultedAt } : {}),
+    ...(origin.faviconUrl ? { favicon_url: origin.faviconUrl } : {}),
+    ...(origin.title ? { title: origin.title } : {}),
+    ...(origin.mode ? { mode: origin.mode } : {}),
+  } };
+}
+
 export const sourceItemSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("upload"), storagePath: z.string().min(1).max(500), title: z.string().trim().min(1).max(300) }).strict(),
-  z.object({ type: z.literal("url"), url: z.string().trim().url("Adresse invalide.").max(2048).refine((u) => /^https?:\/\//i.test(u), "Seuls http et https sont acceptés.") }).strict(),
-  z.object({ type: z.literal("text"), title: z.string().trim().min(1, "Titre requis.").max(300), text: z.string().min(1, "Texte vide.").max(3_500_000, "Texte trop long (500 000 mots maximum).") }).strict(),
+  z.object({ type: z.literal("url"), url: httpUrl, browser: browserOriginSchema.optional() }).strict(),
+  z.object({ type: z.literal("text"), title: z.string().trim().min(1, "Titre requis.").max(300), text: z.string().min(1, "Texte vide.").max(3_500_000, "Texte trop long (500 000 mots maximum)."), browser: browserOriginSchema.optional() }).strict(),
 ]);
 export const sourcesCreateSchema = z.object({ items: z.array(sourceItemSchema).min(1).max(50) }).strict();
 

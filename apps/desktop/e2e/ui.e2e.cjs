@@ -368,6 +368,69 @@ test("agent : interruption immédiate d'une mission en cours", async () => {
   assert.equal(await win.getByLabel("Envoyer").count(), 1, "le panneau est de nouveau disponible");
 });
 
+test("Notebook : ajout par l'utilisateur — lien, contenu, sélection, contenu + synthèse", async () => {
+  await freshConversation();
+  await go(`${site.url}/article`, "/article");
+  const bar = win.locator("[data-notebook-save]");
+  const sources = appServer.notebook.sources;
+  const item = () => sources[sources.length - 1].body.items[0];
+
+  await bar.locator('[data-save-mode="link"]').click();
+  await bar.getByText("Lien ajouté au Notebook.").waitFor();
+  assert.equal(sources[0].notebookId, NOTEBOOK);
+  assert.deepEqual([item().type, item().url, item().browser.title, item().browser.mode], ["url", `${site.url}/article`, "Les marées expliquées", "link"]);
+  assert.ok(!Number.isNaN(Date.parse(item().browser.consultedAt)), "date de consultation transmise");
+
+  await bar.locator('[data-save-mode="text"]').click();
+  await bar.getByText("Contenu ajouté au Notebook.").waitFor();
+  assert.equal(item().type, "text");
+  assert.equal(item().browser.originUrl, `${site.url}/article`);
+  assert.ok(item().text.startsWith(`Source : ${site.url}/article\nPage consultée le `));
+  assert.match(item().text, /attraction gravitationnelle de la Lune/);
+  assert.doesNotMatch(item().text, /Publicité|<article/);
+
+  await bar.locator('[data-save-mode="selection"]').click();
+  await bar.getByText("Sélectionnez d’abord du texte dans la page.").waitFor();
+  const count = sources.length;
+  await electronApp.evaluate(({ webContents }) => webContents.getAllWebContents().find((w) => w.getURL().includes("/article"))
+    .executeJavaScript("const r = document.createRange(); r.selectNodeContents(document.querySelector('h2')); getSelection().removeAllRanges(); getSelection().addRange(r); true"));
+  await bar.locator('[data-save-mode="selection"]').click();
+  await bar.getByText("Sélection ajoutée au Notebook.").waitFor();
+  assert.equal(sources.length, count + 1);
+  assert.ok(item().text.endsWith("(extrait sélectionné)\n\nLe rôle de la Lune"));
+
+  appServer.model.script.push(() => say("Idée principale : la Lune provoque les marées.\n- Le Soleil y contribue pour 46 %."));
+  await bar.locator('[data-save-mode="summary"]').click();
+  await bar.getByText("Contenu et synthèse ajoutés au Notebook.").waitFor();
+  const note = appServer.notebook.notes[appServer.notebook.notes.length - 1];
+  assert.equal(note.body.title, "Synthèse — Les marées expliquées");
+  assert.match(note.body.text, /la Lune provoque les marées[\s\S]*Source : http/);
+  assert.equal(item().browser.mode, "summary");
+  await shot("08-notebook");
+});
+
+test("Notebook : ajout proposé par l'agent — toujours confirmé, résultat réel rapporté au modèle", async () => {
+  await freshConversation();
+  await setMode("autonomous");
+  const before = appServer.notebook.sources.length;
+  appServer.model.script.push(() => callTool("browser_save_to_notebook", { mode: "text" }), () => say("Je n'ai rien enregistré."));
+  await ask("Garde cette page");
+  await journal("pending").waitFor();
+  assert.match(await journal("pending").innerText(), /Ajouter « Les marées expliquées » au Notebook \(contenu\)/);
+  await journal("pending").getByRole("button", { name: "Refuser" }).click();
+  await win.locator('[data-message="assistant"]').getByText(/rien enregistré/).waitFor();
+  assert.equal(appServer.notebook.sources.length, before, "refus : rien n'est envoyé au Notebook");
+
+  appServer.model.script.push(() => callTool("browser_save_to_notebook", { mode: "text" }), () => say("C'est enregistré dans votre Notebook."));
+  await ask("Finalement, garde-la");
+  await journal("pending").getByRole("button", { name: "Autoriser" }).click();
+  await win.locator('[data-message="assistant"]').getByText(/C'est enregistré/).waitFor();
+  assert.equal(appServer.notebook.sources.length, before + 1);
+  const results = lastRequest().messages.filter((m) => m.role === "tool");
+  assert.deepEqual(JSON.parse(results[results.length - 1].result), { saved: true, message: "Contenu ajouté au Notebook." });
+  await setMode("assistance");
+});
+
 test("Roxane : second regard sur la réponse de Leanna, sans outil", async () => {
   await freshConversation();
   await go(`${site.url}/article`, "/article");
