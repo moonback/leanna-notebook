@@ -661,8 +661,9 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
         <AudioLines aria-hidden /> {state === "idle" || state === "error" ? "Mode vocal" : "Studio vocal actif"}
       </Button>
 
-      <Dialog open={open} onOpenChange={(value) => { setOpen(value); if (!value) setExpanded(false); }}>
+      <Dialog modal={!browserApi || expanded} open={open} onOpenChange={(value) => { setOpen(value); if (!value) setExpanded(false); }}>
         <DialogContent
+          showOverlay={!browserApi || expanded}
           title="Studio vocal"
           description="Une conversation naturelle avec vos sources."
           size="lg"
@@ -711,7 +712,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
             </div>
           ) : (
             <div className={`${browserApi ? "browser-voice-expanded" : ""} flex h-full min-h-0 flex-col bg-surface`}>
-              <header className="mobile-voice-expanded-header flex h-16 shrink-0 items-center justify-between gap-3 border-b pl-4 pr-14 sm:pl-7 sm:pr-16">
+              <header className={`${browserApi ? "browser-voice-expanded-header border-b border-border/70 bg-surface/80 backdrop-blur-xl" : "mobile-voice-expanded-header"} flex h-16 shrink-0 items-center justify-between gap-3 border-b pl-4 pr-14 sm:pl-7 sm:pr-16`}>
                 <div className="flex min-w-0 items-center gap-3">
                   <div className="grid size-9 place-items-center rounded-xl bg-accent/10 text-accent"><AudioLines className="size-4" /></div>
                   <div className="min-w-0">
@@ -730,8 +731,8 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
                 </div>
               </header>
 
-              <main className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)]">
-                <section className="flex min-h-0 flex-col items-center justify-center gap-7 overflow-y-auto px-5 py-8 sm:px-10">
+              <main className={`grid min-h-0 flex-1 grid-cols-1 overflow-hidden lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)] ${browserApi ? "browser-voice-expanded-layout" : ""}`}>
+                <section className={`flex min-h-0 flex-col items-center justify-center gap-7 overflow-y-auto px-5 py-8 sm:px-10 ${browserApi ? "bg-[radial-gradient(ellipse_at_50%_0%,rgba(124,58,237,0.13),transparent_58%)]" : ""}`}>
                   <div className="mobile-voice-personas flex w-full max-w-xl items-center justify-center gap-5 sm:gap-10">
                     <div className="flex flex-col items-center gap-3">
                       <div className={`grid size-16 place-items-center rounded-[22px] border text-xl font-semibold shadow-sm transition-all sm:size-20 ${state === "speaking" ? "border-accent/50 bg-accent/10 text-accent shadow-accent/10" : "border-border bg-surface-raised text-text"}`}>L</div>
