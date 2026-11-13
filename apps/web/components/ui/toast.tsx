@@ -35,7 +35,7 @@ export function Toaster() {
             key={t.id}
             type={t.tone === "error" ? "foreground" : "background"}
             onOpenChange={(open) => !open && setItems((xs) => xs.filter((x) => x.id !== t.id))}
-            className="glass-elevated flex w-full items-start gap-3 rounded-lg p-4 shadow-pop"
+            className="mobile-toast glass-elevated flex w-full items-start gap-3 rounded-xl p-4 shadow-pop"
           >
             <Icon className={cn("mt-0.5 size-5 shrink-0", tones[t.tone])} aria-hidden />
             <div className="grid min-w-0 flex-1 gap-0.5">
@@ -55,7 +55,7 @@ export function Toaster() {
           </ToastPrimitive.Root>
         );
       })}
-      <ToastPrimitive.Viewport className="fixed bottom-4 left-1/2 z-[var(--z-toast)] flex w-[calc(100vw-2rem)] max-w-sm -translate-x-1/2 flex-col gap-2 outline-none sm:left-auto sm:right-4 sm:translate-x-0" />
+      <ToastPrimitive.Viewport className="mobile-toast-viewport fixed bottom-4 left-1/2 z-[var(--z-toast)] flex w-[calc(100vw-2rem)] max-w-sm -translate-x-1/2 flex-col gap-2 outline-none sm:left-auto sm:right-4 sm:translate-x-0" />
     </ToastPrimitive.Provider>
   );
 }

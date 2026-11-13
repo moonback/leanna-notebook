@@ -94,7 +94,7 @@ export function Discover({ initial, loadError }: { initial: FeaturedNotebook[]; 
         <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((n) => (
             <li key={n.id}>
-              <Card className="flex h-full flex-col gap-4 p-5">
+              <Card className="mobile-discover-card flex h-full flex-col gap-4 p-5">
                 <div className="flex items-center justify-between gap-3">
                   <span className="grid size-11 place-items-center rounded-xl bg-accent-soft text-xl" aria-hidden>{n.emoji ?? "📘"}</span>
                   <div className="flex items-center gap-2">

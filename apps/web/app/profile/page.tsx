@@ -59,11 +59,11 @@ export default async function ProfilePage() {
     <div className="min-h-dvh var(--bg)">
       <AppHeader><h1 className="truncate text-lg font-semibold">Mon profil</h1></AppHeader>
       <main className="mx-auto grid max-w-5xl gap-6 px-4 py-6 sm:px-6 sm:py-9">
-        <section className="relative isolate overflow-hidden rounded-2xl border border-border bg-surface-raised shadow-xs">
+        <section className="mobile-profile-hero relative isolate overflow-hidden rounded-2xl border border-border bg-surface-raised shadow-xs">
           <div aria-hidden className="absolute inset-x-0 top-0 h-28 bg-gradient-to-r from-accent/15 via-accent/5 to-transparent" />
           <div className="relative flex flex-col gap-5 p-5 sm:flex-row sm:items-end sm:justify-between sm:p-7">
             <div className="flex min-w-0 items-center gap-4">
-              <div className="grid size-20 shrink-0 place-items-center rounded-2xl border-4 border-surface-raised bg-accent text-2xl font-semibold text-on-accent shadow-sm sm:size-24">{initials}</div>
+              <div className="mobile-profile-avatar grid size-20 shrink-0 place-items-center rounded-2xl border-4 border-surface-raised bg-accent text-2xl font-semibold text-on-accent shadow-sm sm:size-24">{initials}</div>
               <div className="min-w-0 pb-1">
                 <p className="mb-1 text-xs font-semibold uppercase tracking-[0.16em] text-text-subtle">Espace personnel</p>
                 <h2 className="truncate text-2xl font-semibold tracking-tight">{displayName}</h2>
