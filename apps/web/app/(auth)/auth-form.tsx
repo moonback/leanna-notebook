@@ -16,7 +16,7 @@ export function AuthForm({ mode, next }: { mode: "login" | "signup"; next?: stri
   const login = mode === "login";
 
   return (
-    <div className="grid gap-4">
+    <div className="mobile-auth-form grid gap-4">
       <div>
         <h1 className="font-serif text-3xl leading-tight tracking-tight sm:text-3xl">{login ? "Connectez-vous" : "Créez votre espace."}</h1>
         <p className="mt-1.5 text-sm leading-5 text-text-muted [@media(max-height:760px)]:hidden">{login ? "Connectez-vous pour reprendre vos recherches exactement là où vous les avez laissées." : "Un espace pour organiser vos sources, explorer vos idées et structurer vos découvertes."}</p>
@@ -24,7 +24,7 @@ export function AuthForm({ mode, next }: { mode: "login" | "signup"; next?: stri
 
       {state.errors?.form && <Alert tone="danger" title={state.errors.form} />}
       {state.message && <Alert tone="success" title="Vérifiez votre boîte mail">{state.message}</Alert>}
-      <form action={action} className="grid gap-3.5" noValidate>
+      <form action={action} className="mobile-auth-fields grid gap-3.5" noValidate>
         <input type="hidden" name="next" value={next ?? ""} />
         <Field id="email" label="Adresse email" error={state.errors?.email}>
           <Input name="email" type="email" autoComplete="email" required defaultValue={state.email} placeholder="vous@exemple.fr" className="h-10 rounded-lg"/>
@@ -47,7 +47,7 @@ export function AuthForm({ mode, next }: { mode: "login" | "signup"; next?: stri
       )}
 
       {login && (showMagic || magic.message || magic.errors) && (
-        <div id="magic-panel" className="rounded-xl border border-border bg-surface/65 p-3.5">
+        <div id="magic-panel" className="mobile-auth-magic rounded-xl border border-border bg-surface/65 p-3.5">
           <div className="flex items-start gap-3">
             <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-accent-soft text-on-accent-soft"><WandSparkles size={17}/></span>
             <div><p className="text-sm font-semibold">Connexion sans mot de passe</p><p className="mt-1 text-xs leading-5 text-text-muted">Recevez un lien sécurisé à usage unique directement par email.</p></div>
