@@ -47,11 +47,11 @@ export function EmptyState({
   icon, title, children, action, className,
 }: { icon: React.ReactNode; title: string; children?: React.ReactNode; action?: React.ReactNode; className?: string }) {
   return (
-    <div className={cn("flex flex-col items-center gap-3 px-6 py-12 text-center", className)}>
-      <div aria-hidden className="grid size-12 place-items-center rounded-xl bg-accent-soft text-on-accent-soft [&_svg]:size-6">
+    <div className={cn("mobile-empty-state flex flex-col items-center gap-3 px-6 py-12 text-center", className)}>
+      <div aria-hidden className="mobile-empty-state-icon grid size-12 place-items-center rounded-xl bg-accent-soft text-on-accent-soft [&_svg]:size-6">
         {icon}
       </div>
-      <h3 className="text-lg">{title}</h3>
+      <h3 className="mobile-empty-state-title text-lg font-semibold tracking-tight">{title}</h3>
       {children && <p className="max-w-sm text-sm text-pretty text-text-muted">{children}</p>}
       {action && <div className="mt-1">{action}</div>}
     </div>
@@ -69,7 +69,7 @@ export function Alert({
     success: "bg-success-soft text-success",
   };
   return (
-    <div role={tone === "danger" ? "alert" : "status"} className={cn("flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg px-4 py-3 text-sm", tones[tone])}>
+    <div role={tone === "danger" ? "alert" : "status"} className={cn("mobile-inline-alert flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg px-4 py-3 text-sm", tones[tone])}>
       <div className="min-w-0 flex-1">
         <p className="font-semibold">{title}</p>
         {children && <p className="opacity-90">{children}</p>}
