@@ -661,17 +661,24 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
         <AudioLines aria-hidden /> {state === "idle" || state === "error" ? "Mode vocal" : "Studio vocal actif"}
       </Button>
 
-      <Dialog open={open} onOpenChange={(value) => { setOpen(value); if (!value) setExpanded(false); }}>
+      <Dialog modal={!browserApi || expanded} open={open} onOpenChange={(value) => { setOpen(value); if (!value) setExpanded(false); }}>
         <DialogContent
+          showOverlay={!browserApi || expanded}
           title="Studio vocal"
           description="Une conversation naturelle avec vos sources."
           size="lg"
-          className={`mobile-voice-dialog ${expanded ? "mobile-voice-dialog--expanded" : "mobile-voice-dialog--sheet"} ${expanded
-            ? "!inset-0 !h-[100dvh] !max-h-none !w-full !max-w-none !translate-x-0 !translate-y-0 !rounded-none !gap-0 !p-0 [&>div:first-child]:!sr-only"
-            : "!inset-x-0 !bottom-0 !left-0 !top-auto !h-auto !max-h-none !w-full !max-w-none !translate-x-0 !translate-y-0 !rounded-t-2xl !rounded-b-none !gap-0 !p-0 [&>div:first-child]:!sr-only"}`}
+          className={browserApi
+            ? `browser-voice-dialog ${expanded ? "browser-voice-dialog--expanded" : "browser-voice-dialog--minimized"} ${expanded
+              ? "!left-4 !right-4 !top-4 !bottom-4 !h-auto !max-h-none !w-auto !max-w-none !translate-x-0 !translate-y-0 !rounded-3xl !gap-0 !overflow-hidden !p-0 [&>div:first-child]:!sr-only"
+              : "!left-1/2 !right-auto !top-auto !bottom-6 !h-auto !max-h-[calc(100dvh-48px)] !w-[min(760px,calc(100vw-32px))] !max-w-none !-translate-x-1/2 !translate-y-0 !rounded-2xl !gap-0 !overflow-hidden !p-0 [&>div:first-child]:!sr-only"}`
+            : `mobile-voice-dialog ${expanded ? "mobile-voice-dialog--expanded" : "mobile-voice-dialog--sheet"} ${expanded
+              ? "!inset-0 !h-[100dvh] !max-h-none !w-full !max-w-none !translate-x-0 !translate-y-0 !rounded-none !gap-0 !p-0 [&>div:first-child]:!sr-only"
+              : "!inset-x-0 !bottom-0 !left-0 !top-auto !h-auto !max-h-none !w-full !max-w-none !translate-x-0 !translate-y-0 !rounded-t-2xl !rounded-b-none !gap-0 !p-0 [&>div:first-child]:!sr-only"}`}
         >
           {!expanded ? (
-            <div className="mobile-voice-sheet-header flex min-h-[76px] items-center gap-3 border-t bg-surface-raised py-2.5 pl-3 pr-14 sm:pl-5 sm:pr-16">
+            <div className={browserApi
+              ? "browser-voice-minimized flex min-h-[76px] items-center gap-3 border-t border-white/10 bg-surface-raised/95 py-3 pl-4 pr-14 sm:pl-5 sm:pr-16"
+              : "mobile-voice-sheet-header flex min-h-[76px] items-center gap-3 border-t bg-surface-raised py-2.5 pl-3 pr-14 sm:pl-5 sm:pr-16"}>
               <div className={`relative grid size-10 shrink-0 place-items-center rounded-full border text-sm font-semibold transition-colors ${state === "speaking" ? "border-accent/50 bg-accent/10 text-accent" : "border-border bg-surface text-text"}`}>
                 L
                 {state !== "idle" && state !== "error" && <span className="absolute -bottom-0.5 -right-0.5 size-3 rounded-full border-2 border-surface-raised bg-emerald-500" />}
@@ -704,8 +711,8 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
               </div>
             </div>
           ) : (
-            <div className="flex h-full min-h-0 flex-col bg-surface">
-              <header className="mobile-voice-expanded-header flex h-16 shrink-0 items-center justify-between gap-3 border-b pl-4 pr-14 sm:pl-7 sm:pr-16">
+            <div className={`${browserApi ? "browser-voice-expanded" : ""} flex h-full min-h-0 flex-col bg-surface`}>
+              <header className={`${browserApi ? "browser-voice-expanded-header border-b border-border/70 bg-surface/80 backdrop-blur-xl" : "mobile-voice-expanded-header"} flex h-16 shrink-0 items-center justify-between gap-3 border-b pl-4 pr-14 sm:pl-7 sm:pr-16`}>
                 <div className="flex min-w-0 items-center gap-3">
                   <div className="grid size-9 place-items-center rounded-xl bg-accent/10 text-accent"><AudioLines className="size-4" /></div>
                   <div className="min-w-0">
@@ -724,8 +731,8 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
                 </div>
               </header>
 
-              <main className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)]">
-                <section className="flex min-h-0 flex-col items-center justify-center gap-7 overflow-y-auto px-5 py-8 sm:px-10">
+              <main className={`grid min-h-0 flex-1 grid-cols-1 overflow-hidden lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)] ${browserApi ? "browser-voice-expanded-layout" : ""}`}>
+                <section className={`flex min-h-0 flex-col items-center justify-center gap-7 overflow-y-auto px-5 py-8 sm:px-10 ${browserApi ? "bg-[radial-gradient(ellipse_at_50%_0%,rgba(124,58,237,0.13),transparent_58%)]" : ""}`}>
                   <div className="mobile-voice-personas flex w-full max-w-xl items-center justify-center gap-5 sm:gap-10">
                     <div className="flex flex-col items-center gap-3">
                       <div className={`grid size-16 place-items-center rounded-[22px] border text-xl font-semibold shadow-sm transition-all sm:size-20 ${state === "speaking" ? "border-accent/50 bg-accent/10 text-accent shadow-accent/10" : "border-border bg-surface-raised text-text"}`}>L</div>
