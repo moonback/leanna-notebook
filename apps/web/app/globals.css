@@ -1,4 +1,4 @@
-@import "tailwindcss";
+﻿@import "tailwindcss";
 @import "./tokens.css";
 @import "./glass.css";
 
@@ -353,7 +353,7 @@
   .mobile-auth-content {
     flex: 0 0 auto;
     justify-content: flex-start;
-    padding-top: clamp(1.5rem, 7svh, 3.5rem);
+    padding-top: 0.5rem;
     padding-bottom: 1.5rem;
   }
   .mobile-auth-footer {
