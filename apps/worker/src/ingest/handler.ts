@@ -9,6 +9,9 @@ import { openRouterPdfOcr, type PdfOcrEngine } from "../ai/ocr.ts";
 import { enqueueKnowledge } from "../knowledge/extract.ts";
 import { latestGithubCommit, sameCommit } from "./github.ts";
 
+/** Au-delà, écriture par lots (begin/append/finish_chunks) : une seule requête dépasserait le statement_timeout. */
+const WRITE_BATCH = 150;
+
 const FTS_CONFIG: Record<string, string> = { fr: "french", en: "english", es: "spanish", de: "german", it: "italian", pt: "portuguese", nl: "dutch" };
 
 /** Détection de langue minimale par mots outils (suffit pour choisir la config plein texte). */
@@ -104,25 +107,45 @@ export function ingestHandler(db: SupabaseClient, embedder: Embedder | null, opt
         await ctx.progress(80, "indexation plein texte");
       }
 
-      await ctx.progress(85, "enregistrement");
-      const { error: e2 } = await db.rpc("replace_chunks", {
-        p_source: src.id,
-        p_chunks: chunks.map((c, i) => ({ ...c, embedding: vectors ? `[${vectors[i].join(",")}]` : null, embedding_model: embedder?.model ?? null })),
-        p_extracted_text: text, p_language: lang, p_fts_config: FTS_CONFIG[lang] ?? "simple",
-        p_word_count: text.split(/\s+/).filter(Boolean).length, p_page_count: ex.pageCount,
-      });
-      if (e2) throw e2;
-      if (ex.title && src.kind === "web") await db.from("sources").update({ title: ex.title.slice(0, 300) }).eq("id", src.id);
+      // Métadonnées (ex. carte des fichiers d'un dépôt) écrites AVANT le passage en ready : jamais de source prête sans elles.
       if (ex.externalRef) {
         const { error: refError } = await db.from("sources")
           .update({ external_ref: { ...(src.external_ref as Record<string, unknown> | null ?? {}), ...ex.externalRef }, synced_at: new Date().toISOString() })
           .eq("id", src.id);
         if (refError) throw refError;
       }
+
+      await ctx.progress(85, "enregistrement");
+      const rows = chunks.map((c, i) => ({ ...c, embedding: vectors ? `[${vectors[i].join(",")}]` : null, embedding_model: embedder?.model ?? null }));
+      const wordCount = text.split(/\s+/).filter(Boolean).length;
+      if (rows.length <= WRITE_BATCH) {
+        // cas courant : remplacement atomique en une requête
+        const { error: e2 } = await db.rpc("replace_chunks", {
+          p_source: src.id, p_chunks: rows,
+          p_extracted_text: text, p_language: lang, p_fts_config: FTS_CONFIG[lang] ?? "simple",
+          p_word_count: wordCount, p_page_count: ex.pageCount,
+        });
+        if (e2) throw e2;
+      } else {
+        // grosse source : par lots, sinon statement_timeout (57014)
+        const { error: e1 } = await db.rpc("begin_chunks", { p_source: src.id, p_language: lang, p_fts_config: FTS_CONFIG[lang] ?? "simple" });
+        if (e1) throw e1;
+        for (let offset = 0; offset < rows.length; offset += WRITE_BATCH) {
+          if (await ctx.cancelled()) return { cancelled: true };
+          const { error: e2 } = await db.rpc("append_chunks", { p_source: src.id, p_chunks: rows.slice(offset, offset + WRITE_BATCH) });
+          if (e2) throw e2;
+          const done = Math.min(offset + WRITE_BATCH, rows.length);
+          await ctx.progress(85 + Math.floor((done / rows.length) * 10), `enregistrement · ${done}/${rows.length}`);
+        }
+        const { error: e3 } = await db.rpc("finish_chunks", { p_source: src.id, p_extracted_text: text, p_word_count: wordCount, p_page_count: ex.pageCount });
+        if (e3) throw e3;
+        console.log(`[ingest] source=${src.id} ${rows.length} chunks écrits en ${Math.ceil(rows.length / WRITE_BATCH)} lots`);
+      }
+      if (ex.title && src.kind === "web") await db.from("sources").update({ title: ex.title.slice(0, 300) }).eq("id", src.id);
       if (opts.summaries) await enqueueSummaries(db, { workspace_id: src.workspace_id, notebook_id: src.notebook_id, source_id: src.kind === "note" ? undefined : src.id });
       // graphe de connaissances : même déclenchement pour les imports manuels et Deep Research
       if (opts.knowledge) await enqueueKnowledge(db, { workspace_id: src.workspace_id, notebook_id: src.notebook_id, source_id: src.id, text });
-      console.log(`[ingest] ok source=${src.id} kind=${src.kind} chunks=${chunks.length} pages=${ex.pageCount ?? "-"} mots=${text.split(/\s+/).filter(Boolean).length} en ${Date.now() - startedAt}ms`);
+      console.log(`[ingest] ok source=${src.id} kind=${src.kind} chunks=${chunks.length} pages=${ex.pageCount ?? "-"} mots=${wordCount} en ${Date.now() - startedAt}ms`);
       return { chunks: chunks.length, embedded: Boolean(vectors), language: lang, pages: ex.pageCount };
     } catch (e) {
       const code = e instanceof PermanentError ? e.code : "temporary_error";
