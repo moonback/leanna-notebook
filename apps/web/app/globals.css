@@ -1177,3 +1177,110 @@ header.glass-toolbar nav button {
   .glass-panel__header { padding-inline: 0.85rem; }
   .glass-list-row { min-height: 3.15rem; }
 }
+
+
+/* --------------------------------------------------------------------------
+   Visual refresh — page-level hierarchy and workspace surfaces.
+   These rules only affect presentation; application state and workflows stay
+   in their existing React components.
+   -------------------------------------------------------------------------- */
+.dashboard-welcome {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: 1.35rem;
+  border-color: color-mix(in srgb, var(--accent) 16%, var(--border));
+  background:
+    radial-gradient(ellipse at 92% 0%, color-mix(in srgb, var(--accent-soft) 82%, transparent), transparent 48%),
+    linear-gradient(135deg, var(--surface-raised), var(--surface));
+  box-shadow: 0 12px 36px color-mix(in srgb, var(--text) 5%, transparent);
+}
+.dashboard-welcome::after {
+  position: absolute;
+  z-index: -1;
+  right: 2rem;
+  bottom: -5rem;
+  width: 15rem;
+  height: 15rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 12%, transparent);
+  border-radius: 50%;
+  content: "";
+  box-shadow: 0 0 0 1.8rem color-mix(in srgb, var(--accent) 3%, transparent),
+              0 0 0 3.6rem color-mix(in srgb, var(--accent) 2%, transparent);
+  pointer-events: none;
+}
+.dashboard-welcome h1 { letter-spacing: -.035em; }
+.mobile-dashboard-card {
+  border-radius: 1rem;
+  border-color: var(--border);
+  background: linear-gradient(155deg, var(--surface-raised), color-mix(in srgb, var(--surface) 52%, var(--surface-raised)));
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--text) 4%, transparent);
+}
+.mobile-dashboard-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 32%, var(--border));
+  box-shadow: 0 12px 28px color-mix(in srgb, var(--text) 8%, transparent);
+}
+.mobile-dashboard-toolbar {
+  padding-bottom: .9rem;
+  border-bottom: 1px solid var(--border);
+}
+.mobile-dashboard-tabs {
+  padding: .25rem;
+  border: 1px solid var(--border);
+  border-radius: .9rem;
+  background: var(--surface);
+}
+.mobile-dashboard-tabs [role="tab"] {
+  border-radius: .65rem;
+  transition: background-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
+}
+.mobile-dashboard-tabs [role="tab"][data-state="active"] {
+  background: var(--surface-raised);
+  color: var(--text);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--text) 10%, transparent);
+}
+.mobile-settings-tabs [role="tab"] {
+  min-height: 2.8rem;
+  border-radius: .75rem;
+}
+.mobile-settings-tabs [role="tab"][aria-selected="true"] {
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.mobile-settings-content [role="tabpanel"] > section,
+.mobile-settings-content [role="tabpanel"] > div > section {
+  border-radius: 1rem;
+  box-shadow: 0 4px 18px color-mix(in srgb, var(--text) 4%, transparent);
+}
+.mobile-settings-account {
+  border-radius: 1rem;
+  background:
+    radial-gradient(ellipse at 100% 0%, color-mix(in srgb, var(--accent-soft) 70%, transparent), transparent 52%),
+    var(--surface-raised);
+}
+.mobile-source-panel, .mobile-studio-panel {
+  border-radius: 1rem;
+}
+.workspace-canvas { background-color: var(--bg); }
+@media (min-width: 768px) {
+  .mobile-dashboard-main { padding-top: 2rem; padding-bottom: 3rem; }
+  .dashboard-welcome { padding: 2rem; }
+  .mobile-dashboard-grid { gap: 1rem; }
+  .mobile-dashboard-card { padding: 1.15rem; }
+  .mobile-settings-main { padding-top: 2.25rem; padding-bottom: 3rem; }
+  .mobile-settings-content { gap: 2rem; }
+}
+@media (max-width: 767px) {
+  .dashboard-welcome { padding: 1.2rem; border-radius: 1.1rem; }
+  .dashboard-welcome::after { right: -5rem; bottom: -7rem; }
+  .mobile-dashboard-toolbar { align-items: flex-start; }
+  .mobile-dashboard-view-controls { justify-content: flex-end; }
+  .mobile-settings-tabs { gap: .4rem; }
+  .mobile-settings-tabs [role="tab"] { border: 1px solid var(--border); }
+  .mobile-settings-tabs [role="tab"][aria-selected="true"] {
+    border-color: color-mix(in srgb, var(--accent) 38%, var(--border));
+    box-shadow: inset 0 -2px 0 var(--accent);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mobile-dashboard-tabs [role="tab"] { transition: none; }
+}
