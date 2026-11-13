@@ -16,10 +16,10 @@ export function DialogContent({
 }: { title: string; description?: string; children: React.ReactNode; size?: "sm" | "md" | "lg"; className?: string }) {
   return (
     <DialogPrimitive.Portal>
-      <DialogPrimitive.Overlay className="fixed inset-0 z-[var(--z-overlay)] bg-overlay/40 backdrop-blur-[2px]" />
+      <DialogPrimitive.Overlay className="glass-backdrop fixed inset-0 z-[var(--z-overlay)]" />
       <DialogPrimitive.Content
         className={cn(
-          "fixed left-1/2 top-1/2 z-[var(--z-dialog)] grid max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto rounded-xl border bg-surface-raised p-6 shadow-dialog",
+          "glass-elevated fixed left-1/2 top-1/2 z-[var(--z-dialog)] grid max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto rounded-xl p-6 shadow-dialog data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-[0.98]",
           { sm: "max-w-sm", md: "max-w-lg", lg: "max-w-3xl" }[size],
           className,
         )}
@@ -54,7 +54,7 @@ export function DropdownMenuContent({ children, align = "end" }: { children: Rea
       <Menu.Content
         align={align}
         sideOffset={6}
-        className="z-[var(--z-dropdown)] min-w-48 rounded-lg border bg-surface-raised p-1 shadow-pop"
+        className="glass-elevated z-[var(--z-dropdown)] min-w-48 rounded-lg p-1 shadow-pop"
       >
         {children}
       </Menu.Content>
