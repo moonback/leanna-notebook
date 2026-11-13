@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ArrowUpRight, BookmarkPlus, Check, Download, FileText, Globe, Mic, PanelsTopLeft, Plus, RotateCw, Search, Sparkles, TriangleAlert } from "lucide-react";
+import { ArrowUpRight, BookmarkPlus, Check, Download, FileText, Globe, Mic, PanelsTopLeft, Plus, RotateCw, Search, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   getBrowserApi, shouldForwardKey,
