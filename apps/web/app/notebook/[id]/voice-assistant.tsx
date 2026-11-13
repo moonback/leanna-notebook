@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Citation } from "@/components/ui/citation";
 import { Dialog, DialogContent } from "@/components/ui/overlay";
 import { PendingVoiceSearches, shouldInviteRoxane, waitForAudioPlaybackDrain, VoiceTurnCitationStore, type NumberedVoicePassage } from "./voice-turn";
-import type { DesktopBrowserApi } from "@/app/browser/browser-api";
+import type { DesktopBrowserApi, DesktopSaveRequest } from "@/app/browser/browser-api";
 
 type VoiceState = "idle" | "connecting" | "listening" | "speaking" | "error";
 type Passage = NumberedVoicePassage;
@@ -99,7 +99,7 @@ function playActivationChime(ctx: AudioContext) {
   } catch { /* le son est un confort, jamais bloquant */ }
 }
 
-export function VoiceAssistant({ notebookId, conversationId, disabled = false, onOpenCitation, browserApi }: { notebookId: string; conversationId: string; disabled?: boolean; onOpenCitation: (passage: Passage) => void; browserApi?: DesktopBrowserApi }) {
+export function VoiceAssistant({ notebookId, conversationId, disabled = false, onOpenCitation, browserApi, saveBrowserRequest }: { notebookId: string; conversationId: string; disabled?: boolean; onOpenCitation: (passage: Passage) => void; browserApi?: DesktopBrowserApi; saveBrowserRequest?: (request: DesktopSaveRequest) => Promise<{ ok: boolean; message: string }> }) {
   const [open, setOpen] = React.useState(false);
   const [expanded, setExpanded] = React.useState(false);
   const [state, setState] = React.useState<VoiceState>("idle");
@@ -215,7 +215,19 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
             const approved = window.confirm(`Leanna souhaite effectuer cette action :\n\n${outcome.summary}\n\nMotif : ${outcome.reason}\n\nAutoriser cette action ?`);
             outcome = await browserApi.agentResolve({ actionId: outcome.actionId, approve: approved, owner: "voice" });
           }
-          socket.current?.send(JSON.stringify({ toolResponse: { functionResponses: [{ id: call.id, name: call.name, response: { result: JSON.stringify(outcome) } }] } }));
+          let browserResponse: Record<string, unknown>;
+          if (outcome.status === "ok") {
+            let result = outcome.result;
+            if (outcome.save) {
+              if (!saveBrowserRequest) throw new Error("L'enregistrement Notebook n'est pas disponible depuis ce navigateur.");
+              const saved = await saveBrowserRequest(outcome.save);
+              result = { ...result, saved: saved.ok, message: saved.message };
+            }
+            browserResponse = { status: outcome.status, tool: outcome.tool, summary: outcome.summary, result };
+          } else {
+            browserResponse = outcome;
+          }
+          socket.current?.send(JSON.stringify({ toolResponse: { functionResponses: [{ id: call.id, name: call.name, response: { result: JSON.stringify(browserResponse) } }] } }));
           setStatus(outcome.status === "ok" ? "Action Browser vérifiée." : outcome.status === "confirmation_required" ? "Confirmation Browser requise." : "Action Browser non exécutée.");
         } catch (error) {
           socket.current?.send(JSON.stringify({ toolResponse: { functionResponses: [{ id: call.id, name: call.name, response: { error: error instanceof Error ? error.message : "Action Browser impossible." } }] } }));
