@@ -41,6 +41,13 @@ export function browserHandlers({ manager, store }: BrowserIpcDeps): Record<stri
   const assertAgentOwner = (input: unknown) => {
     if (agentOwner !== requestedOwner(input)) throw new Error("browser_agent_busy");
   };
+  // Les tool calls d'une même mission sont également sérialisés dans Main.
+  let agentQueue: Promise<unknown> = Promise.resolve();
+  const enqueueAgent = <T>(operation: () => Promise<T> | T): Promise<T> => {
+    const next = agentQueue.then(operation, operation);
+    agentQueue = next.then(() => undefined, () => undefined);
+    return next;
+  };
   return {
     // Agent : le mode d'autonomie est lu dans les réglages à chaque appel, jamais fourni par l'appelant.
     agentStart: (input) => {
@@ -49,16 +56,16 @@ export function browserHandlers({ manager, store }: BrowserIpcDeps): Record<stri
       agentOwner = owner;
       return agent.startMission(record(input).text, record(input).reset === true);
     },
-    agentCall: (input) => { assertAgentOwner(input); return agent.call(record(input).name, record(input).args); },
-    agentResolve: (input) => { assertAgentOwner(input); return agent.resolve(record(input).actionId, record(input).approve); },
+    agentCall: (input) => { assertAgentOwner(input); return enqueueAgent(() => { assertAgentOwner(input); return agent.call(record(input).name, record(input).args); }); },
+    agentResolve: (input) => { assertAgentOwner(input); return enqueueAgent(() => { assertAgentOwner(input); return agent.resolve(record(input).actionId, record(input).approve); }); },
     agentAbort: (input) => {
       assertAgentOwner(input);
       agent.abort(); agentOwner = null; return true;
     },
-    agentEnd: (input) => {
+    agentEnd: (input) => enqueueAgent(() => {
       assertAgentOwner(input);
       agentOwner = null; return true;
-    },
+    }),
 
     init: async () => {
       await manager.init();
