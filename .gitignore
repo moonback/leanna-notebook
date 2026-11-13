@@ -12,3 +12,4 @@ apps/desktop/release
 .project-knowledge.json
 apps/desktop/e2e-artifacts
 apps/desktop/dist/preload.js
+graphify-out

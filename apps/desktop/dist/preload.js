@@ -8,7 +8,8 @@ const BROWSER_METHODS = [
     "goForward", "reload", "stop", "setZoom", "runCommand", "key", "setBounds", "setVisible", "getSettings",
     "updateSettings", "getHistory", "removeVisit", "clearHistory", "getBookmarks", "addBookmark", "updateBookmark",
     "removeBookmark", "addFolder", "renameFolder", "removeFolder", "cancelDownload", "showDownloadInFolder",
-    "removeDownload", "getPermissions", "setPermission", "clearBrowsingData",
+    "removeDownload", "getPermissions", "setPermission", "clearBrowsingData", "extractPage", "getSelection",
+    "agentStart", "agentCall", "agentResolve", "agentAbort", "agentEnd",
 ];
 const allMethodsListed = true;
 void allMethodsListed;
