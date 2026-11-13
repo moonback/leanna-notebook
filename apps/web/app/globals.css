@@ -1374,3 +1374,97 @@ header.glass-toolbar nav button {
   .mobile-discover-card, .mobile-studio-artifacts > li { transition: none; }
   .mobile-discover-card:hover { transform: none; }
 }
+
+
+/* Authentication — a focused, brand-consistent entry experience. */
+.mobile-auth-brand {
+  background:
+    radial-gradient(ellipse at 14% 20%, color-mix(in srgb, var(--accent) 42%, transparent), transparent 48%),
+    radial-gradient(ellipse at 88% 88%, color-mix(in srgb, var(--accent-soft) 55%, transparent), transparent 44%),
+    linear-gradient(145deg, color-mix(in srgb, var(--surface-inverse, #18352e) 92%, #10251f), #18352e);
+}
+.mobile-auth-brand::after {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgb(255 255 255 / 0.32) .65px, transparent .65px);
+  background-size: 22px 22px;
+  opacity: .16;
+  content: "";
+  pointer-events: none;
+}
+.mobile-auth-brand > * { position: relative; z-index: 1; }
+.mobile-auth-panel {
+  background:
+    radial-gradient(ellipse at 100% 0%, color-mix(in srgb, var(--accent-soft) 42%, transparent), transparent 42%),
+    var(--bg);
+}
+.mobile-auth-header a:first-child {
+  min-height: 2.5rem;
+  border-radius: .7rem;
+  transition: color 150ms ease, background-color 150ms ease;
+}
+.mobile-auth-header a:first-child:hover {
+  background: color-mix(in srgb, var(--accent-soft) 45%, transparent);
+}
+.mobile-auth-form {
+  padding: clamp(1.25rem, 3vw, 2rem);
+  border: 1px solid color-mix(in srgb, var(--accent) 13%, var(--border));
+  border-radius: 1.35rem;
+  background: color-mix(in srgb, var(--surface-raised) 94%, transparent);
+  box-shadow: 0 16px 44px color-mix(in srgb, var(--text) 7%, transparent);
+}
+.mobile-auth-form h1 {
+  font-size: clamp(1.85rem, 3vw, 2.15rem);
+  letter-spacing: -.045em;
+}
+.mobile-auth-form > div:first-child > p {
+  max-width: 35rem;
+  line-height: 1.65;
+}
+.mobile-auth-fields input,
+.mobile-auth-magic input {
+  min-height: 2.85rem;
+  border-radius: .8rem;
+  background: var(--surface);
+}
+.mobile-auth-fields input:focus-visible,
+.mobile-auth-magic input:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent);
+}
+.mobile-auth-fields button[type="submit"] {
+  min-height: 2.95rem;
+  border-radius: .85rem;
+  box-shadow: 0 5px 14px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+.mobile-auth-form > button,
+.mobile-auth-magic {
+  border-radius: .9rem;
+}
+.mobile-auth-magic {
+  background: color-mix(in srgb, var(--surface) 72%, var(--surface-raised));
+}
+.mobile-auth-footer {
+  padding-top: .75rem;
+  padding-bottom: max(.5rem, env(safe-area-inset-bottom));
+}
+@media (min-width: 1024px) {
+  .mobile-auth-panel { padding-inline: clamp(3rem, 6vw, 6rem); }
+  .mobile-auth-content { width: min(100%, 460px); }
+  .mobile-auth-form { padding: 2rem; }
+}
+@media (max-width: 767px) {
+  .mobile-auth-panel { padding-inline: max(1rem, env(safe-area-inset-left)); }
+  .mobile-auth-content { justify-content: center; }
+  .mobile-auth-form { padding: 1.15rem; border-radius: 1.1rem; }
+  .mobile-auth-form h1 { font-size: 1.8rem; }
+  .mobile-auth-footer { font-size: .68rem; }
+}
+@media (max-height: 700px) {
+  .mobile-auth-content { justify-content: flex-start; overflow-y: auto; }
+  .mobile-auth-form { padding-block: 1rem; }
+  .mobile-auth-form > div:first-child > p { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mobile-auth-header a:first-child { transition: none; }
+}
