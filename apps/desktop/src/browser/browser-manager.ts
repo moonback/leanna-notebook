@@ -392,7 +392,8 @@ export class BrowserManager {
       await this.waitForLoad(id);
     }
     if (tab.error) throw new Error("page_load_failed");
-    const sources = [...preludes.map((code) => ({ code })), { code: `(${fn.toString()})(${JSON.stringify(arg)})` }];
+    // Une seule source : avec plusieurs, Electron ne renvoie pas la valeur du dernier script.
+    const sources = [{ code: `${preludes.map((code) => `${code}\n;`).join("")}(${fn.toString()})(${JSON.stringify(arg)})` }];
     let timer: NodeJS.Timeout | undefined;
     try {
       return await Promise.race([
