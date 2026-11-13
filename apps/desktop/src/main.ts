@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from "electron";
+import { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, shell } from "electron";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { BrowserDataStore } from "./browser/browser-data-store";
@@ -94,6 +94,45 @@ function isTrustedRenderer(event: Electron.IpcMainInvokeEvent): boolean {
   }
 }
 
+/** Boîte « À propos » détaillée : versions, plateforme, serveur et dossier de données. */
+async function showAboutDialog(): Promise<void> {
+  const v = process.versions;
+  const detail = [
+    "Votre espace de recherche et de notes assisté par IA :",
+    "sources, chat, Studio, navigateur intégré et assistant vocal.",
+    "",
+    `Version : ${app.getVersion()}${app.isPackaged ? "" : " (développement)"}`,
+    `Électron : ${v.electron}`,
+    `Chromium : ${v.chrome}`,
+    `Node.js : ${v.node}`,
+    `V8 : ${v.v8}`,
+    `Plateforme : ${process.platform} ${process.arch} (${process.getSystemVersion()})`,
+    `Langue : ${app.getLocale()}`,
+    `Serveur : ${allowedOrigin}`,
+    `Données locales : ${app.getPath("userData")}`,
+    "",
+    `© ${new Date().getFullYear()} Leanna Notebook. Tous droits réservés.`,
+  ].join("\n");
+
+  const buttons = ["Fermer", "Copier les informations", "Rechercher les mises à jour"];
+  const options: Electron.MessageBoxOptions = {
+    type: "info",
+    title: "À propos de Leanna Notebook",
+    message: "Leanna Notebook",
+    detail,
+    buttons,
+    defaultId: 0,
+    cancelId: 0,
+    noLink: true,
+  };
+  const result = mainWindow && !mainWindow.isDestroyed()
+    ? await dialog.showMessageBox(mainWindow, options)
+    : await dialog.showMessageBox(options);
+
+  if (result.response === 1) clipboard.writeText(`Leanna Notebook\n${detail}`);
+  else if (result.response === 2) void checkForUpdates(mainWindow, true);
+}
+
 function registerApplicationMenu(): void {
   const viewItems: Electron.MenuItemConstructorOptions[] = [
     { role: "reload", label: "Recharger" },
@@ -110,7 +149,7 @@ function registerApplicationMenu(): void {
     {
       label: "Leanna Notebook",
       submenu: [
-        { role: "about", label: "À propos de Leanna Notebook" },
+        { label: "À propos de Leanna Notebook", click: () => { void showAboutDialog(); } },
         { type: "separator" },
         { role: "quit", label: "Quitter" },
         { type: "separator" },
