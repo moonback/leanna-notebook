@@ -19,7 +19,7 @@ export type JournalEntry = {
 };
 
 export type RunnerDeps = {
-  api: Pick<DesktopBrowserApi, "agentStart" | "agentCall" | "agentResolve" | "agentAbort" | "extractPage" | "getSelection" | "getState">;
+  api: Pick<DesktopBrowserApi, "agentStart" | "agentCall" | "agentResolve" | "agentAbort" | "agentEnd" | "extractPage" | "getSelection" | "getState">;
   fetch: typeof fetch;
   notebookId?: string;
   signal: AbortSignal;
@@ -112,8 +112,10 @@ async function activePage(deps: RunnerDeps): Promise<{ page?: PageContext; selec
 export async function runTurn(deps: RunnerDeps, history: TranscriptMessage[], userText: string, options: { reset?: boolean } = {}): Promise<TurnResult> {
   const transcript = trim([...history]);
   let assistantText = "";
+  let missionId: number | null = null;
   try {
-    const { mode } = await deps.api.agentStart({ text: userText, reset: options.reset === true });
+    const { mode, mission } = await deps.api.agentStart({ text: userText, reset: options.reset === true });
+    missionId = mission;
     transcript.push({ role: "user", text: userText, ...(await activePage(deps)) });
     let continuation: string | undefined;
 
@@ -129,13 +131,13 @@ export async function runTurn(deps: RunnerDeps, history: TranscriptMessage[], us
       for (const call of step.calls) {
         if (deps.signal.aborted) throw new DOMException("aborted", "AbortError");
         const id = `${transcript.length}-${call.id}`;
-        let outcome: DesktopAgentOutcome = await deps.api.agentCall({ name: call.name, args: call.arguments });
+        let outcome: DesktopAgentOutcome = await deps.api.agentCall({ name: call.name, args: call.arguments, mission: missionId! });
         if (outcome.status === "confirmation_required") {
           const entry: JournalEntry = { id, tool: outcome.tool, summary: outcome.summary, status: "pending", detail: outcome.reason };
           deps.onJournal(entry);
           const approved = await deps.confirm(entry);
           if (deps.signal.aborted) throw new DOMException("aborted", "AbortError");
-          outcome = await deps.api.agentResolve({ actionId: outcome.actionId, approve: approved });
+          outcome = await deps.api.agentResolve({ actionId: outcome.actionId, approve: approved, mission: missionId! });
         } else {
           deps.onJournal({ id, tool: outcome.tool, summary: outcome.summary, status: "running" });
         }
@@ -162,10 +164,12 @@ export async function runTurn(deps: RunnerDeps, history: TranscriptMessage[], us
     return { transcript, error: "step_limit" };
   } catch (error) {
     const aborted = deps.signal.aborted || (error instanceof DOMException && error.name === "AbortError");
-    if (aborted) await deps.api.agentAbort().catch(() => undefined);
+    if (aborted && missionId !== null) await deps.api.agentAbort({ mission: missionId }).catch(() => undefined);
     // Le texte partiel d'une réponse interrompue est conservé, comme dans le chat du Notebook.
     if (assistantText) transcript.push({ role: "assistant", text: assistantText });
     return { transcript, error: aborted ? "aborted" : error instanceof Error ? error.message : "internal" };
+  } finally {
+    if (missionId !== null) await deps.api.agentEnd({ mission: missionId }).catch(() => false);
   }
 }
 

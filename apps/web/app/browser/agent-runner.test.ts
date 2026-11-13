@@ -37,6 +37,7 @@ function harness(script: (Event[] | (() => Promise<Response>))[], outcomes: Reco
           : { status: "denied", tool: "click_element", summary: "Cliquer", error: "user_denied", message: "Refusé" };
       },
       agentAbort: async () => { log.push("abort"); return true; },
+      agentEnd: async () => true,
       extractPage: async () => PAGE,
       getSelection: async () => "",
       getState: async () => ({ activeTabId: "t1", tabs: [], fullscreen: false, downloads: [] }),

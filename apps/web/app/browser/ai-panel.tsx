@@ -80,7 +80,7 @@ export function AiPanel({ api, tab, settings, onSettings, notebookId, save, chil
   function stop() {
     controller.current?.abort();
     for (const id of [...decisions.current.keys()]) decide(id, false);
-    void api.agentAbort().catch(() => undefined);
+    // runTurn reçoit l'annulation et interrompt Main avec l'identifiant de mission courant.
   }
 
   async function send(text: string) {

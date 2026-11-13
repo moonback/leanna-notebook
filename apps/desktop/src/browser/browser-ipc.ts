@@ -34,12 +34,49 @@ export function browserHandlers({ manager, store }: BrowserIpcDeps): Record<stri
     actInPage: (id, fn, arg) => manager.runInPage(id, fn, arg, [], 10_000, true),
     extract: (id, options) => extractPage(manager, id, options), selection: (id) => getSelection(manager, id),
   });
+  // Une seule mission Browser peut contrôler l'état mutable de BrowserAgent à la fois.
+  // Le propriétaire est déterminé par le renderer de confiance, jamais par Gemini.
+  let agentOwner: "panel" | "voice" | null = null;
+  let agentMission: number | null = null;
+  const requestedOwner = (input: unknown): "panel" | "voice" => record(input).owner === "voice" ? "voice" : "panel";
+  const assertAgentOwner = (input: unknown) => {
+    const args = record(input);
+    if (agentOwner !== requestedOwner(input)) throw new Error("browser_agent_busy");
+    if (typeof args.mission !== "number" || args.mission !== agentMission) throw new Error("browser_agent_stale_mission");
+  };
+  // Les tool calls d'une même mission sont également sérialisés dans Main.
+  let agentQueue: Promise<unknown> = Promise.resolve();
+  const enqueueAgent = <T>(operation: () => Promise<T> | T): Promise<T> => {
+    const next = agentQueue.then(operation, operation);
+    agentQueue = next.then(() => undefined, () => undefined);
+    return next;
+  };
   return {
     // Agent : le mode d'autonomie est lu dans les réglages à chaque appel, jamais fourni par l'appelant.
-    agentStart: (input) => agent.startMission(record(input).text, record(input).reset === true),
-    agentCall: (input) => agent.call(record(input).name, record(input).args),
-    agentResolve: (input) => agent.resolve(record(input).actionId, record(input).approve),
-    agentAbort: () => { agent.abort(); return true; },
+    agentStart: (input) => {
+      const owner = requestedOwner(input);
+      if (agentOwner) throw new Error("browser_agent_busy");
+      agentOwner = owner;
+      try {
+        const started = agent.startMission(record(input).text, record(input).reset === true);
+        agentMission = started.mission;
+        return started;
+      } catch (error) {
+        agentOwner = null;
+        agentMission = null;
+        throw error;
+      }
+    },
+    agentCall: (input) => { assertAgentOwner(input); return enqueueAgent(() => { assertAgentOwner(input); return agent.call(record(input).name, record(input).args); }); },
+    agentResolve: (input) => { assertAgentOwner(input); return enqueueAgent(() => { assertAgentOwner(input); return agent.resolve(record(input).actionId, record(input).approve); }); },
+    agentAbort: (input) => {
+      assertAgentOwner(input);
+      agent.abort(); agentOwner = null; agentMission = null; return true;
+    },
+    agentEnd: (input) => enqueueAgent(() => {
+      assertAgentOwner(input);
+      agentOwner = null; agentMission = null; return true;
+    }),
 
     init: async () => {
       await manager.init();

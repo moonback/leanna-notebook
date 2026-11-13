@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Citation } from "@/components/ui/citation";
 import { Dialog, DialogContent } from "@/components/ui/overlay";
 import { PendingVoiceSearches, shouldInviteRoxane, waitForAudioPlaybackDrain, VoiceTurnCitationStore, type NumberedVoicePassage } from "./voice-turn";
+import type { DesktopBrowserApi, DesktopSaveRequest } from "@/app/browser/browser-api";
 
 type VoiceState = "idle" | "connecting" | "listening" | "speaking" | "error";
 type Passage = NumberedVoicePassage;
@@ -98,7 +99,7 @@ function playActivationChime(ctx: AudioContext) {
   } catch { /* le son est un confort, jamais bloquant */ }
 }
 
-export function VoiceAssistant({ notebookId, conversationId, disabled = false, onOpenCitation }: { notebookId: string; conversationId: string; disabled?: boolean; onOpenCitation: (passage: Passage) => void }) {
+export function VoiceAssistant({ notebookId, conversationId, disabled = false, onOpenCitation, browserApi, saveBrowserRequest }: { notebookId: string; conversationId: string; disabled?: boolean; onOpenCitation: (passage: Passage) => void; browserApi?: DesktopBrowserApi; saveBrowserRequest?: (request: DesktopSaveRequest) => Promise<{ ok: boolean; message: string }> }) {
   const [open, setOpen] = React.useState(false);
   const [expanded, setExpanded] = React.useState(false);
   const [state, setState] = React.useState<VoiceState>("idle");
@@ -135,10 +136,20 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
   const mutedRef = React.useRef(false);
   const mounted = React.useRef(true);
   const intentionalClose = React.useRef(false);
+  const browserMissionStarted = React.useRef(false);
+  const browserMissionId = React.useRef<number | null>(null);
+  const browserToolCallIds = React.useRef(new Set<string>());
+  const browserToolCallsThisTurn = React.useRef(0);
 
   const stop = React.useCallback(() => {
     rlog("stop() appelé", { nodes: playbackNodes.current.size, roxaneSpeaking: roxaneSpeaking.current, stack: new Error().stack?.split("\n").slice(2, 5).join(" | ") });
     intentionalClose.current = true;
+    if (browserApi && browserMissionId.current !== null) {
+      const mission = browserMissionId.current;
+      void browserApi.agentAbort({ owner: "voice", mission }).catch(() => undefined);
+      browserMissionId.current = null;
+      browserMissionStarted.current = false;
+    }
     socket.current?.close();
     socket.current = null;
     roxaneSocket.current?.close();
@@ -159,7 +170,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
     nextPlaybackTime.current = 0;
     mutedRef.current = false;
     if (mounted.current) { setMuted(false); setState("idle"); }
-  }, []);
+  }, [browserApi]);
 
   React.useEffect(() => {
     mounted.current = true;
@@ -200,6 +211,50 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
   async function handleToolCall(message: LiveMessage) {
     const calls = message?.toolCall?.functionCalls ?? [];
     for (const call of calls) {
+      if (call.name.startsWith("browser_")) {
+        if (browserToolCallIds.current.has(call.id)) {
+          socket.current?.send(JSON.stringify({ toolResponse: { functionResponses: [{ id: call.id, name: call.name, response: { error: "Appel dupliqué ignoré : aucune action supplémentaire n’a été exécutée." } }] } }));
+          continue;
+        }
+        browserToolCallIds.current.add(call.id);
+        if (browserToolCallsThisTurn.current >= 8) {
+          socket.current?.send(JSON.stringify({ toolResponse: { functionResponses: [{ id: call.id, name: call.name, response: { error: "Limite de 8 actions Browser par tour vocal atteinte. Demande à l’utilisateur de préciser la suite." } }] } }));
+          continue;
+        }
+        browserToolCallsThisTurn.current += 1;
+        try {
+          if (!browserApi) throw new Error("Le navigateur intégré n'est pas disponible dans cette session.");
+          if (!browserMissionStarted.current) {
+            const started = await browserApi.agentStart({ text: userTurn.current.slice(0, 8000), reset: false, owner: "voice" });
+            browserMissionId.current = started.mission;
+            browserMissionStarted.current = true;
+          }
+          const mission = browserMissionId.current;
+          if (mission === null) throw new Error("Mission Browser vocale invalide.");
+          let outcome = await browserApi.agentCall({ name: call.name.slice("browser_".length), args: call.args ?? {}, owner: "voice", mission });
+          if (outcome.status === "confirmation_required") {
+            const approved = window.confirm(`Leanna souhaite effectuer cette action :\n\n${outcome.summary}\n\nMotif : ${outcome.reason}\n\nAutoriser cette action ?`);
+            outcome = await browserApi.agentResolve({ actionId: outcome.actionId, approve: approved, owner: "voice", mission });
+          }
+          let browserResponse: Record<string, unknown>;
+          if (outcome.status === "ok") {
+            let result = outcome.result;
+            if (outcome.save) {
+              if (!saveBrowserRequest) throw new Error("L'enregistrement Notebook n'est pas disponible depuis ce navigateur.");
+              const saved = await saveBrowserRequest(outcome.save);
+              result = { ...result, saved: saved.ok, message: saved.message };
+            }
+            browserResponse = { status: outcome.save ? (result.saved === true ? "ok" : "error") : outcome.status, tool: outcome.tool, summary: outcome.summary, result };
+          } else {
+            browserResponse = outcome;
+          }
+          socket.current?.send(JSON.stringify({ toolResponse: { functionResponses: [{ id: call.id, name: call.name, response: { result: JSON.stringify(browserResponse) } }] } }));
+          setStatus(browserResponse.status === "ok" ? "Action Browser vérifiée." : "Action Browser non exécutée.");
+        } catch (error) {
+          socket.current?.send(JSON.stringify({ toolResponse: { functionResponses: [{ id: call.id, name: call.name, response: { error: error instanceof Error ? error.message : "Action Browser impossible." } }] } }));
+        }
+        continue;
+      }
       if (call.name === "search_notebook_sources") {
         try {
           const response = await fetch(`/api/v1/notebooks/${notebookId}/voice-search`, {
@@ -266,6 +321,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
     const assistantText = assistantTurn.current.trim();
     const sourceIds = [...turnSourceIds.current];
     if (!userText || !assistantText) return;
+    if (browserApi) { userTurn.current = ""; assistantTurn.current = ""; turnSourceIds.current.clear(); return; }
     const response = await fetch(`/api/v1/conversations/${conversationId}/voice-messages`, {
       method: "POST", headers: { "content-type": "application/json" },
       body: JSON.stringify({ userText, assistantText, sourceIds })
@@ -360,7 +416,11 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
     setSources([]);
     setTurnHistory([]);
     try {
-      if (!conversationId) throw new Error("Conversation du notebook en cours de chargement.");
+      if (!conversationId && !browserApi) throw new Error("Conversation du notebook en cours de chargement.");
+      browserMissionStarted.current = false;
+      browserMissionId.current = null;
+      browserToolCallIds.current.clear();
+      browserToolCallsThisTurn.current = 0;
       userTurn.current = "";
       assistantTurn.current = "";
       turnSourceIds.current.clear();
@@ -374,7 +434,7 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
       audioContext.current = ctx;
       await ctx.resume();
       const tokenResponse = await fetch(`/api/v1/notebooks/${notebookId}/voice-token`, {
-        method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ voice: "Aoede", persona: "leanna" })
+        method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ voice: "Aoede", persona: "leanna", browser: Boolean(browserApi) })
       });
       const tokenPayload = await tokenResponse.json();
       if (!tokenResponse.ok) throw new Error(tokenPayload.error === "voice_not_configured" ? "Ajoutez GEMINI_API_KEY côté serveur." : "Impossible d'ouvrir la session vocale de Leanna.");
@@ -481,6 +541,11 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
           } else {
             setStatus(roxaneEnabledRef.current ? `Échange ${completedTurnNumber}/2 · Roxane reste en écoute.` : "Leanna a répondu · Roxane est désactivée.");
           }
+          if (browserApi && browserMissionId.current !== null) {
+            await browserApi.agentEnd({ owner: "voice", mission: browserMissionId.current }).catch(() => false);
+            browserMissionId.current = null;
+            browserMissionStarted.current = false;
+          }
           const completedTurn = { user: userTurn.current.trim(), assistant: leannaAnswer, roxane: roxaneTurnText.current.trim(), sources: turnPassages.current.snapshot() };
           await persistVoiceTurn();
           if (completedTurn.user && completedTurn.assistant) setTurnHistory((history) => [...history, completedTurn]);
@@ -495,6 +560,9 @@ export function VoiceAssistant({ notebookId, conversationId, disabled = false, o
           userTurn.current = "";
           assistantTurn.current = "";
           turnCompletePending.current = false;
+          browserMissionStarted.current = false;
+          browserToolCallIds.current.clear();
+          browserToolCallsThisTurn.current = 0;
           setState("listening");
           setStatus("À vous de parler. Posez votre prochaine question.");
         } catch (error) {

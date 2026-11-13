@@ -163,12 +163,14 @@ export interface DesktopBrowserInvokeApi {
   extractPage(id: string, options?: { full?: boolean }): Promise<DesktopPageContent>;
   getSelection(id: string): Promise<string>;
   /** Début d'un tour utilisateur pour l'agent (`reset` : nouvelle conversation). */
-  agentStart(input: { text: string; reset?: boolean }): Promise<{ mission: number; mode: DesktopAgentMode }>;
+  agentStart(input: { text: string; reset?: boolean; owner?: "panel" | "voice" }): Promise<{ mission: number; mode: DesktopAgentMode }>;
   /** Appel d'outil proposé par le modèle : validé, soumis aux garde-fous, exécuté ou mis en attente. */
-  agentCall(input: { name: string; args: unknown }): Promise<DesktopAgentOutcome>;
+  agentCall(input: { name: string; args: unknown; owner?: "panel" | "voice"; mission: number }): Promise<DesktopAgentOutcome>;
   /** Décision de l'utilisateur sur une action en attente de confirmation. */
-  agentResolve(input: { actionId: string; approve: boolean }): Promise<DesktopAgentOutcome>;
-  agentAbort(): Promise<boolean>;
+  agentResolve(input: { actionId: string; approve: boolean; owner?: "panel" | "voice"; mission: number }): Promise<DesktopAgentOutcome>;
+  agentAbort(input: { owner?: "panel" | "voice"; mission: number }): Promise<boolean>;
+  /** Libère le verrou de mission après un tour terminé sans annuler le navigateur. */
+  agentEnd(input: { owner?: "panel" | "voice"; mission: number }): Promise<boolean>;
   getPermissions(): Promise<Record<string, Record<string, DesktopPermissionDecision>>>;
   setPermission(origin: string, permission: string, decision: DesktopPermissionDecision | null): Promise<boolean>;
   clearBrowsingData(): Promise<boolean>;

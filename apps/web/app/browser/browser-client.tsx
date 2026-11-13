@@ -8,6 +8,7 @@ import {
   type DesktopBrowserApi, type DesktopBrowserBookmark, type DesktopBrowserCommand, type DesktopBrowserSettings, type DesktopBrowserState,
 } from "./browser-api";
 import { AiPanel } from "./ai-panel";
+import { VoiceAssistant } from "../notebook/[id]/voice-assistant";
 import { LibraryPanel, type LibraryTab } from "./library-panel";
 import { saveToNotebook } from "./notebook-save";
 import { SettingsPanel } from "./settings-panel";
@@ -146,8 +147,14 @@ export function BrowserClient({ notebookId }: { notebookId?: string } = {}) {
   return (
     <main className="flex min-h-0 flex-1 flex-col overflow-hidden bg-bg" data-browser-ready={ready}>
       <TabStrip api={api} state={state} />
-      <Toolbar api={api} tab={activeTab} fullscreen={state.fullscreen} bookmarked={Boolean(bookmark)} onToggleBookmark={toggleBookmark}
-        panel={panel} onPanel={togglePanel} addressRef={addressRef} />
+      <div className="flex min-w-0 items-center gap-2 border-b border-border pr-2">
+        <div className="min-w-0 flex-1">
+          <Toolbar api={api} tab={activeTab} fullscreen={state.fullscreen} bookmarked={Boolean(bookmark)} onToggleBookmark={toggleBookmark}
+            panel={panel} onPanel={togglePanel} addressRef={addressRef} />
+        </div>
+        {target.selected && <VoiceAssistant key={target.selected} notebookId={target.selected} conversationId="" browserApi={api} onOpenCitation={() => undefined}
+          saveBrowserRequest={(request) => saveToNotebook(window.fetch.bind(window), target.selected, request)} />}
+      </div>
 
       <div className="flex min-h-0 flex-1">
         <div ref={viewportRef} className="relative min-w-0 flex-1 bg-surface-sunken" aria-label="Page web" data-browser-viewport>
