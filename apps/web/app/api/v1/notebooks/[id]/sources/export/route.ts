@@ -16,7 +16,11 @@ export const GET = handle(async (req: NextRequest, { params }: Params) => {
   if (!/^[0-9a-f-]{36}$/i.test(id)) throw new ApiError(404, "not_found");
   await requireRole(id, "viewer");
 
+  const format = req.nextUrl.searchParams.get("format") ?? "md";
+  if (format !== "md") throw new ApiError(422, "unsupported_export_format");
+  const hasIds = req.nextUrl.searchParams.has("ids");
   const requested = req.nextUrl.searchParams.get("ids");
+  if (hasIds && !requested) throw new ApiError(422, "invalid_source_ids");
   const ids = requested ? [...new Set(requested.split(",").filter(Boolean))] : null;
   if (ids && (!ids.length || ids.length > 600 || ids.some((value) => !/^[0-9a-f-]{36}$/i.test(value)))) {
     throw new ApiError(422, "invalid_source_ids");
