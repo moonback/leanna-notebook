@@ -1,11 +1,11 @@
 "use client";
 import * as React from "react";
 import { createPortal } from "react-dom";
-import { AlertTriangle, ArrowUp, AudioLines, Download, Bold, BookmarkPlus, BrainCircuit, Code, Eraser, Heading2, Italic, List, ListOrdered, Quote, Settings2, ThumbsDown, ThumbsUp, FileText, Globe, Inbox, Lock, NotebookPen, Pencil, Plus, Square, Sparkles, Trash2, Type, Upload, Search, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, FolderOpen, Telescope, Network, Scale, ExternalLink } from "lucide-react";
+import { AlertTriangle, ArrowUp, AudioLines, Download, Bold, BookmarkPlus, BrainCircuit, Code, Eraser, Heading2, Italic, List, ListOrdered, Quote, Settings2, ThumbsDown, ThumbsUp, FileText, Globe, Inbox, Lock, NotebookPen, Pencil, Plus, Square, Sparkles, Trash2, Type, Upload, Search, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, FolderOpen, Telescope, Network, Scale, ExternalLink, MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Textarea } from "@/components/ui/field";
 import { Alert, Badge, EmptyState, Progress, Skeleton } from "@/components/ui/feedback";
-import { Dialog, DialogClose, DialogContent, Tooltip } from "@/components/ui/overlay";
+import { Dialog, DialogClose, DialogContent, Tooltip, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/overlay";
 import { useConfirm } from "@/components/ui/confirm";
 import { Checkbox, Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/controls";
 import { ListRow, Panel } from "@/components/ui/surfaces";
@@ -231,13 +231,29 @@ export function Workspace({ notebookId, initialTitle, role, allowCopies, disable
   const allSelected = ready.length > 0 && selectedCount === ready.length;
 
   const sourcesPanel = (
-    <Panel id="sources" title="Sources" className="mobile-source-panel h-full" actions={<span className="flex flex-wrap items-center gap-1">
-      <a href={`/api/v1/notebooks/${notebookId}/sources/export?format=md`} download><Button size="sm" variant="ghost" disabled={!ready.length}><Download aria-hidden /> Tout télécharger (MD)</Button></a>
-      <a href={`/api/v1/notebooks/${notebookId}/sources/export?format=md&ids=${ready.filter((source) => !deselected.has(source.id)).map((source) => source.id).join(",")}`} download>
-        <Button size="sm" variant="ghost" disabled={!selectedCount} title="Télécharger les sources sélectionnées">Sélection ({selectedCount})</Button>
-      </a>
-      {canEdit && <Button size="sm" variant="soft" onClick={() => setAdding(true)}><Plus aria-hidden /> Ajouter</Button>}
-    </span>}>
+    <Panel id="sources" title={`Sources${ready.length ? ` · ${ready.length}` : ""}`} className="mobile-source-panel h-full" actions={<div className="flex shrink-0 flex-nowrap items-center gap-1">
+      <Tooltip label="Tout télécharger en Markdown">
+        <a href={`/api/v1/notebooks/${notebookId}/sources/export?format=md`} download aria-label="Tout télécharger en Markdown" className="inline-flex">
+          <Button size="icon" variant="ghost" disabled={!ready.length}><Download aria-hidden /></Button>
+        </a>
+      </Tooltip>
+      {canEdit && <Tooltip label="Ajouter des sources"><Button size="icon" variant="soft" aria-label="Ajouter des sources" onClick={() => setAdding(true)}><Plus aria-hidden /></Button></Tooltip>}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild><Button size="icon" variant="ghost" aria-label="Actions des sources"><MoreHorizontal aria-hidden /></Button></DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem icon={<Checkbox checked={allSelected} />} onSelect={() => void saveSelection(allSelected ? new Set(ready.map((source) => source.id)) : new Set())} disabled={!ready.length}>
+            {allSelected ? "Tout désélectionner" : "Tout sélectionner"}
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem icon={<Download aria-hidden />} disabled={!selectedCount} onSelect={() => {
+            const ids = ready.filter((source) => !deselected.has(source.id)).map((source) => source.id).join(",");
+            if (ids) window.location.assign(`/api/v1/notebooks/${notebookId}/sources/export?format=md&ids=${ids}`);
+          }}>
+            Télécharger la sélection ({selectedCount})
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>}>
       {loadError ? (
         <div className="p-4"><Alert tone="danger" title="Sources indisponibles" action={<Button size="sm" variant="secondary" onClick={load}>Réessayer</Button>} /></div>
       ) : sources === null ? (
