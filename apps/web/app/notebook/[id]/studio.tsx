@@ -141,7 +141,7 @@ export function Studio({ notebookId, canEdit, sourceIds, sourceTitle, onOpenCita
   }
 
   return (
-    <Panel id="studio" title="Studio" className="mobile-studio-panel h-full">
+    <Panel id="studio" title="Studio" className="mobile-studio-panel h-full" actions={<a href={`/api/v1/notebooks/${notebookId}/artifacts/export?format=md`} download><Button size="sm" variant="ghost" disabled={!arts?.some((artifact) => artifact.status === "ready")}><Download aria-hidden /> Tout télécharger (MD)</Button></a>}>
       {confirmDialog}
       {canEdit && (
         <div className="mobile-studio-actions grid grid-cols-2 gap-2 border-b p-3">
@@ -193,6 +193,7 @@ export function Studio({ notebookId, canEdit, sourceIds, sourceTitle, onOpenCita
                     {a.unread && <span role="img" aria-label="Non lu" className="size-2 rounded-pill bg-accent" />}
                     {busy(a.status) && <Badge tone="accent">{a.progress ? `${a.progress} %` : "En cours"}</Badge>}
                     {a.status === "failed" && canEdit && <Button size="icon-sm" variant="ghost" aria-label={`Relancer ${label(a)}`} onClick={() => void generate(a.type, a.options ?? {}, a.custom_prompt ?? undefined)}><RotateCcw aria-hidden /></Button>}
+                    {a.status === "ready" && <a href={`/api/v1/artifacts/${a.id}/export?format=md`} download aria-label={`Télécharger ${label(a)} en Markdown`} title="Télécharger en Markdown" className="inline-flex size-8 items-center justify-center rounded-md text-text-muted hover:bg-surface-raised hover:text-text"><Download aria-hidden className="size-4" /></a>}
                     {canEdit && a.status === "ready" && <Button size="icon-sm" variant="ghost" aria-label={`Importer ${label(a)} comme source`} title="Importer comme source" onClick={() => void importAsSource(a.id, onImported)}><FilePlus2 aria-hidden /></Button>}
                     {canEdit && !busy(a.status) && <Button size="icon-sm" variant="ghost" aria-label={`Supprimer ${label(a)}`} onClick={() => void remove(a)}><Trash2 aria-hidden /></Button>}
                   </span>
