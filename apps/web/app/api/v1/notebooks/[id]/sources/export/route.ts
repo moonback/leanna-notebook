@@ -5,7 +5,7 @@ import type { NextRequest } from "next/server";
 type Params = { params: Promise<{ id: string }> };
 
 function slug(value: string) {
-  return value.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase()
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
     .replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 70) || "notebook";
 }
 
@@ -46,10 +46,10 @@ export const GET = handle(async (req: NextRequest, { params }: Params) => {
       source.word_count ? `- Mots : ${source.word_count}` : null,
       source.page_count ? `- Pages : ${source.page_count}` : null,
       `- Ajoutée le : ${new Date(source.created_at).toLocaleString("fr-FR")}`,
-    ].filter(Boolean).join("\\n");
-    return `## ${index + 1}. ${source.title || "Source sans titre"}\\n\\n${metadata}\\n\\n${source.extracted_text?.trim() || "_Aucun texte extrait._"}`;
+    ].filter(Boolean).join("\n");
+    return `## ${index + 1}. ${source.title || "Source sans titre"}\n\n${metadata}\n\n${source.extracted_text?.trim() || "_Aucun texte extrait._"}`;
   });
-  const body = `# ${title} — Sources\\n\\nExport Markdown · ${sources?.length ?? 0} source(s) prête(s)\\n\\n${sections.join("\\n\\n---\\n\\n")}\\n`;
+  const body = `# ${title} — Sources\n\nExport Markdown · ${sources?.length ?? 0} source(s) prête(s)\n\n${sections.join("\n\n---\n\n")}\n`;
   return new Response(body, {
     headers: {
       "content-type": "text/markdown; charset=utf-8",
