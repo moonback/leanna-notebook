@@ -38,6 +38,8 @@ export const GET = handle(async (_req: NextRequest, { params }: Params) => {
   await requireUser();
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) throw new ApiError(404, "not_found");
+  // format est volontairement explicite : cette route ne produit que du Markdown.
+  // NextRequest reste utilisé pour conserver une signature de route homogène.
   await requireRole(id, "viewer");
   const db = await createUserClient();
   const [{ data: notebook }, { data: artifacts, error }] = await Promise.all([
