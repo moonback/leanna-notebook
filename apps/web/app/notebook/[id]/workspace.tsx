@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import { createPortal } from "react-dom";
-import { AlertTriangle, ArrowUp, AudioLines, Bold, BookmarkPlus, BrainCircuit, Code, Eraser, Heading2, Italic, List, ListOrdered, Quote, Settings2, ThumbsDown, ThumbsUp, FileText, Globe, Inbox, Lock, NotebookPen, Pencil, Plus, Square, Sparkles, Trash2, Type, Upload, Search, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, FolderOpen, Telescope, Network, Scale, ExternalLink } from "lucide-react";
+import { AlertTriangle, ArrowUp, AudioLines, Download, Bold, BookmarkPlus, BrainCircuit, Code, Eraser, Heading2, Italic, List, ListOrdered, Quote, Settings2, ThumbsDown, ThumbsUp, FileText, Globe, Inbox, Lock, NotebookPen, Pencil, Plus, Square, Sparkles, Trash2, Type, Upload, Search, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, FolderOpen, Telescope, Network, Scale, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Textarea } from "@/components/ui/field";
 import { Alert, Badge, EmptyState, Progress, Skeleton } from "@/components/ui/feedback";
@@ -231,7 +231,13 @@ export function Workspace({ notebookId, initialTitle, role, allowCopies, disable
   const allSelected = ready.length > 0 && selectedCount === ready.length;
 
   const sourcesPanel = (
-    <Panel id="sources" title="Sources" className="mobile-source-panel h-full" actions={canEdit && <span className="flex flex-wrap items-center gap-1"><Button size="sm" variant="soft" onClick={() => setAdding(true)}><Plus aria-hidden /> Ajouter</Button></span>}>
+    <Panel id="sources" title="Sources" className="mobile-source-panel h-full" actions={<span className="flex flex-wrap items-center gap-1">
+      <a href={`/api/v1/notebooks/${notebookId}/sources/export?format=md`} download><Button size="sm" variant="ghost" disabled={!ready.length}><Download aria-hidden /> Tout télécharger (MD)</Button></a>
+      <a href={`/api/v1/notebooks/${notebookId}/sources/export?format=md&ids=${ready.filter((source) => !deselected.has(source.id)).map((source) => source.id).join(",")}`} download>
+        <Button size="sm" variant="ghost" disabled={!selectedCount} title="Télécharger les sources sélectionnées">Sélection ({selectedCount})</Button>
+      </a>
+      {canEdit && <Button size="sm" variant="soft" onClick={() => setAdding(true)}><Plus aria-hidden /> Ajouter</Button>}
+    </span>}>
       {loadError ? (
         <div className="p-4"><Alert tone="danger" title="Sources indisponibles" action={<Button size="sm" variant="secondary" onClick={load}>Réessayer</Button>} /></div>
       ) : sources === null ? (
@@ -267,10 +273,11 @@ export function Workspace({ notebookId, initialTitle, role, allowCopies, disable
                     {busyStatus(s.status) && <Badge tone="accent">En cours</Badge>}
                     {canEdit && s.kind !== "note" && <Button size="icon-sm" variant="ghost" aria-label={`Renommer ${s.title}`} className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100" onClick={() => setRenaming(s)}><Pencil aria-hidden /></Button>}
                     {canEdit && <Button size="icon-sm" variant="ghost" aria-label={`Supprimer ${s.title}`} className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100" onClick={() => removeSource(s)}><Trash2 aria-hidden /></Button>}
-                    {s.status === "ready" && (
+                    {s.status === "ready" && <>
+                      <a href={`/api/v1/notebooks/${notebookId}/sources/export?format=md&ids=${s.id}`} download aria-label={`Télécharger ${s.title} en Markdown`} title="Télécharger en Markdown" className="inline-flex size-8 items-center justify-center rounded-md text-text-muted hover:bg-surface-raised hover:text-text"><Download aria-hidden className="size-4" /></a>
                       <Checkbox checked={!deselected.has(s.id)} aria-label={`Utiliser ${s.title} dans les réponses`}
                         onCheckedChange={(v) => { const n = new Set(deselected); if (v) n.delete(s.id); else n.add(s.id); void saveSelection(n); }} />
-                    )}
+                    </>}
                   </span>
                 }
               />
@@ -493,7 +500,7 @@ export function Workspace({ notebookId, initialTitle, role, allowCopies, disable
 
       <AddSourcesDialog open={adding} onOpenChange={setAdding} notebookId={notebookId} onAdded={() => void load()} onWebSearch={() => { setAdding(false); setResearching(true); }} onNote={() => { setAdding(false); setNoteEditor({}); }} />
       <FastResearch notebookId={notebookId} open={researching} onOpenChange={setResearching} onImported={() => void load()} />
-      <SourceViewer state={viewer} onClose={() => setViewer(null)} onAsk={ask} />
+      <SourceViewer notebookId={notebookId} state={viewer} onClose={() => setViewer(null)} onAsk={ask} />
       <RenameSourceDialog source={renaming} onClose={() => setRenaming(null)} onRename={renameSource} />
       <NoteEditor state={noteEditor} notebookId={notebookId} canEdit={canEdit} onClose={() => setNoteEditor(null)} onSaved={() => void load()} />
     </>
@@ -1010,7 +1017,7 @@ function AddSourcesDialog({ open, onOpenChange, notebookId, onAdded, onWebSearch
 
 /* --------------------------------------------------------- Visionneuse ---- */
 
-function SourceViewer({ state, onClose, onAsk }: { state: { sourceId: string; range?: [number, number]; timeStartMs?: number } | null; onClose: () => void; onAsk: (text: string) => void }) {
+function SourceViewer({ notebookId, state, onClose, onAsk }: { notebookId: string; state: { sourceId: string; range?: [number, number]; timeStartMs?: number } | null; onClose: () => void; onAsk: (text: string) => void }) {
   const [source, setSource] = React.useState<{ title: string; kind: string; origin_url: string | null; extracted_text: string | null; guide: { summary: string; topics: string[] } | null } | null>(null);
   const [audioSegments, setAudioSegments] = React.useState<Array<{ ordinal: number; content: string; time_start_ms: number; time_end_ms: number }>>([]);
   const [failed, setFailed] = React.useState(false);
@@ -1046,6 +1053,7 @@ function SourceViewer({ state, onClose, onAsk }: { state: { sourceId: string; ra
             <ExternalLink className="size-3.5" aria-hidden /> Ouvrir la page originale
           </a>
         )}
+        <div className="mb-3 flex justify-end"><a href={`/api/v1/notebooks/${notebookId}/sources/export?format=md&ids=${state?.sourceId}`} download className="inline-flex items-center gap-2 text-sm font-medium text-accent hover:underline"><Download aria-hidden className="size-4" /> Télécharger (MD)</a></div>
         <div className="mobile-source-viewer-content max-h-[65dvh] overflow-y-auto rounded-lg bg-surface p-5">
           {failed ? <Alert tone="danger" title="Source indisponible" /> : !source ? (
             <div className="grid gap-2" aria-busy="true"><Skeleton className="h-4" /><Skeleton className="h-4 w-5/6" /><Skeleton className="h-4 w-4/6" /></div>
