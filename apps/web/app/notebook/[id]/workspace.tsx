@@ -500,7 +500,7 @@ export function Workspace({ notebookId, initialTitle, role, allowCopies, disable
 
       <AddSourcesDialog open={adding} onOpenChange={setAdding} notebookId={notebookId} onAdded={() => void load()} onWebSearch={() => { setAdding(false); setResearching(true); }} onNote={() => { setAdding(false); setNoteEditor({}); }} />
       <FastResearch notebookId={notebookId} open={researching} onOpenChange={setResearching} onImported={() => void load()} />
-      <SourceViewer state={viewer} onClose={() => setViewer(null)} onAsk={ask} />
+      <SourceViewer notebookId={notebookId} state={viewer} onClose={() => setViewer(null)} onAsk={ask} />
       <RenameSourceDialog source={renaming} onClose={() => setRenaming(null)} onRename={renameSource} />
       <NoteEditor state={noteEditor} notebookId={notebookId} canEdit={canEdit} onClose={() => setNoteEditor(null)} onSaved={() => void load()} />
     </>
@@ -1017,7 +1017,7 @@ function AddSourcesDialog({ open, onOpenChange, notebookId, onAdded, onWebSearch
 
 /* --------------------------------------------------------- Visionneuse ---- */
 
-function SourceViewer({ state, onClose, onAsk }: { state: { sourceId: string; range?: [number, number]; timeStartMs?: number } | null; onClose: () => void; onAsk: (text: string) => void }) {
+function SourceViewer({ notebookId, state, onClose, onAsk }: { notebookId: string; state: { sourceId: string; range?: [number, number]; timeStartMs?: number } | null; onClose: () => void; onAsk: (text: string) => void }) {
   const [source, setSource] = React.useState<{ title: string; kind: string; origin_url: string | null; extracted_text: string | null; guide: { summary: string; topics: string[] } | null } | null>(null);
   const [audioSegments, setAudioSegments] = React.useState<Array<{ ordinal: number; content: string; time_start_ms: number; time_end_ms: number }>>([]);
   const [failed, setFailed] = React.useState(false);
