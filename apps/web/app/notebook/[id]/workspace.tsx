@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import { createPortal } from "react-dom";
-import { AlertTriangle, ArrowUp, AudioLines, Download, Bold, BookmarkPlus, BrainCircuit, Code, Eraser, Heading2, Italic, List, ListOrdered, Quote, Settings2, ThumbsDown, ThumbsUp, FileText, Globe, Inbox, Lock, NotebookPen, Pencil, Plus, Square, Sparkles, Trash2, Type, Upload, Search, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, FolderOpen, Telescope, Network, Scale, ExternalLink, MoreHorizontal } from "lucide-react";
+import { AlertTriangle, ArrowUp, AudioLines, Download, Bold, BookmarkPlus, BrainCircuit, Code, Eraser, Heading2, Italic, List, ListOrdered, Quote, Settings2, ThumbsDown, ThumbsUp, FileText, Globe, Inbox, Lock, NotebookPen, Pencil, Plus, Square, Sparkles, Trash2, Type, Upload, Search, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, FolderOpen, Telescope, Network, Scale, ExternalLink, MoreHorizontal, CheckSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Textarea } from "@/components/ui/field";
 import { Alert, Badge, EmptyState, Progress, Skeleton } from "@/components/ui/feedback";
@@ -233,15 +233,15 @@ export function Workspace({ notebookId, initialTitle, role, allowCopies, disable
   const sourcesPanel = (
     <Panel id="sources" title={`Sources${ready.length ? ` · ${ready.length}` : ""}`} className="mobile-source-panel h-full" actions={<div className="flex shrink-0 flex-nowrap items-center gap-1">
       <Tooltip label="Tout télécharger en Markdown">
-        <a href={`/api/v1/notebooks/${notebookId}/sources/export?format=md`} download aria-label="Tout télécharger en Markdown" className="inline-flex">
-          <Button size="icon" variant="ghost" disabled={!ready.length}><Download aria-hidden /></Button>
+        <a href={`/api/v1/notebooks/${notebookId}/sources/export?format=md`} download aria-label="Tout télécharger en Markdown" className="inline-flex size-9 items-center justify-center rounded-md text-text-muted hover:bg-surface hover:text-text" aria-disabled={!ready.length}>
+          <Download aria-hidden className="size-4" />
         </a>
       </Tooltip>
       {canEdit && <Tooltip label="Ajouter des sources"><Button size="icon" variant="soft" aria-label="Ajouter des sources" onClick={() => setAdding(true)}><Plus aria-hidden /></Button></Tooltip>}
       <DropdownMenu>
         <DropdownMenuTrigger asChild><Button size="icon" variant="ghost" aria-label="Actions des sources"><MoreHorizontal aria-hidden /></Button></DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem icon={<Checkbox checked={allSelected} />} onSelect={() => void saveSelection(allSelected ? new Set(ready.map((source) => source.id)) : new Set())} disabled={!ready.length}>
+          <DropdownMenuItem icon={<CheckSquare aria-hidden />} onSelect={() => void saveSelection(allSelected ? new Set(ready.map((source) => source.id)) : new Set())} disabled={!ready.length}>
             {allSelected ? "Tout désélectionner" : "Tout sélectionner"}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
