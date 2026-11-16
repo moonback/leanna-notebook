@@ -668,6 +668,7 @@ function ArtifactViewer({ id, canShare, onImported, onEditImage, onClose, source
   return (
     <Dialog open={Boolean(id)} onOpenChange={(o) => !o && onClose()}>
       <DialogContent size="lg" className="mobile-artifact-dialog" title={art ? (art.title || TYPES[art.type].label) : "Contenu du Studio"}>
+        {id && art && <div className="mb-2 flex justify-end"><a href={`/api/v1/artifacts/${id}/export?format=md`} download><Button size="sm" variant="secondary"><Download aria-hidden /> Télécharger (MD)</Button></a></div>}
         {id && canShare && <ImportAsSourceButton artifactId={id} disabled={!art} onImported={onImported} />}
         {id && canShare && <ArtifactShareButton artifactId={id} disabled={!art} />}
         <div className="mobile-artifact-content max-h-[70dvh] overflow-y-auto pr-1">
