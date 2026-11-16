@@ -231,12 +231,12 @@ export function Workspace({ notebookId, initialTitle, role, allowCopies, disable
   const allSelected = ready.length > 0 && selectedCount === ready.length;
 
   const sourcesPanel = (
-    <Panel id="sources" title="Sources" className="mobile-source-panel h-full" actions={canEdit && <span className="flex flex-wrap items-center gap-1">
+    <Panel id="sources" title="Sources" className="mobile-source-panel h-full" actions={<span className="flex flex-wrap items-center gap-1">
       <a href={`/api/v1/notebooks/${notebookId}/sources/export?format=md`} download><Button size="sm" variant="ghost" disabled={!ready.length}><Download aria-hidden /> Tout télécharger (MD)</Button></a>
       <a href={`/api/v1/notebooks/${notebookId}/sources/export?format=md&ids=${ready.filter((source) => !deselected.has(source.id)).map((source) => source.id).join(",")}`} download>
         <Button size="sm" variant="ghost" disabled={!selectedCount} title="Télécharger les sources sélectionnées">Sélection ({selectedCount})</Button>
       </a>
-      <Button size="sm" variant="soft" onClick={() => setAdding(true)}><Plus aria-hidden /> Ajouter</Button>
+      {canEdit && <Button size="sm" variant="soft" onClick={() => setAdding(true)}><Plus aria-hidden /> Ajouter</Button>}
     </span>}>
       {loadError ? (
         <div className="p-4"><Alert tone="danger" title="Sources indisponibles" action={<Button size="sm" variant="secondary" onClick={load}>Réessayer</Button>} /></div>
