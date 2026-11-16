@@ -233,7 +233,7 @@ export function Workspace({ notebookId, initialTitle, role, allowCopies, disable
   const sourcesPanel = (
     <Panel id="sources" title={`Sources${ready.length ? ` · ${ready.length}` : ""}`} className="mobile-source-panel h-full" actions={<div className="flex shrink-0 flex-nowrap items-center gap-1">
       <Tooltip label="Tout télécharger en Markdown">
-        <a href={`/api/v1/notebooks/${notebookId}/sources/export?format=md`} download aria-label="Tout télécharger en Markdown" className="inline-flex size-9 items-center justify-center rounded-md text-text-muted hover:bg-surface hover:text-text" aria-disabled={!ready.length}>
+        <a href={ready.length ? `/api/v1/notebooks/${notebookId}/sources/export?format=md` : undefined} download aria-label="Tout télécharger en Markdown" className={cn("inline-flex size-9 items-center justify-center rounded-md text-text-muted hover:bg-surface hover:text-text", !ready.length && "pointer-events-none opacity-40")} aria-disabled={!ready.length}>
           <Download aria-hidden className="size-4" />
         </a>
       </Tooltip>
