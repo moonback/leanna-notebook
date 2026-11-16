@@ -34,12 +34,12 @@ function markdown(type: string, title: string, value: unknown): string {
 }
 
 /** Compilation Markdown de tous les contenus Studio prêts du notebook. */
-export const GET = handle(async (_req: NextRequest, { params }: Params) => {
+export const GET = handle(async (req: NextRequest, { params }: Params) => {
   await requireUser();
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) throw new ApiError(404, "not_found");
-  // format est volontairement explicite : cette route ne produit que du Markdown.
-  // NextRequest reste utilisé pour conserver une signature de route homogène.
+  const format = req.nextUrl.searchParams.get("format") ?? "md";
+  if (format !== "md") throw new ApiError(422, "unsupported_export_format");
   await requireRole(id, "viewer");
   const db = await createUserClient();
   const [{ data: notebook }, { data: artifacts, error }] = await Promise.all([
